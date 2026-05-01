@@ -1,0 +1,52 @@
+name: bmc_app
+description: "BMC Staff Self-Serviice"
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+
+# Dependencies specify other packages that your package needs in order to work.
+# To automatically upgrade your package dependencies to the latest versions
+# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# dependencies can be manually updated by changing the version numbers below to
+# the latest version available on pub.dev. To see which dependencies have newer
+# versions available, run `flutter pub outdated`.
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.3
+  provider: ^6.1.5+1
+  flutter_svg: ^2.2.3
+  go_router: ^17.0.0
+  carousel_slider: ^5.1.2
+  iconsax: ^0.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icons/
+
+  fonts:
+    - family: Montserrat
+      fonts:
+          - asset: assets/fonts/Montserrat-Bold.ttf
+  #       - asset: fonts/Schyler-Italic.ttf
+  #         style: italic
+    - family: Lexend
+      fonts:
+          - asset: assets/fonts/Lexend-Regular.ttf
+          - asset: assets/fonts/Lexend-VariableFont_wght.ttf
+  #         weight: 700
+
