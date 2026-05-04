@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../authentication/widget.dart';
 import '../home/widget.dart';
+import '../messages/widget.dart';
+import '../models/widget.dart';
 import '../on_boarding/widget.dart';
 import 'widget.dart';
 
@@ -51,6 +53,7 @@ class BMCRouter {
 
   // message
   static const String messagePath = '/message';
+  static const String chatPath = 'chat';
 
   BMCRouter._internal() {
     final routes = <RouteBase>[
@@ -110,7 +113,16 @@ class BMCRouter {
                 routes: <RouteBase>[
                   GoRoute(
                       path: messagePath,
-                      builder: (context, state) => Container(),
+                      builder: (context, state) => MessagesListScreen(),
+                    routes: [
+                      GoRoute(
+                        path: chatPath,
+                        builder: (context, state){
+                          final user = state.extra as ChatUser;
+                          return ChatScreen(user: user,);
+                        }
+                      )
+                    ]
                       ),
                 ]),
           ])

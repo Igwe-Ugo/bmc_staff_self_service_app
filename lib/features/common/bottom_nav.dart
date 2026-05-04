@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'widget.dart';
 
 enum NavStyle { floating, stationary }
 
 class BMCAppNavBar extends StatefulWidget {
   final StatefulNavigationShell navigationShell;
   final NavStyle navStyle;
+  final bool hideNavBar;
 
   const BMCAppNavBar({
     super.key,
     required this.navigationShell,
+    this.hideNavBar = false,
     this.navStyle = NavStyle.floating,
   });
 
@@ -42,10 +45,15 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
     final selectedUiIndex =
     _shellIndexToUiIndex(widget.navigationShell.currentIndex);
 
-    return Scaffold(
-      extendBody: true,
-      body: widget.navigationShell,
-      bottomNavigationBar: _buildNavBar(context, selectedUiIndex),
+    return ValueListenableBuilder<bool>(
+      valueListenable: navBarVisible,
+      builder: (context, _isNavVisible, _) {
+        return Scaffold(
+          extendBody: true,
+          body: widget.navigationShell,
+          bottomNavigationBar: _isNavVisible==true ? _buildNavBar(context, selectedUiIndex) : null,
+        );
+      }
     );
   }
 
@@ -135,7 +143,7 @@ class _NavTile extends StatelessWidget {
                 item.label,
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: 13,
+                  fontSize: 10,
                   letterSpacing: 0.1,
                 ),
               ),
