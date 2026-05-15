@@ -27,7 +27,6 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
     _NavItem(onIconName: 'assets/icons/calendar-add_on.svg', offIconName: 'assets/icons/calendar-add.svg', label: 'Availability'),
     _NavItem(onIconName: 'assets/icons/share_on.svg', offIconName: 'assets/icons/share.svg', label: 'Rota'),
     _NavItem(onIconName: 'assets/icons/brifecase-timer_on.svg', offIconName: 'assets/icons/brifecase-timer.svg', label: 'Leave'),
-    _NavItem(onIconName: 'assets/icons/messages_on.svg', offIconName: 'assets/icons/messages.svg', label: 'Messages'),
   ];
 
   int _shellIndexToUiIndex(int shellIndex) => shellIndex;

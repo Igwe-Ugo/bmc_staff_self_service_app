@@ -6,7 +6,7 @@ class ChatUser {
   final bool isYou;
   final bool hasNotification;
   final Color avatarColor;
-  final String initials;
+  final String userAvatar;
 
   const ChatUser({
     required this.name,
@@ -14,6 +14,6 @@ class ChatUser {
     this.isYou = false,
     this.hasNotification = false,
     required this.avatarColor,
-    required this.initials,
+    required this.userAvatar,
   });
 }

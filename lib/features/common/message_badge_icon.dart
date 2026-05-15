@@ -1,14 +1,18 @@
+import 'package:bmc_app/features/common/widget.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 
 /// Notification icon with badge showing unread count. Tapping navigates to notifications.
-class NotificationBadgeIcon extends StatelessWidget {
-  const NotificationBadgeIcon({super.key});
+class MessageBadgeIcon extends StatelessWidget {
+  const MessageBadgeIcon({super.key});
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {},
+      onTap: () {
+        GoRouter.of(context).go("${BMCRouter.homePath}/${BMCRouter.messagePath}");
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(10),
@@ -21,7 +25,7 @@ class NotificationBadgeIcon extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Icon(
-              Iconsax.notification,
+              Iconsax.message,
               size: 24,
               color: Theme
                   .of(context)

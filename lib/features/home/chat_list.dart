@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iconsax/iconsax.dart';
 import '../common/widget.dart';
 import '../models/widget.dart';
-import 'widget.dart';
 
 // ─── Messages List Screen ─────────────────────────────────────────────────────
 
@@ -25,45 +25,45 @@ class _MessagesListScreenState extends State<MessagesListScreen>
       subtitle: 'No messages yet',
       isYou: true,
       avatarColor: Color(0xFF8D6E63),
-      initials: 'OU',
+      userAvatar: "assets/images/profile_pic.png"
     ),
     ChatUser(
       name: 'Adenike Abiodun',
       subtitle: 'No messages yet',
       hasNotification: true,
       avatarColor: Color(0xFF5C6BC0),
-      initials: 'AA',
+        userAvatar: "assets/images/users/user_1.png"
     ),
     ChatUser(
       name: 'Tega Ojiriokhi',
       subtitle: 'No messages yet',
       avatarColor: Color(0xFF66BB6A),
-      initials: 'TO',
+        userAvatar: "assets/images/users/user_2.png"
     ),
     ChatUser(
       name: 'Tega Ojiriokhi',
       subtitle: 'No messages yet',
       avatarColor: Color(0xFF42A5F5),
-      initials: 'TO',
+        userAvatar: "assets/images/users/user_3.png"
     ),
     ChatUser(
       name: 'Idowu Abiodun',
       subtitle: 'No messages yet',
       hasNotification: true,
       avatarColor: Color(0xFFAB47BC),
-      initials: 'IA',
+        userAvatar: "assets/images/users/user_4.png"
     ),
     ChatUser(
       name: 'Valerie Olufolaji',
       subtitle: 'No messages yet',
       avatarColor: Color(0xFFEF5350),
-      initials: 'VO',
+        userAvatar: "assets/images/users/user_5.png"
     ),
     ChatUser(
       name: 'Promise Nwabogor',
       subtitle: 'No messages yet',
       avatarColor: Color(0xFF26A69A),
-      initials: 'PN',
+        userAvatar: "assets/images/users/user_6.png"
     ),
   ];
 
@@ -90,34 +90,34 @@ class _MessagesListScreenState extends State<MessagesListScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        elevation: 0,
+        leading: IconButton(
+            onPressed: () {
+              GoRouter.of(context).pop();
+            },
+            icon: const Icon(
+              Iconsax.arrow_left,
+              size: 17,
+            )),
+        title: Text(
+          "Collaborate with team members",
+          style: TextStyle(
+            fontFamily: 'Lexend',
+            fontSize: 16,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            _buildHandle(),
             _buildHeader(),
             _buildTabBar(),
             _buildSearchBar(),
             Expanded(child: _buildUserList()),
           ],
-        ),
-      ),
-    );
-  }
-
-  // ── Drag handle ──────────────────────────────────────────────────────────────
-
-  Widget _buildHandle() {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 8),
-      child: Center(
-        child: Container(
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Colors.black12,
-            borderRadius: BorderRadius.circular(2),
-          ),
         ),
       ),
     );
@@ -191,7 +191,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Container(
-        height: 40,
+        height: 50,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
@@ -200,11 +200,11 @@ class _MessagesListScreenState extends State<MessagesListScreen>
         child: TextField(
           controller: _searchController,
           onChanged: (v) => setState(() => _searchQuery = v),
-          style: const TextStyle(fontSize: 14, color: Color(0xFF1C1C1E)),
+          style: const TextStyle(fontSize: 18, color: Color(0xFF1C1C1E)),
           decoration: const InputDecoration(
             hintText: 'Search Users...',
             hintStyle: TextStyle(color: Color(0xFFAEAEB2), fontSize: 14),
-            prefixIcon: Icon(Icons.search, color: Color(0xFFAEAEB2), size: 20),
+            prefixIcon: Icon(Icons.search, color: Color(0xFFAEAEB2), size: 25),
             border: InputBorder.none,
             contentPadding: EdgeInsets.symmetric(vertical: 10),
           ),
@@ -219,22 +219,25 @@ class _MessagesListScreenState extends State<MessagesListScreen>
     final users = _filteredUsers;
 
     if (users.isEmpty) {
-      return const Center(
-        child: Text(
-          'No users found',
-          style: TextStyle(color: Color(0xFF8E8E93), fontSize: 14),
-        ),
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Iconsax.user_remove,
+            size: 70,
+          ),
+          const SizedBox(height: 20,),
+          Text(
+            'No users found with this identity!',
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+        ],
       );
     }
 
-    return ListView.separated(
+    return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       itemCount: users.length,
-      separatorBuilder: (_, __) => const Divider(
-        height: 1,
-        indent: 60,
-        color: Color(0xFFE5E5EA),
-      ),
       itemBuilder: (context, index) => _buildUserTile(users[index]),
     );
   }
@@ -244,7 +247,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
   Widget _buildUserTile(ChatUser user) {
     return InkWell(
       onTap: (){
-        GoRouter.of(context).push("${BMCRouter.messagePath}/${BMCRouter.chatPath}", extra: user);
+        GoRouter.of(context).push("${BMCRouter.homePath}/${BMCRouter.messagePath}/${BMCRouter.chatPath}", extra: user);
         navBarVisible.value = false;
       },
       borderRadius: BorderRadius.circular(12),
@@ -258,14 +261,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
                 CircleAvatar(
                   radius: 22,
                   backgroundColor: user.avatarColor,
-                  child: Text(
-                    user.initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
+                  child: Image.asset(user.userAvatar),
                 ),
                 if (user.hasNotification)
                   Positioned(
@@ -329,11 +325,16 @@ class _MessagesListScreenState extends State<MessagesListScreen>
             Row(
               children: [
                 _buildActionIcon(
-                  icon: Icons.notifications_outlined,
+                  icon: Iconsax.cloud,
                   filled: user.hasNotification,
                 ),
                 const SizedBox(width: 8),
-                _buildActionIcon(icon: Icons.block, filled: false),
+                _buildActionIcon(
+                  icon: Iconsax.home_wifi,
+                  filled: false,
+                ),
+                const SizedBox(width: 8),
+                _buildActionIcon(icon: Iconsax.eye_slash, filled: false),
               ],
             ),
           ],
@@ -347,13 +348,13 @@ class _MessagesListScreenState extends State<MessagesListScreen>
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: filled ? const Color(0xFF007AFF) : const Color(0xFFE5E5EA),
+        color: filled ? const Color(0xFF007AFF) : Colors.white,
         shape: BoxShape.circle,
       ),
       child: Icon(
         icon,
         size: 16,
-        color: filled ? Colors.white : const Color(0xFF8E8E93),
+        color: filled ? Colors.white : Colors.black,
       ),
     );
   }

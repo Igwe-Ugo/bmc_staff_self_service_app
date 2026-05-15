@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import '../common/widget.dart';
+import 'package:intl/intl.dart';
+
+import '../models/widget.dart';
 
 class BMCHome extends StatefulWidget {
   const BMCHome({super.key});
@@ -13,6 +16,35 @@ class BMCHome extends StatefulWidget {
 class _BMCHomeState extends State<BMCHome> {
   int _selectedDayIndex = 1; // Monday selected by default
   bool _showDrawer = false;
+  late String currentDate;
+  late String currentTime;
+  late ChatUser user;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateDateTime();
+
+    // Updates every second
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 1));
+
+      if (mounted) {
+        _updateDateTime();
+      }
+
+      return mounted;
+    });
+  }
+
+  void _updateDateTime() {
+    final now = DateTime.now();
+
+    setState(() {
+      currentTime = DateFormat('hh:mm a').format(now);
+      currentDate = DateFormat('EE, MMMM d').format(now);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +56,7 @@ class _BMCHomeState extends State<BMCHome> {
               padding: EdgeInsets.fromLTRB(20, 100, 20, 40),
               child: Column(
                 children: [
+                  const SizedBox(height: 5,),
                   _welcomeCard(context),
                   const SizedBox(height: 24,),
                   _SectionTitle(title: "My Rota", badge: "23", isRota: true,),
@@ -73,16 +106,14 @@ class _BMCHomeState extends State<BMCHome> {
                   _SectionTitle(title: "My Leave", badge: "18", isRota: false,),
                   SizedBox(height: 18,),
                   _buildLeaveCard(),
+                  SizedBox(height: 32,),
                   _SectionTitle(title: "My Availability", badge: "18", isRota: false,),
                   SizedBox(height: 18,),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: buildWeekCalendar(
-                      selectedIndex: _selectedDayIndex,
-                      onDaySelected: (index) {
-                        setState(() => _selectedDayIndex = index);
-                      },
-                    ),
+                  buildWeekCalendar(
+                    selectedIndex: _selectedDayIndex,
+                    onDaySelected: (index) {
+                      setState(() => _selectedDayIndex = index);
+                    },
                   ),
                   SizedBox(height: 32,),
                   _SectionTitle(title: "Recent Notifications", badge: "10", isRota: false,),
@@ -92,6 +123,7 @@ class _BMCHomeState extends State<BMCHome> {
                   _SectionTitle(title: "Recent Messages", badge: "5", isRota: false,),
                   SizedBox(height: 18,),
                   _buildMessagesList(),
+                  //_showMoreInfoSheet(),
                 ],
               ),
             ),
@@ -142,7 +174,7 @@ class _BMCHomeState extends State<BMCHome> {
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: [
-              Colors.black.withOpacity(0.84),
+              Colors.black,
               Colors.transparent,
             ],
           ),
@@ -175,7 +207,7 @@ class _BMCHomeState extends State<BMCHome> {
                   ),
                 ),
                 const Spacer(),
-                SvgPicture.asset('assets/icons/meteocons_sunrise.svg')
+                SvgPicture.asset('assets/icons/weather.svg')
               ],
             ),
             const SizedBox(height: 19),
@@ -224,55 +256,66 @@ class _BMCHomeState extends State<BMCHome> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            onTap: () => onProfileTap(),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: Colors.grey.shade300,
-              child: Image.asset('assets/images/profile_pic.png', scale: 0.5),
-            ),
-          ),
-          const SizedBox(width: 15,),
-          Text(
-            'Profile',
-            style: TextStyle(
-                fontFamily: 'Lexend',
-                fontWeight: FontWeight.w700,
-                fontSize: 14
-            ),
-          ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 23, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20)
-            ),
-            child: Row(
-              children: [
-                Text(
-                  'Active',
-                  style: TextStyle(
-                      fontFamily: 'Lexend',
-                      fontWeight: FontWeight.w600,
-                      fontSize: 12
+          Row(
+            children: [
+              GestureDetector(
+                onTap: () => onProfileTap(),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Theme.of(context).primaryColor,
+                  child: CircleAvatar(
+                    radius: 18,
+                    child: Image.asset('assets/images/profile_pic.png', scale: 0.5),
                   ),
                 ),
-                const SizedBox(width: 5,),
-                CircleAvatar(
+              ),
+              const SizedBox(width: 10,),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    currentTime,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: 'Lexend',
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    currentDate,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade600,
+                      fontFamily: 'Lexend',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 10,),
+              CircleAvatar(
+                radius: 7,
+                backgroundColor: Color(0xff22C55E).withOpacity(0.3),
+                child: CircleAvatar(
                   radius: 5,
-                  backgroundColor: Colors.green,
+                  backgroundColor: Color(0xff22C55E),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          Spacer(),
           GestureDetector(
             onTap: (){},
             child: CircleAvatar(
               radius: 20,
-              backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Colors.white,
+              backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
               child: Icon(Iconsax.moon, size: 20, color: Theme.of(context).brightness == Brightness.dark ? Colors.white: Colors.black,),
             ),
           ),
+          const SizedBox(width: 16,),
+          MessageBadgeIcon(),
+          const SizedBox(width: 16,),
           NotificationBadgeIcon()
         ],
       ),
@@ -621,7 +664,25 @@ class _BMCHomeState extends State<BMCHome> {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final item = notifications[index];
-        return _buildCard(item);
+        return GestureDetector(
+            onTap: () {
+              navBarVisible.value = false;
+              showModalBottomSheet(
+                context: context,
+                builder: (context) => _showMoreInfoSheet(
+                  colleague: item['badge'],
+                  color: item['borderColor'],
+                  username: "Orji Ugochukwu",
+                  userDept: "Nursing",
+                  userAvatar: "assets/images/profile_pic.png",
+                  title: item['title'],
+                  info: item['subtitle'],
+                  time: "Yesterday | ${item['time']}",
+                ),
+              );
+            },
+            child: _buildCard(item),
+        );
       },
     );
   }
@@ -686,6 +747,200 @@ class _BMCHomeState extends State<BMCHome> {
     );
   }
 
+  SingleChildScrollView _showMoreInfoSheet({required String colleague, required String title, required Color color, required String username, required String userDept, required String userAvatar, required String info, required String time}){
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+              ),
+              child: _buildHeaderTile(color: color, title: title, username: username, userDept: userDept, userAvatar: userAvatar, info: info, time: time),
+            ),
+            const SizedBox(height: 24,),
+            Container(
+              padding: const EdgeInsets.all(26),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                color: Colors.white,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Swap Summary:',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        fontFamily: 'Lexend'
+                    ),
+                  ),
+                  const SizedBox(height: 24,),
+                  Text(
+                    'You get: Fri 29 May Night (17.00-08.00)',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w400,
+                      fontSize: 14,
+                      fontFamily: 'Lexend'
+                    ),
+                  ),
+                  const SizedBox(height: 16,),
+                  Text(
+                    'You give: Sun 31 May Night (17.00 - 08.00)',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        fontFamily: 'Lexend'
+                    ),
+                  ),
+                  const SizedBox(height: 16,),
+                  Text(
+                    'With $colleague',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                        fontFamily: 'Lexend'
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 50,),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {},
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF22C55E),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    side: BorderSide(color: Color(0xFF27AE60).withOpacity(0.6))
+                  ),
+                ),
+                child: const Text(
+                  "Accept",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Lexend',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16,),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  navBarVisible.value = true;
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0x88F3C0C0).withOpacity(0.8),
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    side: BorderSide(color: Color(0xFFDE2626).withOpacity(0.6))
+                  ),
+                ),
+                child: const Text(
+                  "Reject",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontFamily: 'Lexend',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 70,)
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderTile({required Color color, required String title, required String username, required String userDept, required String userAvatar, required String info, required String time}) {
+    return InkWell(
+      onTap: (){},
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            // Avatar
+            CircleAvatar(
+                radius: 22,
+                backgroundColor: color,
+                child: CircleAvatar(
+                  backgroundImage: AssetImage(userAvatar),
+                )
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        username,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        info,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        userDept,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        time,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF888888),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // State variable to track selected index — declare this in your class:
 // int _selectedDayIndex = 1;
 
@@ -732,7 +987,7 @@ class _BMCHomeState extends State<BMCHome> {
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),

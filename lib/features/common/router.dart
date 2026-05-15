@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../authentication/widget.dart';
 import '../home/widget.dart';
-import '../messages/widget.dart';
 import '../models/widget.dart';
 import '../on_boarding/widget.dart';
 import 'widget.dart';
@@ -21,7 +20,6 @@ class BMCRouter {
       GlobalKey<NavigatorState>();
   static final GlobalKey<NavigatorState> leaveTabNavigationKey =
       GlobalKey<NavigatorState>();
-  static final GlobalKey<NavigatorState> messageTabNavigationKey = GlobalKey<NavigatorState>();
   BuildContext get context =>
       router.routerDelegate.navigatorKey.currentContext!;
   GoRouterDelegate get routerDelegate => router.routerDelegate;
@@ -41,6 +39,10 @@ class BMCRouter {
 
   // home pages
   static const String homePath = '/home';
+  static const String chatPath = 'chat';
+  static const String aboutAppPath = 'about';
+  static const String profilePath = 'profile';
+  static const String messagePath = 'message';
   
   // availability
   static const String availabilityPath = '/availability';
@@ -50,10 +52,6 @@ class BMCRouter {
 
   // leave
   static const String leavePath = '/leave';
-
-  // message
-  static const String messagePath = '/message';
-  static const String chatPath = 'chat';
 
   BMCRouter._internal() {
     final routes = <RouteBase>[
@@ -83,7 +81,35 @@ class BMCRouter {
                 routes: <RouteBase>[
                   GoRoute(
                       path: homePath,
-                      builder: (context, state) => BMCHome()),
+                      builder: (context, state) => BMCHome(),
+                    routes: [
+                      GoRoute(
+                          path: messagePath,
+                          builder: (context, state) => MessagesListScreen(),
+                          routes: [
+                            GoRoute(
+                                path: chatPath,
+                                builder: (context, state){
+                                  final user = state.extra as ChatUser;
+                                  return ChatScreen(user: user,);
+                                }
+                            )
+                          ]
+                      ),
+                      GoRoute(
+                          path: aboutAppPath,
+                          builder: (context, state){
+                            return const AboutApp();
+                          }
+                      ),
+                      GoRoute(
+                          path: profilePath,
+                          builder: (context, state){
+                            return const Profile();
+                          }
+                      ),
+                    ]
+                  ),
                 ]),
             StatefulShellBranch(
                 navigatorKey: availabilityTabNavigationKey,
@@ -107,23 +133,6 @@ class BMCRouter {
                     path: leavePath,
                     builder: (context, state) => Container(),
                   ),
-                ]),
-            StatefulShellBranch(
-                navigatorKey: messageTabNavigationKey,
-                routes: <RouteBase>[
-                  GoRoute(
-                      path: messagePath,
-                      builder: (context, state) => MessagesListScreen(),
-                    routes: [
-                      GoRoute(
-                        path: chatPath,
-                        builder: (context, state){
-                          final user = state.extra as ChatUser;
-                          return ChatScreen(user: user,);
-                        }
-                      )
-                    ]
-                      ),
                 ]),
           ])
     ];
