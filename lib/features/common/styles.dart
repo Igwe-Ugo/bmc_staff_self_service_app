@@ -8,11 +8,11 @@ abstract class Styles {
     return ThemeData(
       visualDensity: VisualDensity.adaptivePlatformDensity,
       primaryColor: const Color(0xff645AB5),
-      scaffoldBackgroundColor: isDarkTheme ? Colors.black : const Color(0xffFFFFFF),
+      scaffoldBackgroundColor: isDarkTheme ? Colors.black : const Color(0xffF5F5F5),
       indicatorColor: isDarkTheme ? const Color(0xff0E1D36) : const Color(0xffCBDCF8),
       hintColor: isDarkTheme ? const Color(0xff280C0B) : const Color(0xffEECED3),
       highlightColor: isDarkTheme ? const Color(0xff372901) : const Color(0xffFCE192),
-      hoverColor: const Color(0xffF5F5F5),
+      hoverColor: const Color(0xffFFFFFF),
       focusColor: isDarkTheme ? const Color(0xff0B2512) : const Color(0xffA8DAB5),
       disabledColor: const Color(0xff686161),
       cardColor: isDarkTheme ? const Color(0xFF151515) : Colors.white,

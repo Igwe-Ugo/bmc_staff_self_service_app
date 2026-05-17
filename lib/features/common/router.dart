@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../authentication/widget.dart';
 import '../home/widget.dart';
+import '../leave/widget.dart';
 import '../models/widget.dart';
 import '../on_boarding/widget.dart';
 import 'widget.dart';
@@ -42,6 +43,7 @@ class BMCRouter {
   static const String chatPath = 'chat';
   static const String aboutAppPath = 'about';
   static const String profilePath = 'profile';
+  static const String profileSummaryPath = 'profile_summary';
   static const String messagePath = 'message';
   
   // availability
@@ -98,15 +100,17 @@ class BMCRouter {
                       ),
                       GoRoute(
                           path: aboutAppPath,
-                          builder: (context, state){
-                            return const AboutApp();
-                          }
+                          builder: (context, state) => AboutApp()
                       ),
                       GoRoute(
-                          path: profilePath,
-                          builder: (context, state){
-                            return const Profile();
-                          }
+                        path: profileSummaryPath,
+                        builder: (context, state) => ProfileSummary(),
+                        routes: [
+                          GoRoute(
+                              path: profilePath,
+                              builder: (context, state) => Profile()
+                          ),
+                        ]
                       ),
                     ]
                   ),
@@ -131,7 +135,7 @@ class BMCRouter {
                 routes: <RouteBase>[
                   GoRoute(
                     path: leavePath,
-                    builder: (context, state) => Container(),
+                    builder: (context, state) => LeaveScreen(),
                   ),
                 ]),
           ])

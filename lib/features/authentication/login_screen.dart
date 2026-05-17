@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../core/network/provider/widget.dart';
 import '../common/widget.dart'; // adjust path
 
 class LoginScreen extends StatefulWidget {
@@ -10,6 +12,17 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -81,7 +94,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
 
-                const CustomTextInput(
+                CustomTextInput(
+                  controller: _usernameController,
                   hint: "John",
                   prefixIcon: Icons.person,
                 ),
@@ -101,15 +115,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
-                const CustomTextInput(
+                CustomTextInput(
+                  controller: _passwordController,
                   hint: "*************",
                   prefixIcon: Icons.lock,
                   isPassword: true,
                 ),
-
                 const SizedBox(height: 10),
-
                 /// 🔹 FORGOT PASSWORD
                 Align(
                   alignment: Alignment.centerRight,
@@ -126,14 +138,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const Spacer(),
-
                 /// 🔹 LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => GoRouter.of(context).go(BMCRouter.homePath),
+                    onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -141,7 +151,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: const Text(
+                    child: _isLoading
+                        ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    ): const Text(
                       "Login",
                       style: TextStyle(
                         color: Colors.white,
@@ -158,5 +176,45 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _login() async {
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (username.isEmpty || password.isEmpty) {
+      showMessage(
+        'Please enter your username and password.',
+        context,
+        status: MessageStatus.warning,
+        title: 'Missing Fields',
+      );
+      return;
+    }
+
+    final authProvider = context.read<AuthProvider>();
+    final userProvider = context.read<UserProvider>();
+    final success = await authProvider.login(username, password, userProvider);
+
+    if (!mounted) return;
+
+    if (success) {
+      showMessage(
+        'Welcome back! Redirecting you now.',
+        context,
+        status: MessageStatus.success,
+        title: 'Login Successful',
+      );
+      await Future.delayed(const Duration(milliseconds: 800));
+      if (!mounted) return;
+      GoRouter.of(context).go(BMCRouter.homePath);
+    } else {
+      showMessage(
+        authProvider.errorMessage ?? 'Login failed.',
+        context,
+        status: MessageStatus.error,
+        title: authProvider.errorTitle ?? 'Error',
+      );
+    }
   }
 }

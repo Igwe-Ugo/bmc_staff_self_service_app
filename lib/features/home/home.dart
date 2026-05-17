@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:provider/provider.dart';
+import '../../core/network/provider/widget.dart';
 import '../common/widget.dart';
 import 'package:intl/intl.dart';
 
@@ -48,116 +50,145 @@ class _BMCHomeState extends State<BMCHome> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(20, 100, 20, 40),
-              child: Column(
-                children: [
-                  const SizedBox(height: 5,),
-                  _welcomeCard(context),
-                  const SizedBox(height: 24,),
-                  _SectionTitle(title: "My Rota", badge: "23", isRota: true,),
-                  SizedBox(height: 18,),
-                  SizedBox(
-                    height: 240,
-                    child: ListView(
-                      shrinkWrap: true,
-                      scrollDirection: Axis.horizontal,
-                      children: [
-                        ..._buildRotaCard(context, [
-                          {
-                            'color': Theme.of(context).primaryColor,
-                            'active': true,
-                            'day': "Today",
-                            'label': "Morning Shift",
-                            'dayNumber': "01",
-                            'month': "May",
-                            'shiftDuty': "Consultation",
-                            'shiftRoom': "Ward One"
-                          },
-                          {
-                            'color': Theme.of(context).primaryColor.withOpacity(0.2),
-                            'active': false,
-                            'day': "Tue",
-                            'label': "All Day",
-                            'dayNumber': "02",
-                            'month': "May",
-                            'shiftDuty': "",
-                            'shiftRoom': "No shift"
-                          },
-                            {
-                            'color': Colors.orange.shade200,
-                            'active': false,
-                            'day': "Tue",
-                            'label': "Night Shift",
-                            'dayNumber': "03",
-                            'month': "May",
-                            'shiftDuty': "Consultation",
-                            'shiftRoom': "Ward One"
-                            }
-                        ])
-                      ]
-                    ),
-                  ),
-                  SizedBox(height: 32,),
-                  _SectionTitle(title: "My Leave", badge: "18", isRota: false,),
-                  SizedBox(height: 18,),
-                  _buildLeaveCard(),
-                  SizedBox(height: 32,),
-                  _SectionTitle(title: "My Availability", badge: "18", isRota: false,),
-                  SizedBox(height: 18,),
-                  buildWeekCalendar(
-                    selectedIndex: _selectedDayIndex,
-                    onDaySelected: (index) {
-                      setState(() => _selectedDayIndex = index);
-                    },
-                  ),
-                  SizedBox(height: 32,),
-                  _SectionTitle(title: "Recent Notifications", badge: "10", isRota: false,),
-                  SizedBox(height: 18,),
-                  _buildNotificationList(),
-                  SizedBox(height: 32,),
-                  _SectionTitle(title: "Recent Messages", badge: "5", isRota: false,),
-                  SizedBox(height: 18,),
-                  _buildMessagesList(),
-                  //_showMoreInfoSheet(),
-                ],
-              ),
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        // Show loader while fetching
+        if (userProvider.isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        // Show error state
+        if (userProvider.state == UserState.error) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 12),
+                Text(userProvider.errorMessage ?? 'Failed to load profile'),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () => userProvider.fetchMe(),
+                  child: const Text('Retry'),
+                ),
+              ],
             ),
-          ),
-          _topNavBar(
-            context,
-            onProfileTap: () {
-              setState(() {
-                _showDrawer = true;
-                navBarVisible.value = false;
-              });
-            },
-          ),
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            top: 0,
-            bottom: 0,
-            left: _showDrawer ? 0 : -MediaQuery.of(context).size.width,
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width,
-              child: ProfileDrawer(
-                onClose: () {
-                  setState(() => _showDrawer = false);
+          );
+        }
+
+        return Scaffold(
+          body: Stack(
+            children: [
+              SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(20, 100, 20, 40),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 5,),
+                      _welcomeCard(context, userProvider),
+                      const SizedBox(height: 24,),
+                      _SectionTitle(title: "My Rota", badge: "23", isRota: true,),
+                      SizedBox(height: 18,),
+                      SizedBox(
+                        height: 240,
+                        child: ListView(
+                          shrinkWrap: true,
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            ..._buildRotaCard(context, [
+                              {
+                                'color': Theme.of(context).primaryColor,
+                                'active': true,
+                                'day': "Today",
+                                'label': "Morning Shift",
+                                'dayNumber': "01",
+                                'month': "May",
+                                'shiftDuty': "Consultation",
+                                'shiftRoom': "Ward One"
+                              },
+                              {
+                                'color': Theme.of(context).primaryColor.withOpacity(0.2),
+                                'active': false,
+                                'day': "Tue",
+                                'label': "All Day",
+                                'dayNumber': "02",
+                                'month': "May",
+                                'shiftDuty': "",
+                                'shiftRoom': "No shift"
+                              },
+                                {
+                                'color': Colors.orange.shade200,
+                                'active': false,
+                                'day': "Tue",
+                                'label': "Night Shift",
+                                'dayNumber': "03",
+                                'month': "May",
+                                'shiftDuty': "Consultation",
+                                'shiftRoom': "Ward One"
+                                }
+                            ])
+                          ]
+                        ),
+                      ),
+                      SizedBox(height: 32,),
+                      _SectionTitle(title: "My Leave", badge: "18", isRota: false,),
+                      SizedBox(height: 18,),
+                      _buildLeaveCard(),
+                      SizedBox(height: 32,),
+                      _SectionTitle(title: "My Availability", badge: "18", isRota: false,),
+                      SizedBox(height: 18,),
+                      buildWeekCalendar(
+                        selectedIndex: _selectedDayIndex,
+                        onDaySelected: (index) {
+                          setState(() => _selectedDayIndex = index);
+                        },
+                      ),
+                      SizedBox(height: 32,),
+                      _SectionTitle(title: "Recent Notifications", badge: "10", isRota: false,),
+                      SizedBox(height: 18,),
+                      _buildNotificationList(),
+                      SizedBox(height: 32,),
+                      _SectionTitle(title: "Recent Messages", badge: "5", isRota: false,),
+                      SizedBox(height: 18,),
+                      _buildMessagesList(),
+                      //_showMoreInfoSheet(),
+                    ],
+                  ),
+                ),
+              ),
+              _topNavBar(
+                context,
+                userProvider: userProvider,
+                onProfileTap: () {
+                  setState(() {
+                    _showDrawer = true;
+                    navBarVisible.value = false;
+                  });
                 },
               ),
-            ),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                top: 0,
+                bottom: 0,
+                left: _showDrawer ? 0 : -MediaQuery.of(context).size.width,
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  child: ProfileDrawer(
+                    onClose: () {
+                      setState(() => _showDrawer = false);
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      }
     );
   }
 
-  Widget _welcomeCard(context){
+  Widget _welcomeCard(context, UserProvider userProvider){
     return Container(
       height: 185,
       decoration: BoxDecoration(
@@ -188,7 +219,7 @@ class _BMCHomeState extends State<BMCHome> {
             Row(
               children: [
                 Text(
-                  "Good Evening",
+                  _getGreeting(),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -198,7 +229,7 @@ class _BMCHomeState extends State<BMCHome> {
                 ),
                 const SizedBox(width: 8,),
                 Text(
-                  "Orji Ugochukwu",
+                  userProvider.displayName,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -248,7 +279,19 @@ class _BMCHomeState extends State<BMCHome> {
     );
   }
 
-  Widget _topNavBar(BuildContext context, {required VoidCallback onProfileTap}){
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour < 12) {
+      return "Good Morning";
+    } else if (hour < 17) {
+      return "Good Afternoon";
+    } else {
+      return "Good Evening";
+    }
+  }
+
+  Widget _topNavBar(BuildContext context, {required VoidCallback onProfileTap, required UserProvider userProvider}){
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       height: 100,
@@ -263,9 +306,10 @@ class _BMCHomeState extends State<BMCHome> {
                 child: CircleAvatar(
                   radius: 20,
                   backgroundColor: Theme.of(context).primaryColor,
-                  child: CircleAvatar(
-                    radius: 18,
-                    child: Image.asset('assets/images/profile_pic.png', scale: 0.5),
+                  child: UserAvatar(
+                    image:    userProvider.avatar,
+                    initials: userProvider.initials,
+                    radius:   18,
                   ),
                 ),
               ),

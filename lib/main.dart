@@ -1,11 +1,14 @@
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'features/common/widget.dart';
+import '../../core/network/provider/widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   BMCRouter(); // 👈 triggers _internal() which sets router
+  await dotenv.load(fileName: '.env');
   runApp(const BMCStaffSelfService());
 }
 
@@ -44,6 +47,8 @@ class _BMCStaffSelfServiceState extends State<BMCStaffSelfService>{
             return themeChangeProvider;
           },
         ),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => UserProvider())
       ],
       child: Consumer<DarkThemeProvider>(
           builder: (context, themeData, child){

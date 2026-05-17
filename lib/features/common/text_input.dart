@@ -5,14 +5,14 @@ class CustomTextInput extends StatefulWidget {
   final String hint;
   final IconData prefixIcon;
   final bool isPassword;
-  final TextEditingController? controller;
+  final TextEditingController controller;
 
   const CustomTextInput({
     super.key,
     required this.hint,
     required this.prefixIcon,
     this.isPassword = false,
-    this.controller,
+    required this.controller,
   });
 
   @override

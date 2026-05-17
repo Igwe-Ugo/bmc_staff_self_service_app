@@ -7,3 +7,5 @@ export 'notification_badge_icon.dart';
 export 'side_nav_bar.dart';
 export 'nav_visibility.dart';
 export 'message_badge_icon.dart';
+export 'show_message.dart';
+export 'user_avatar.dart';

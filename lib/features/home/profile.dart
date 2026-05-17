@@ -1,9 +1,8 @@
-import 'dart:io';
-
+import 'package:bmc_app/core/network/provider/widget.dart';
+import 'package:bmc_app/features/common/user_avatar.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -13,8 +12,6 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
-  final _picker = ImagePicker();
-  File? _imageFile;
 
   /// CONTROLLERS
   final TextEditingController fullNameController =
@@ -92,287 +89,349 @@ class _ProfileState extends State<Profile> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
-        leading: IconButton(
-            onPressed: () {
-              GoRouter.of(context).pop();
-            },
-            icon: const Icon(
-              Iconsax.arrow_left,
-              size: 17,
-            )),
-        title: Text(
-          "Update Profile",
-          style: TextStyle(
-            fontFamily: 'Lexend',
-            fontSize: 16,
-            fontWeight: FontWeight.w400,
+    return Consumer<UserProvider>(
+      builder: (context, userProvider, _) {
+        return Scaffold(
+          appBar: AppBar(
+            elevation: 0,
+            leading: IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back, size: 18),
+            ),
+            title: const Text(
+            "Update profile",
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Lexend',
+            ),
           ),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 30),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              /// PROFILE IMAGE
-              Center(
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    _imageFile == null ?  CircleAvatar(
-                      radius: 75,
-                      backgroundImage: AssetImage("assets/images/profile_pic.png"),
-                    ) : Image.file(_imageFile!),
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        width: 20,
-                        height: 20,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Iconsax.trash,
-                          size: 16,
-                          color: Colors.red,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              /// IMAGE BUTTONS
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _imageButton(
-                    icon: Icons.camera_outlined,
-                    text: "Snap",
-                    onTap: _pickImageFromCamera,
-                  ),
-                  const SizedBox(width: 12),
-                  _imageButton(
-                    icon: Iconsax.cloud_notif,
-                    text: "Upload",
-                    onTap: _pickImageFromGallery,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 26),
-              /// FULL NAME
-              _fieldLabel("Full Name"),
-              const SizedBox(height: 8),
-              _customField(
-                controller: fullNameController,
-                hint: "Enter full name",
-              ),
-              const SizedBox(height: 18),
-              /// PHONE
-              _fieldLabel("Phone Number"),
-              const SizedBox(height: 8),
-              _customField(
-                controller: phoneController,
-                hint: "Enter phone number",
-                prefix: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(width: 10),
-
-                    Container(
-                      width: 20,
-                      height: 14,
-                      decoration: const BoxDecoration(
-                        image: DecorationImage(
-                          image: AssetImage(
-                            "assets/images/nigeria_flag.png",
-                          ),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 18),
-              /// COUNTRY
-              _fieldLabel("Country"),
-              const SizedBox(height: 8),
-
-              _dropdownField(
-                value: country,
-                items: const ["Nigeria", "Ghana", "Kenya"],
-                onChanged: (value) {
-                  setState(() {
-                    country = value!;
-                  });
-                  _onDropdownChanged();
-                },
-              ),
-              const SizedBox(height: 18),
-              /// STATE + CITY
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _fieldLabel("State"),
-                        const SizedBox(height: 8),
-                        _dropdownField(
-                          value: state,
-                          items: const ["Enugu", "Lagos", "Abuja"],
-                          onChanged: (value) {
-                            setState(() {
-                              state = value!;
-                            });
-                            _onDropdownChanged();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _fieldLabel("City"),
-                        const SizedBox(height: 8),
-                        _dropdownField(
-                          value: city,
-                          items: const ["Enugu", "Nsukka", "Awgu"],
-                          onChanged: (value) {
-                            setState(() {
-                              city = value!;
-                            });
-                            _onDropdownChanged();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 18),
-              /// ADDRESS
-              _fieldLabel("Address"),
-              const SizedBox(height: 8),
-              _customField(
-                controller: addressController,
-                hint: "Enter address",
-              ),
-              const SizedBox(height: 18),
-              /// PASSWORDS
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _fieldLabel("New Password"),
-                        const SizedBox(height: 8),
-                        _customField(
-                          controller: passwordController,
-                          hint: "********",
-                          obscure: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _fieldLabel("Confirm Password"),
-                        const SizedBox(height: 8),
-                        _customField(
-                          controller: confirmPasswordController,
-                          hint: "********",
-                          obscure: true,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 26),
-              /// SHOW BUTTONS ONLY WHEN EDITED
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-
-                child: hasChanges
-                    ? Column(
-                  children: [
-                    /// SAVE BUTTON
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _saveChanges,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                            BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: const Text(
-                          "Save",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                            fontFamily: 'Lexend',
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    /// CANCEL BUTTON
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: ElevatedButton(
-                        onPressed: _cancelChanges,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFBE3E3),
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                            BorderRadius.circular(30),
-                          ),
-                        ),
-                        child: const Text(
-                          "Cancel",
-                          style: TextStyle(
-                            color: Colors.red,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                            fontFamily: 'Lexend',
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-                    : const SizedBox.shrink(),
-              ),
-              const SizedBox(height: 40),
-            ],
           ),
-        ),
-      ),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  /// PROFILE IMAGE
+                  Center(
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).primaryColor,
+                              width: 2,
+                            ),
+                          ),
+                          child: UserAvatar(
+                              image: userProvider.avatar,
+                              initials: userProvider.initials,
+                          ),
+                        ),
+
+                        Positioned(
+                          right: 0,
+                          top: 6,
+                          child: Container(
+                            width: 20,
+                            height: 20,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Iconsax.trash,
+                              size: 14,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  /// IMAGE BUTTONS
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _imageButton(
+                        icon: Icons.camera_outlined,
+                        text: "Snap",
+                        onTap: () {},
+                      ),
+                      const SizedBox(width: 12),
+                      _imageButton(
+                        icon: Icons.cloud_upload_outlined,
+                        text: "Upload",
+                        onTap: () {},
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 26),
+
+                  /// FULL NAME
+                  _fieldLabel("Full Name"),
+                  const SizedBox(height: 8),
+
+                  _customField(
+                    controller: fullNameController,
+                    hint: "Enter full name",
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  /// PHONE
+                  _fieldLabel("Phone Number"),
+                  const SizedBox(height: 8),
+
+                  _customField(
+                    controller: phoneController,
+                    hint: "Enter phone number",
+                    prefix: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(width: 10),
+
+                        Container(
+                          width: 20,
+                          height: 14,
+                          decoration: const BoxDecoration(
+                            image: DecorationImage(
+                              image: AssetImage(
+                                "assets/images/nigeria_flag.png",
+                              ),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 8),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  /// COUNTRY
+                  _fieldLabel("Country"),
+                  const SizedBox(height: 8),
+
+                  _dropdownField(
+                    value: country,
+                    items: const ["Nigeria", "Ghana", "Kenya"],
+                    onChanged: (value) {
+                      setState(() {
+                        country = value!;
+                      });
+
+                      _onDropdownChanged();
+                    },
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  /// STATE + CITY
+                  Row(
+                    children: [
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            _fieldLabel("State"),
+                            const SizedBox(height: 8),
+
+                            _dropdownField(
+                              value: state,
+                              items: const ["Enugu", "Lagos", "Abuja"],
+                              onChanged: (value) {
+                                setState(() {
+                                  state = value!;
+                                });
+
+                                _onDropdownChanged();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            _fieldLabel("City"),
+                            const SizedBox(height: 8),
+
+                            _dropdownField(
+                              value: city,
+                              items: const ["Enugu", "Nsukka", "Awgu"],
+                              onChanged: (value) {
+                                setState(() {
+                                  city = value!;
+                                });
+
+                                _onDropdownChanged();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  /// ADDRESS
+                  _fieldLabel("Address"),
+                  const SizedBox(height: 8),
+
+                  _customField(
+                    controller: addressController,
+                    hint: "Enter address",
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  /// PASSWORDS
+                  Row(
+                    children: [
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            _fieldLabel("New Password"),
+                            const SizedBox(height: 8),
+
+                            _customField(
+                              controller: passwordController,
+                              hint: "********",
+                              obscure: true,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+
+                            _fieldLabel("Confirm Password"),
+                            const SizedBox(height: 8),
+
+                            _customField(
+                              controller: confirmPasswordController,
+                              hint: "********",
+                              obscure: true,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 26),
+
+                  /// SHOW BUTTONS ONLY WHEN EDITED
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+
+                    child: hasChanges
+                        ? Column(
+                      children: [
+
+                        /// SAVE BUTTON
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: _saveChanges,
+
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                              const Color(0xFF6C5DD3),
+
+                              elevation: 0,
+
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(30),
+                              ),
+                            ),
+
+                            child: const Text(
+                              "Save",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                fontFamily: 'Lexend',
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        /// CANCEL BUTTON
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            onPressed: _cancelChanges,
+
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                              const Color(0xFFFBE3E3),
+
+                              elevation: 0,
+
+                              shape: RoundedRectangleBorder(
+                                borderRadius:
+                                BorderRadius.circular(30),
+                              ),
+                            ),
+
+                            child: const Text(
+                              "Cancel",
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                                fontFamily: 'Lexend',
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                        : const SizedBox.shrink(),
+                  ),
+
+                  const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
     );
   }
 
@@ -417,18 +476,23 @@ class _ProfileState extends State<Profile> {
 
         decoration: InputDecoration(
           hintText: hint,
+
           hintStyle: TextStyle(
             color: Colors.grey.shade400,
             fontSize: 13,
             fontFamily: 'Lexend',
           ),
+
           prefixIcon: prefix,
+
           suffixIcon: const Icon(
             Icons.edit_outlined,
             size: 18,
             color: Colors.black54,
           ),
+
           border: InputBorder.none,
+
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 14,
             vertical: 15,
@@ -438,27 +502,10 @@ class _ProfileState extends State<Profile> {
     );
   }
 
-  // picking from Gallery
-  Future<void> _pickImageFromGallery() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
-    }
-  }
-
-  // picking from camera
-  Future<void> _pickImageFromCamera() async {
-    final pickedFile = await _picker.pickImage(source: ImageSource.camera);
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
-    }
-  }
-
+  /// =========================================================
   /// DROPDOWN FIELD
+  /// =========================================================
+
   Widget _dropdownField({
     required String value,
     required List<String> items,
@@ -511,13 +558,11 @@ class _ProfileState extends State<Profile> {
   }) {
     return GestureDetector(
       onTap: onTap,
-
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 10,
         ),
-
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(6),
@@ -525,14 +570,10 @@ class _ProfileState extends State<Profile> {
             color: Colors.grey.shade300,
           ),
         ),
-
         child: Row(
           children: [
-
             Icon(icon, size: 18),
-
             const SizedBox(width: 8),
-
             Text(
               text,
               style: const TextStyle(
