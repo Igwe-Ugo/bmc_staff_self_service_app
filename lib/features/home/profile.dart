@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:bmc_app/core/network/provider/widget.dart';
 import 'package:bmc_app/features/common/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 class Profile extends StatefulWidget {
@@ -12,22 +15,15 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
+  File? _imageFile;
+  final ImagePicker _imagePicker = ImagePicker();
 
   /// CONTROLLERS
-  final TextEditingController fullNameController =
-  TextEditingController(text: "Ugochukwu Orji");
-
-  final TextEditingController phoneController =
-  TextEditingController(text: "+234 9061 686 915");
-
-  final TextEditingController addressController =
-  TextEditingController(text: "329 Agbani Road");
-
-  final TextEditingController passwordController =
-  TextEditingController();
-
-  final TextEditingController confirmPasswordController =
-  TextEditingController();
+  final TextEditingController fullNameController = TextEditingController(text: "Ugochukwu Orji");
+  final TextEditingController phoneController = TextEditingController(text: "+234 9061 686 915");
+  final TextEditingController addressController = TextEditingController(text: "329 Agbani Road");
+  final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
 
   /// DROPDOWNS
   String country = "Nigeria";
@@ -118,7 +114,6 @@ class _ProfileState extends State<Profile> {
                     child: Stack(
                       clipBehavior: Clip.none,
                       children: [
-
                         Container(
                           width: 120,
                           height: 120,
@@ -129,7 +124,8 @@ class _ProfileState extends State<Profile> {
                               width: 2,
                             ),
                           ),
-                          child: UserAvatar(
+                          child: _imageFile == null ? CircleAvatar() // should love at this tomorrow.
+                              : UserAvatar(
                               image: userProvider.avatar,
                               initials: userProvider.initials,
                           ),
@@ -165,13 +161,13 @@ class _ProfileState extends State<Profile> {
                       _imageButton(
                         icon: Icons.camera_outlined,
                         text: "Snap",
-                        onTap: () {},
+                        onTap: _pickImageFromCamera,
                       ),
                       const SizedBox(width: 12),
                       _imageButton(
                         icon: Icons.cloud_upload_outlined,
                         text: "Upload",
-                        onTap: () {},
+                        onTap: _pickImageFromGallery,
                       ),
                     ],
                   ),
@@ -448,6 +444,25 @@ class _ProfileState extends State<Profile> {
         fontFamily: 'Lexend',
       ),
     );
+  }
+
+  // Image Picker - from camera
+  Future<void> _pickImageFromCamera() async {
+    final pickedFile = await _imagePicker.pickImage(source: ImageSource.camera);
+    if (pickedFile != null){
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
+  // Image picker - from gallery
+  Future<void> _pickImageFromGallery() async {
+    final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null){
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
   }
 
   /// =========================================================

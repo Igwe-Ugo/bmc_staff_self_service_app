@@ -5,6 +5,7 @@ import '../home/widget.dart';
 import '../leave/widget.dart';
 import '../models/widget.dart';
 import '../on_boarding/widget.dart';
+import '../rota/widget.dart';
 import 'widget.dart';
 
 class BMCRouter {
@@ -127,7 +128,7 @@ class BMCRouter {
                 routes: <RouteBase>[
                   GoRoute(
                     path: rotaPath,
-                    builder: (context, state) => Container(),
+                    builder: (context, state) => RotaScreen(),
                   ),
                 ]),
             StatefulShellBranch(

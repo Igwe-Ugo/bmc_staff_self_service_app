@@ -61,7 +61,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
       body: SafeArea(
         child: Stack(
           children: [
@@ -70,7 +69,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 _buildAppBar(),
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -79,6 +78,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
                         _buildBalanceSection(),
                         const SizedBox(height: 20),
                         _buildLeaveRequestSection(),
+                        const SizedBox(height: 20),
+                        _buildRequestButton(),
                       ],
                     ),
                   ),
@@ -88,12 +89,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
 
             // Dropdown overlay
             if (_dropdownOpen) _buildDropdownOverlay(),
-
-            // Request Leave button pinned at bottom
-            Positioned(
-              left: 16, right: 16, bottom: 16,
-              child: _buildRequestButton(),
-            ),
           ],
         ),
       ),
@@ -107,14 +102,9 @@ class _LeaveScreenState extends State<LeaveScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.maybePop(context),
-            child: const Icon(Icons.arrow_back_ios, size: 18, color: Color(0xFF1C1C1E)),
-          ),
-          const SizedBox(width: 8),
           const Text(
             'Leave',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1C1C1E)),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
           // Dropdown trigger
@@ -142,7 +132,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                   Icon(
                     _dropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     size: 18,
-                    color: const Color(0xFF6C47FF),
+                    color: Theme.of(context).primaryColor,
                   ),
                 ],
               ),
@@ -165,7 +155,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
         child: Container(
           width: 200,
           decoration: BoxDecoration(
-            color: const Color(0xFF6C47FF),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -189,7 +178,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
                   child: Text(
                     type.label,
                     style: const TextStyle(
-                      color: Colors.white,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),

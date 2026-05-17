@@ -146,11 +146,11 @@ class _BMCHomeState extends State<BMCHome> {
                       SizedBox(height: 32,),
                       _SectionTitle(title: "Recent Notifications", badge: "10", isRota: false,),
                       SizedBox(height: 18,),
-                      _buildNotificationList(),
+                      _buildNotificationList(userProvider),
                       SizedBox(height: 32,),
                       _SectionTitle(title: "Recent Messages", badge: "5", isRota: false,),
                       SizedBox(height: 18,),
-                      _buildMessagesList(),
+                      _buildMessagesList(userProvider),
                       //_showMoreInfoSheet(),
                     ],
                   ),
@@ -653,7 +653,7 @@ class _BMCHomeState extends State<BMCHome> {
     );
   }
 
-  Widget _buildNotificationList() {
+  Widget _buildNotificationList(UserProvider userProvider) {
     final List<Map<String, dynamic>> notifications = [
       {
         'title': 'Availability window open closes 30/05/2026 at 23:59',
@@ -714,24 +714,25 @@ class _BMCHomeState extends State<BMCHome> {
               showModalBottomSheet(
                 context: context,
                 builder: (context) => _showMoreInfoSheet(
+                  userProvider: userProvider,
                   colleague: item['badge'],
                   color: item['borderColor'],
-                  username: "Orji Ugochukwu",
+                  username: userProvider.displayName,
                   userDept: "Nursing",
-                  userAvatar: "assets/images/profile_pic.png",
+                  userAvatar: userProvider.avatar!,
                   title: item['title'],
                   info: item['subtitle'],
                   time: "Yesterday | ${item['time']}",
                 ),
               );
             },
-            child: _buildCard(item),
+            child: _buildCard(item, userProvider),
         );
       },
     );
   }
 
-  Widget _buildMessagesList() {
+  Widget _buildMessagesList(UserProvider userProvider) {
     final List<Map<String, dynamic>> notifications = [
       {
         'title': 'I won’t come to work tomorrow ma',
@@ -786,12 +787,12 @@ class _BMCHomeState extends State<BMCHome> {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final item = notifications[index];
-        return _buildCard(item);
+        return _buildCard(item, userProvider);
       },
     );
   }
 
-  SingleChildScrollView _showMoreInfoSheet({required String colleague, required String title, required Color color, required String username, required String userDept, required String userAvatar, required String info, required String time}){
+  SingleChildScrollView _showMoreInfoSheet({required UserProvider userProvider, required String colleague, required String title, required Color color, required String username, required String userDept, required String userAvatar, required String info, required String time}){
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -806,7 +807,7 @@ class _BMCHomeState extends State<BMCHome> {
                 borderRadius: BorderRadius.circular(16),
                 color: Colors.white,
               ),
-              child: _buildHeaderTile(color: color, title: title, username: username, userDept: userDept, userAvatar: userAvatar, info: info, time: time),
+              child: _buildHeaderTile(userProvider: userProvider,color: color, title: title, username: username, userDept: userDept, userAvatar: userAvatar, info: info, time: time),
             ),
             const SizedBox(height: 24,),
             Container(
@@ -914,7 +915,7 @@ class _BMCHomeState extends State<BMCHome> {
     );
   }
 
-  Widget _buildHeaderTile({required Color color, required String title, required String username, required String userDept, required String userAvatar, required String info, required String time}) {
+  Widget _buildHeaderTile({required UserProvider userProvider, required Color color, required String title, required String username, required String userDept, required String userAvatar, required String info, required String time}) {
     return InkWell(
       onTap: (){},
       borderRadius: BorderRadius.circular(12),
@@ -923,12 +924,10 @@ class _BMCHomeState extends State<BMCHome> {
         child: Row(
           children: [
             // Avatar
-            CircleAvatar(
-                radius: 22,
-                backgroundColor: color,
-                child: CircleAvatar(
-                  backgroundImage: AssetImage(userAvatar),
-                )
+            UserAvatar(
+              image:    userProvider.avatar,
+              initials: userProvider.initials,
+              radius:   22,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1120,7 +1119,7 @@ class _BMCHomeState extends State<BMCHome> {
     );
   }
 
-  Widget _buildCard(Map<String, dynamic> item) {
+  Widget _buildCard(Map<String, dynamic> item, UserProvider userProvider) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1147,9 +1146,10 @@ class _BMCHomeState extends State<BMCHome> {
           CircleAvatar(
             radius: 20,
             backgroundColor: item['badgeTextColor'] as Color,
-            child: CircleAvatar(
+            child: UserAvatar(
+                image: userProvider.avatar,
+                initials: userProvider.initials,
               radius: 18,
-              backgroundImage: AssetImage("assets/images/profile_pic.png"),
             ),
           ),
           const SizedBox(width: 12),
