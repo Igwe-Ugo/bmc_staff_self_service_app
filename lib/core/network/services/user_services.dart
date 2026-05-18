@@ -17,7 +17,7 @@ class UserServices {
     }
   }
 
-  /// GET /users/{id}
+  /*/// GET /users/{id}
   Future<UserModel> getUserById(String id) async {
     try {
       final response = await _dio.get(
@@ -42,5 +42,5 @@ class UserServices {
     } on DioException catch (e) {
       throw e.error as ApiException;
     }
-  }
+  }*/
 }

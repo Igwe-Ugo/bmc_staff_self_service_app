@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class CustomTextInput extends StatefulWidget {
   final String hint;
@@ -30,9 +29,10 @@ class _CustomTextInputState extends State<CustomTextInput> {
       controller: widget.controller,
       obscureText: widget.isPassword ? _obscure : false,
       maxLines: 1,
-      style: const TextStyle(
+      style: TextStyle(
         fontFamily: 'Lexend',
         fontSize: 14,
+        color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
       ),
       decoration: InputDecoration(
         hintText: widget.hint,

@@ -114,6 +114,7 @@ class _RotaScreenState extends State<RotaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [

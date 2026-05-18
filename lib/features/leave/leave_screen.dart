@@ -61,6 +61,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -196,7 +197,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
   Widget _buildCalendarCard() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -228,12 +229,11 @@ class _LeaveScreenState extends State<LeaveScreen> {
           titleTextStyle: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
-            color: Color(0xFF1C1C1E),
           ),
           leftChevronIcon: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: const Color(0xFF6C47FF),
+              color: Theme.of(context).primaryColor,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.chevron_left, color: Colors.white, size: 18),
@@ -241,7 +241,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
           rightChevronIcon: Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: const Color(0xFF6C47FF),
+              color: Theme.of(context).primaryColor,
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.chevron_right, color: Colors.white, size: 18),
@@ -252,30 +252,28 @@ class _LeaveScreenState extends State<LeaveScreen> {
           weekdayStyle: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF8E8E93),
           ),
           weekendStyle: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Color(0xFF8E8E93),
           ),
         ),
         calendarStyle: CalendarStyle(
           outsideDaysVisible: false,
           todayDecoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFF6C47FF), width: 1.5),
+            border: Border.all(color: Theme.of(context).primaryColor, width: 1.5),
             borderRadius: BorderRadius.circular(8),
           ),
-          todayTextStyle: const TextStyle(
-            color: Color(0xFF6C47FF),
+          todayTextStyle: TextStyle(
+            color: Theme.of(context).primaryColor,
             fontWeight: FontWeight.bold,
           ),
           selectedDecoration: BoxDecoration(
-            color: const Color(0xFF6C47FF),
+            color: Theme.of(context).primaryColor,
             borderRadius: BorderRadius.circular(8),
           ),
-          defaultTextStyle: const TextStyle(fontSize: 13, color: Color(0xFF1C1C1E)),
-          weekendTextStyle: const TextStyle(fontSize: 13, color: Color(0xFF1C1C1E)),
+          defaultTextStyle: const TextStyle(fontSize: 13),
+          weekendTextStyle: const TextStyle(fontSize: 13),
           cellMargin: const EdgeInsets.all(3),
         ),
         calendarBuilders: CalendarBuilders(

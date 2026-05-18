@@ -8,7 +8,8 @@ abstract class Styles {
     return ThemeData(
       visualDensity: VisualDensity.adaptivePlatformDensity,
       primaryColor: const Color(0xff645AB5),
-      scaffoldBackgroundColor: isDarkTheme ? Colors.black : const Color(0xffF5F5F5),
+      scaffoldBackgroundColor: isDarkTheme ? const Color(0xff202039CC) : const Color(
+          0xcc202039),
       indicatorColor: isDarkTheme ? const Color(0xff0E1D36) : const Color(0xffCBDCF8),
       hintColor: isDarkTheme ? const Color(0xff280C0B) : const Color(0xffEECED3),
       highlightColor: isDarkTheme ? const Color(0xff372901) : const Color(0xffFCE192),

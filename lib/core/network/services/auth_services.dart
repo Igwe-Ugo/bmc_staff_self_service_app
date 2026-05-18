@@ -1,6 +1,7 @@
 // auth_services.dart
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../core/storage/secure_storage.dart';
 import '../../errors/api_exceptions.dart';
 import '../api_client/widget.dart';
@@ -70,10 +71,13 @@ class AuthServices {
 
       print('Login successful! Access token received: ${loginResponse.accessToken.substring(0, 20)}...');
 
-      // Persist tokens securely
-      await _storage.saveAccessToken(loginResponse.accessToken);
-      if (loginResponse.refreshToken != null) {
+      // ✅ Only save refresh token if it actually exists
+      if (loginResponse.refreshToken != null &&
+          loginResponse.refreshToken!.isNotEmpty) {
         await _storage.saveRefreshToken(loginResponse.refreshToken!);
+        debugPrint('Refresh token saved');
+      } else {
+        debugPrint('Warning: No refresh token in login response');
       }
 
       return loginResponse;

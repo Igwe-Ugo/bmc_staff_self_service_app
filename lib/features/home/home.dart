@@ -77,6 +77,7 @@ class _BMCHomeState extends State<BMCHome> {
         }
 
         return Scaffold(
+          backgroundColor: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
           body: Stack(
             children: [
               SingleChildScrollView(
@@ -293,7 +294,7 @@ class _BMCHomeState extends State<BMCHome> {
 
   Widget _topNavBar(BuildContext context, {required VoidCallback onProfileTap, required UserProvider userProvider}){
     return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).primaryColor.withOpacity(0.8),
       height: 100,
       padding: EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -331,7 +332,6 @@ class _BMCHomeState extends State<BMCHome> {
                     currentDate,
                     style: TextStyle(
                       fontSize: 10,
-                      color: Colors.grey.shade600,
                       fontFamily: 'Lexend',
                     ),
                   ),
@@ -350,11 +350,14 @@ class _BMCHomeState extends State<BMCHome> {
           ),
           Spacer(),
           GestureDetector(
-            onTap: (){},
+            onTap: () {
+              final themeProvider = Provider.of<DarkThemeProvider>(context, listen: false,);
+              themeProvider.darkTheme = !themeProvider.darkTheme;
+              },
             child: CircleAvatar(
               radius: 20,
               backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
-              child: Icon(Iconsax.moon, size: 20, color: Theme.of(context).brightness == Brightness.dark ? Colors.white: Colors.black,),
+              child: Icon(Provider.of<DarkThemeProvider>(context).darkTheme ? Iconsax.sun : Iconsax.moon, size: 20, color: Theme.of(context).brightness == Brightness.dark ? Colors.white: Colors.black,),
             ),
           ),
           const SizedBox(width: 16,),

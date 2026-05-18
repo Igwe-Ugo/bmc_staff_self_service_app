@@ -6,7 +6,8 @@ class UserModel {
   final String? image;
   final String initials;
   final List<String> privileges;
-  final String? defaultDept;        // ← replaces dnd + protected
+  final String? defaultDept;
+  final String? personnelID;
 
   const UserModel({
     required this.id,
@@ -17,6 +18,7 @@ class UserModel {
     required this.initials,
     required this.privileges,
     this.defaultDept,
+    this.personnelID
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -38,6 +40,7 @@ class UserModel {
           .toList(),
       defaultDept: json['defaultDept'] as String?   // ← from API
           ?? json['default_dept']  as String?,
+      personnelID: json['personnelID'] as String? ?? json['personnelID'] as String?
     );
   }
 
@@ -50,6 +53,7 @@ class UserModel {
     'initials':    initials,
     'privileges':  privileges,
     'defaultDept': defaultDept,
+    'personnelID': personnelID
   };
 
   bool hasPrivilege(String privilege) => privileges.contains(privilege);
@@ -63,6 +67,7 @@ class UserModel {
     String?       initials,
     List<String>? privileges,
     String?       defaultDept,
+    String? personnelID,
   }) =>
       UserModel(
         id:          id          ?? this.id,
@@ -73,6 +78,7 @@ class UserModel {
         initials:    initials    ?? this.initials,
         privileges:  privileges  ?? this.privileges,
         defaultDept: defaultDept ?? this.defaultDept,
+        personnelID: personnelID ?? this.personnelID
       );
 
   @override

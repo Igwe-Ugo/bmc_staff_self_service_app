@@ -36,17 +36,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.topLeft,
                   child: GestureDetector(
-                    onTap: GoRouter.of(context).pop,
+                    onTap: Navigator.of(context).pop,
                     child: CircleAvatar(
                       radius: 14,
                       backgroundColor: Colors.grey.shade300,
-                      child: Icon(Icons.arrow_back, size: 16, weight: 20,),
+                      child: Icon(Icons.arrow_back, size: 16, weight: 20, color: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.grey.shade300,),
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 120),
-
                 /// 🔹 LOGO
                 Image.asset(
                   'assets/images/bmc_image.png',
@@ -65,51 +64,44 @@ class _LoginScreenState extends State<LoginScreen> {
                     letterSpacing: 1,
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
-                const Text(
+                Text(
                   "Please enter you credentials to log in",
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w300,
                     fontFamily: 'Lexend',
-                    color: Colors.grey,
+                    color: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.grey,
                   ),
                 ),
-
                 const SizedBox(height: 25),
-
                 /// 🔹 USERNAME
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     "Username",
                     style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.grey,
                         fontFamily: 'Lexend',
-                        color: Theme.of(context).disabledColor,
                         fontWeight: FontWeight.w400,
                         fontSize: 16),
                   ),
                 ),
                 const SizedBox(height: 16),
-
                 CustomTextInput(
                   controller: _usernameController,
                   hint: "John",
                   prefixIcon: Icons.person,
                 ),
-
                 const SizedBox(height: 24),
-
                 /// 🔹 PASSWORD
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     "Password",
                     style: TextStyle(
+                        color: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.grey,
                         fontFamily: 'Lexend',
-                        color: Theme.of(context).disabledColor,
                         fontWeight: FontWeight.w400,
                         fontSize: 16),
                   ),
@@ -143,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
+                    onPressed: _isLoading == true ? null : _login,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -151,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: _isLoading
+                    child: _isLoading == true
                         ? const SizedBox(
                       width: 20,
                       height: 20,
@@ -195,9 +187,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final authProvider = context.read<AuthProvider>();
     final userProvider = context.read<UserProvider>();
     final success = await authProvider.login(username, password, userProvider);
-
-    if (!mounted) return;
-
+    setState(() {
+      _isLoading = true;
+    });
     if (success) {
       showMessage(
         'Welcome back! Redirecting you now.',
@@ -205,10 +197,16 @@ class _LoginScreenState extends State<LoginScreen> {
         status: MessageStatus.success,
         title: 'Login Successful',
       );
-      await Future.delayed(const Duration(milliseconds: 800));
+      await Future.delayed(const Duration(milliseconds: 200));
       if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+      });
       GoRouter.of(context).go(BMCRouter.homePath);
     } else {
+      setState(() {
+        _isLoading = false;
+      });
       showMessage(
         authProvider.errorMessage ?? 'Login failed.',
         context,

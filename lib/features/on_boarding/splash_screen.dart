@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:go_router/go_router.dart';
 
 import '../common/widget.dart';
-import 'widget.dart';
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {

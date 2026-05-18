@@ -1,5 +1,6 @@
 // lib/features/auth/providers/auth_provider.dart
 
+import 'package:bmc_app/core/storage/secure_storage.dart';
 import 'package:flutter/material.dart';
 import '../models/widget.dart';
 import '../services/auth_services.dart';
@@ -99,14 +100,28 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Check if user is already logged in (e.g., on app start)
-  Future<void> checkAuthStatus() async {
-    final isLoggedIn = await _authServices.isLoggedIn();
-    if (isLoggedIn) {
-      _state = AuthState.success;
-    } else {
+  // Call this from your router or app startup
+  Future<void> checkAuthStatus(UserProvider userProvider) async {
+    final hasSession = await SecureStorage.instance.hasValidSession();
+
+    if (!hasSession) {
+      // No tokens at all — go straight to login
       _state = AuthState.idle;
+      return;
     }
-    notifyListeners();
+
+    // Has tokens — try to load user
+    try {
+      await userProvider.fetchMe();
+      _state = AuthState.success;
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        // Token expired AND refresh failed — clear and force login
+        await SecureStorage.instance.clearAll();
+        userProvider.clear();
+        _state = AuthState.idle;
+      }
+    }
   }
 
   void reset() {

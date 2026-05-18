@@ -1,72 +1,125 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import '../../storage/secure_storage.dart';
 import '../api_client/widget.dart';
 
 class AuthInterceptor extends Interceptor {
-  final Dio dio;
+  final Dio _dio;
   final SecureStorage _storage = SecureStorage.instance;
 
-  AuthInterceptor(this.dio);
+  // Prevents infinite retry loops
+  bool _isRefreshing = false;
 
-  // 1. Attach access token to every request
+  AuthInterceptor(this._dio);
+
+  // ── 1. Attach access token to every outgoing request ─────────────────────
   @override
   Future<void> onRequest(
       RequestOptions options,
       RequestInterceptorHandler handler,
       ) async {
     final token = await _storage.getAccessToken();
+
     if (token != null) {
       options.headers['Authorization'] = 'Bearer $token';
     }
+
+    debugPrint('→ [${options.method}] ${options.path}');
     handler.next(options);
   }
 
-  // 2. On 401 → try to refresh the token, then retry the original request
+  // ── 2. On 401 → attempt token refresh, then retry original request ────────
   @override
   Future<void> onError(
       DioException err,
       ErrorInterceptorHandler handler,
       ) async {
-    if (err.response?.statusCode == 401) {
-      final refreshed = await _tryRefresh();
-      if (refreshed) {
-        // Retry original request with new token
-        final opts = err.requestOptions;
-        final token = await _storage.getAccessToken();
-        opts.headers['Authorization'] = 'Bearer $token';
-        try {
-          final response = await dio.fetch(opts);
-          return handler.resolve(response);
-        } catch (_) {}
-      }
-      // Refresh failed → clear storage (force logout)
-      await _storage.clearAll();
-    }
-    handler.next(err);
-  }
+    final statusCode = err.response?.statusCode;
+    final requestPath = err.requestOptions.path;
 
-  Future<bool> _tryRefresh() async {
+    // Don't retry if:
+    // - Not a 401
+    // - Already on the refresh endpoint (avoid infinite loop)
+    // - Already mid-refresh
+    if (statusCode != 401 ||
+        requestPath == ApiEndpoints.refresh ||
+        _isRefreshing) {
+      handler.next(err);
+      return;
+    }
+
+    _isRefreshing = true;
+
     try {
       final refreshToken = await _storage.getRefreshToken();
-      if (refreshToken == null) return false;
 
-      final response = await dio.post(
-        ApiEndpoints.refresh,
-        data: {'refresh_token': refreshToken},
-        options: Options(headers: {'Authorization': ''}), // skip auth interceptor
+      // ✅ No refresh token stored — clear everything, force logout
+      if (refreshToken == null || refreshToken.isEmpty) {
+        debugPrint('No refresh token found — clearing session');
+        await _storage.clearAll();
+        _isRefreshing = false;
+        handler.next(err);
+        return;
+      }
+
+      // ✅ Call refresh endpoint with the token in the body
+      final refreshDio = Dio(
+        BaseOptions(
+          baseUrl: ApiEndpoints.baseUrl,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept':        'application/json',
+            // x-api-key still needed on refresh
+            ApiEndpoints.apiKeyHeader: ApiEndpoints.apiKey,
+          },
+        ),
       );
 
-      final newToken = response.data['access_token'] as String?;
-      if (newToken == null) return false;
+      final refreshResponse = await refreshDio.post(
+        ApiEndpoints.refresh,
+        data: {
+          'refreshToken': refreshToken,   // ✅ matches your API's expected key
+        },
+      );
 
-      await _storage.saveAccessToken(newToken);
+      // ✅ Unwrap the response — handle { data: { accessToken } } or flat
+      final payload = refreshResponse.data['data'] ?? refreshResponse.data;
+      final newAccessToken  = payload['accessToken']?.toString()
+          ?? payload['access_token']?.toString();
+      final newRefreshToken = payload['refreshToken']?.toString()
+          ?? payload['refresh_token']?.toString();
 
-      final newRefresh = response.data['refresh_token'] as String?;
-      if (newRefresh != null) await _storage.saveRefreshToken(newRefresh);
+      if (newAccessToken == null || newAccessToken.isEmpty) {
+        throw Exception('Refresh response missing accessToken');
+      }
 
-      return true;
-    } catch (_) {
-      return false;
+      // Save new tokens
+      await _storage.saveAccessToken(newAccessToken);
+      if (newRefreshToken != null && newRefreshToken.isNotEmpty) {
+        await _storage.saveRefreshToken(newRefreshToken);
+      }
+
+      debugPrint('Token refreshed successfully');
+
+      // ✅ Retry the original failed request with the new token
+      final retryOptions = err.requestOptions;
+      retryOptions.headers['Authorization'] = 'Bearer $newAccessToken';
+
+      final retryResponse = await _dio.fetch(retryOptions);
+      _isRefreshing = false;
+      handler.resolve(retryResponse);
+
+    } catch (e) {
+      debugPrint('Token refresh failed: $e — clearing session');
+      await _storage.clearAll();
+      _isRefreshing = false;
+      handler.next(err);
     }
+  }
+
+  @override
+  void onResponse(Response response, ResponseInterceptorHandler handler) {
+    debugPrint('← [${response.statusCode}] ${response.requestOptions.path}');
+    handler.next(response);
   }
 }

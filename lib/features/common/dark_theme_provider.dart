@@ -18,9 +18,20 @@ class DarkThemeProvider with ChangeNotifier {
   BMCStaffPreferences bmcStaffPreferences = BMCStaffPreferences();
   bool _darkTheme = false;
   bool get darkTheme => _darkTheme;
+
+  DarkThemeProvider() {
+    getCurrentTheme();
+  }
+
+  void getCurrentTheme() async {
+    _darkTheme = await bmcStaffPreferences.getTheme();
+    notifyListeners();
+  }
+
   set darkTheme(bool value) {
     _darkTheme = value;
     bmcStaffPreferences.setDarkTheme(value);
     notifyListeners();
   }
 }
+

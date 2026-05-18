@@ -1,7 +1,10 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
+import 'core/network/api_client/widget.dart';
+import 'core/storage/secure_storage.dart';
 import 'features/common/widget.dart';
 import '../../core/network/provider/widget.dart';
 
@@ -48,7 +51,8 @@ class _BMCStaffSelfServiceState extends State<BMCStaffSelfService>{
           },
         ),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => UserProvider())
+        ChangeNotifierProvider(create: (_) => UserProvider()),
+        ChangeNotifierProvider(create: (_) => AvailabilityProvider()),
       ],
       child: Consumer<DarkThemeProvider>(
           builder: (context, themeData, child){

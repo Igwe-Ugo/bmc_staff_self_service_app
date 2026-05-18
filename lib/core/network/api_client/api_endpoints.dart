@@ -19,12 +19,13 @@ class ApiEndpoints {
   // Routes
   static const String login          = '/mobapp/auth/login';
   static const String logout         = '/mobapp/auth/logout';
-  static const String refresh        = '/mobapp/auth/refresh';
+  static const String refresh = '/mobapp/auth/refresh';
   static const String me             = '/users/me';
-  static const String userById       = '/users/{id}';
-  static const String updateProfile  = '/users/me';
-  static const String uploadDocument = '/users/me/documents';
-  static const String deleteDocument = '/users/me/documents/{id}';
+
+  // ── Availability ──────────────────────────────────────────────────────────────
+  static const String availabilityCurrentWindow = '/hr/availability/windows/current';
+  static const String availabilityMyCalendar    = '/hr/availability/my-calendar';
+  static const String availabilityBulk          = '/hr/availability/bulk';
 
   static String fill(String path, Map<String, String> params) {
     var result = path;

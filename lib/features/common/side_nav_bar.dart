@@ -16,7 +16,7 @@ class ProfileDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Theme.of(context).scaffoldBackgroundColor,
+      color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Colors.black,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(30, 50, 30, 0),
@@ -41,7 +41,7 @@ class ProfileDrawer extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).hoverColor,
+                      color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).primaryColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
@@ -82,8 +82,8 @@ class ProfileDrawer extends StatelessWidget {
                                         color: Theme.of(context).primaryColor,
                                       ),
                                     ),
-                                    backgroundColor:
-                                    Theme.of(context).primaryColor.withOpacity(0.1),
+                                    backgroundColor: Theme.of(context).brightness == Brightness.light ?
+                                    Theme.of(context).primaryColor.withOpacity(0.1) : Colors.white,
                                     side: BorderSide.none,
                                     padding: EdgeInsets.zero,
                                   );
@@ -103,7 +103,7 @@ class ProfileDrawer extends StatelessWidget {
               /// 🔹 PERSONAL ITEMS — no user data needed, no Consumer
               Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).hoverColor,
+                  color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).primaryColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: _personalMenuItem(context),
@@ -114,7 +114,7 @@ class ProfileDrawer extends StatelessWidget {
               /// 🔹 SYSTEM ITEMS
               Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).hoverColor,
+                  color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).primaryColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: _systemMenuItems(context),
@@ -220,8 +220,9 @@ class ProfileDrawer extends StatelessWidget {
                   ),
                 ),
                 onTap: () {
-                  userProvider.clear();
+                  showMessage("Logout Successful!", context, status: MessageStatus.success);
                   GoRouter.of(context).go(BMCRouter.loginPath);
+                  userProvider.clear();
                 },
               );
             },

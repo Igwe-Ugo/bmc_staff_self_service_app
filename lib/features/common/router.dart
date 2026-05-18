@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../authentication/widget.dart';
+import '../availability/widget.dart';
 import '../home/widget.dart';
 import '../leave/widget.dart';
 import '../models/widget.dart';
@@ -121,7 +122,7 @@ class BMCRouter {
                 routes: <RouteBase>[
                   GoRoute(
                       path: availabilityPath,
-                      builder: (context, state) => Container()),
+                      builder: (context, state) => AvailabilityScreen()),
                 ]),
             StatefulShellBranch(
                 navigatorKey: rotaTabNavigationKey,

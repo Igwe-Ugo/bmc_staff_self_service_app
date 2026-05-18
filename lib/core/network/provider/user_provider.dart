@@ -53,7 +53,7 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  // ── Fetch any user by ID ─────────────────────────────────────────────────────
+  /*// ── Fetch any user by ID ─────────────────────────────────────────────────────
   Future<UserModel?> fetchUserById(String id) async {
     try {
       return await _userServices.getUserById(id);
@@ -81,7 +81,7 @@ class UserProvider extends ChangeNotifier {
       _setState(UserState.error);
       return false;
     }
-  }
+  }*/
 
   // ── Clear on logout ──────────────────────────────────────────────────────────
   void clear() {

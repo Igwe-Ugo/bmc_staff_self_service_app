@@ -17,7 +17,7 @@ class MessageBadgeIcon extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: Theme.of(context).hoverColor,
+            color: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
             borderRadius: BorderRadius.circular(20)
         ),
         child: Stack(
