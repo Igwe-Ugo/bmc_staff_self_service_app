@@ -24,9 +24,13 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // ✅ Uses personnelId from UserModel — null-safe
       final user = context.read<UserProvider>().user;
-      final personnelId = user?.personnelID;
+      final personnelId = user?.personnelId;
+      debugPrint('🔍 USER DEBUG IN AVAILABILITY SCREEN:');
+      debugPrint('   personnelID: ${user?.personnelId}');
+      debugPrint('   Full user: ${user?.toJson()}');   // This will show everything
 
       if (personnelId == null) {
+        debugPrint('❌ personnelId is null → Button will be disabled');
         // personnelId not yet assigned by HR — fetch window only
         context.read<AvailabilityProvider>().refreshWindow();
       } else {
@@ -166,7 +170,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
           setState(() => _focusedDay = focused);
           // ✅ Reload slots when user swipes to a new month
           final user = context.read<UserProvider>().user;
-          if (user?.personnelID != null) {
+          if (user?.personnelId != null) {
             provider.changeMonth(focused);
           }
         },
@@ -317,8 +321,9 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
 
     // ✅ personnelId null check — button disabled if HR hasn't assigned one
     final user        = context.read<UserProvider>().user;
-    final personnelId = user?.personnelID;
-    final canSchedule = isOpen && personnelId != null;
+    final personnelId = user?.personnelId;
+    // Change to (temporary for testing):
+    final canSchedule = isOpen;   // Allow even if personnelId is null
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -385,7 +390,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
           // Schedule button
           GestureDetector(
             onTap: canSchedule
-                ? () => _showAvailabilitySheet(provider, personnelId!)
+                ? () => _showAvailabilitySheet(provider, personnelId ?? "demo-placeholder")
                 : null,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 300),

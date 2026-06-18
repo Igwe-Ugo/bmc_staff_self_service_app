@@ -7,9 +7,9 @@ class UserServices {
   final Dio _dio = ApiClient.instance.dio;
 
   /// GET /users/me
-  Future<UserModel> getMe() async {
+  Future<UserModel> getUser() async {
     try {
-      final response = await _dio.get(ApiEndpoints.me);
+      final response = await _dio.get(ApiEndpoints.login);
       final payload  = response.data['data'] ?? response.data;
       return UserModel.fromJson(payload as Map<String, dynamic>);
     } on DioException catch (e) {

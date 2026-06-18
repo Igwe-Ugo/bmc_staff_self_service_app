@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../core/network/api_client/widget.dart';
 import '../../core/network/provider/widget.dart';
 import '../common/widget.dart'; // adjust path
 
@@ -173,6 +174,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
+    setState(() {
+      _isLoading = true;
+    });
 
     if (username.isEmpty || password.isEmpty) {
       showMessage(
@@ -187,10 +191,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final authProvider = context.read<AuthProvider>();
     final userProvider = context.read<UserProvider>();
     final success = await authProvider.login(username, password, userProvider);
-    setState(() {
-      _isLoading = true;
-    });
+
     if (success) {
+      // After successful login and setUserFromLogin()
+      ApiClient.instance.setUserProvider(userProvider);
       showMessage(
         'Welcome back! Redirecting you now.',
         context,

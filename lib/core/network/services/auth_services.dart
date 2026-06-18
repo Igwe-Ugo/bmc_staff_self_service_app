@@ -69,9 +69,12 @@ class AuthServices {
       // Create LoginResponse with safe parsing
       final loginResponse = LoginResponse.fromJson(jsonData);
 
-      print('Login successful! Access token received: ${loginResponse.accessToken.substring(0, 20)}...');
+      print("Token before saving");
+      print(loginResponse.accessToken);
 
-      // ✅ Only save refresh token if it actually exists
+      // ✅ Save tokens
+      await _storage.saveAccessToken(loginResponse.accessToken);
+
       if (loginResponse.refreshToken != null &&
           loginResponse.refreshToken!.isNotEmpty) {
         await _storage.saveRefreshToken(loginResponse.refreshToken!);
@@ -79,6 +82,9 @@ class AuthServices {
       } else {
         debugPrint('Warning: No refresh token in login response');
       }
+      // ✅ Verify saved token
+      final token = await _storage.getAccessToken();
+      print("STORED TOKEN after saving: $token");
 
       return loginResponse;
 

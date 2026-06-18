@@ -107,9 +107,9 @@ class AvailabilityProvider extends ChangeNotifier {
   Future<void> _fetchCurrentWindow() async {
     try {
       _window = await _services.getCurrentWindow();
+      debugPrint('✅ Window fetched: ${_window?.toJson()}');  // Nice formatted output
       _startTimer();
     } on ApiException catch (e) {
-      // Window fetch failure is non-fatal — log but don't block the screen
       debugPrint('Window fetch failed: ${e.message}');
     }
   }
@@ -123,7 +123,11 @@ class AvailabilityProvider extends ChangeNotifier {
   // ── 2. Fetch my calendar ──────────────────────────────────────────────────
   Future<void> _fetchMyCalendar(String month) async {
     try {
-      _slots        = await _services.getMyCalendar(month);
+      _slots = await _services.getMyCalendar(month);
+      debugPrint('✅ Slots fetched for $month: ${_slots.length} slots');
+      for (var slot in _slots) {
+        debugPrint('   - ${slot.date} → ${slot.availability.label}');
+      }
       _currentMonth = month;
       _setState(AvailabilityState.success);
     } on ApiException catch (e) {

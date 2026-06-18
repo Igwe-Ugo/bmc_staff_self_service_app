@@ -53,6 +53,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
     final entries = staffServiceFeatures.entries.toList();
 
     return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 60),

@@ -357,7 +357,7 @@ class _BMCHomeState extends State<BMCHome> {
             child: CircleAvatar(
               radius: 20,
               backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
-              child: Icon(Provider.of<DarkThemeProvider>(context).darkTheme ? Iconsax.sun : Iconsax.moon, size: 20, color: Theme.of(context).brightness == Brightness.dark ? Colors.white: Colors.black,),
+              child: Icon(Provider.of<DarkThemeProvider>(context).darkTheme ? Iconsax.sun_1 : Iconsax.moon, size: 20, color: Theme.of(context).brightness == Brightness.dark ? Colors.white: Colors.black,),
             ),
           ),
           const SizedBox(width: 16,),

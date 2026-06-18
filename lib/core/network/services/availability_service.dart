@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../core/errors/api_exceptions.dart';
 import '../api_client/widget.dart';
 import '../models/availability_model.dart';
@@ -12,10 +13,16 @@ class AvailabilityServices {
   Future<HrAvailabilityWindow?> getCurrentWindow() async {
     try {
       final response = await _dio.get(ApiEndpoints.availabilityCurrentWindow);
-      final payload  = _unwrap(response.data);
+
+      debugPrint('📡 STATUS CODE: ${response.statusCode}');
+      debugPrint('📡 FULL RESPONSE: ${response.data}');   // ← Raw response
+
+      final payload = _unwrap(response.data);
       if (payload == null) return null;
+      print('PAYLOAD ===> ${response.data}');
       return HrAvailabilityWindow.fromJson(payload as Map<String, dynamic>);
     } on DioException catch (e) {
+      debugPrint('❌ API ERROR: ${e.response?.data}');
       throw e.error as ApiException;
     }
   }
@@ -63,7 +70,29 @@ class AvailabilityServices {
     }
   }
 
+  // ── 4. DELETE /hr/availability/{id} ───────────────────────────────────────
+  Future<void> deleteAvailability(String slotId) async {
+    try {
+      final response = await _dio.delete(
+        ApiEndpoints.fill(ApiEndpoints.deleteAvailability, {'slotId': slotId}),
+      );
+      _unwrap(response.data);
+    } on DioException catch (e) {
+      throw e.error as ApiException;
+    }
+  }
+
   // ── Helper ────────────────────────────────────────────────────────────────
-  dynamic _unwrap(dynamic data) =>
-      (data is Map && data.containsKey('data')) ? data['data'] : data;
+  // Add this at the top of the class or inside methods
+  dynamic _unwrap(dynamic data) {
+    final payload = (data is Map && data.containsKey('data')) ? data['data'] : data;
+
+    // 🔥 Print payload for debugging
+    debugPrint('🔍 API PAYLOAD: $payload');
+    if (payload != null) {
+      debugPrint('🔍 PAYLOAD TYPE: ${payload.runtimeType}');
+    }
+
+    return payload;
+  }
 }

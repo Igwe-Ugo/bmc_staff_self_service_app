@@ -17,15 +17,15 @@ class ApiEndpoints {
   static const String apiKeyHeader = 'x-api-key';
 
   // Routes
-  static const String login          = '/mobapp/auth/login';
-  static const String logout         = '/mobapp/auth/logout';
+  static const String login = '/mobapp/auth/login';
+  static const String logout = '/mobapp/auth/logout';
   static const String refresh = '/mobapp/auth/refresh';
-  static const String me             = '/users/me';
 
   // ── Availability ──────────────────────────────────────────────────────────────
-  static const String availabilityCurrentWindow = '/hr/availability/windows/current';
-  static const String availabilityMyCalendar    = '/hr/availability/my-calendar';
-  static const String availabilityBulk          = '/hr/availability/bulk';
+  static const String availabilityCurrentWindow = '/hr/availability/windows/current'; // getting the open window and can only be seen when made available. WHich would be readonly when not available
+  static const String availabilityMyCalendar = '/hr/availability/my-calendar'; // fetches the calandar itself.
+  static const String availabilityBulk = '/hr/availability/bulk'; // for saving the availability
+  static const String deleteAvailability = '/hr/availability/{slotId}'; // for deleting the availability
 
   static String fill(String path, Map<String, String> params) {
     var result = path;
