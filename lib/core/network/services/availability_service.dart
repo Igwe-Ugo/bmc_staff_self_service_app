@@ -111,8 +111,12 @@ class AvailabilityServices {
   Future<void> deleteAvailability(String id) async {
     try {
       await _dio.delete(
-        '${ApiEndpoints.deleteAvailability}/$id',
+        ApiEndpoints.fill(
+          ApiEndpoints.deleteAvailability,
+          {'slotId': id},
+        ),
       );
+
       debugPrint('✅ Slot $id deleted');
     } on DioException catch (e) {
       debugPrint('❌ DELETE ERROR: ${e.response?.data}');

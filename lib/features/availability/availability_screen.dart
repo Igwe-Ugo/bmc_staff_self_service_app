@@ -66,7 +66,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
           body: Column(
             children: [
               if (provider.isLoading)
-                const LinearProgressIndicator(color: Color(0xFF6C47FF)),
+                LinearProgressIndicator(color: Theme.of(context).primaryColor),
 
               Expanded(
                 child: SingleChildScrollView(
@@ -74,13 +74,19 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildAdminBanner(provider),
+                      Align(
+                        alignment: Alignment.bottomCenter,
+                        child: const Text(
+                          "Submit and manage your availability for upcoming months",
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w300),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      _buildWindowBanner(provider),
                       const SizedBox(height: 16),
                       _buildCalendar(provider, canSchedule, personnelId),
                       const SizedBox(height: 40),
-                      _buildChartSection(provider),
-                      const SizedBox(height: 20),
-                      _buildBottomBar(provider, canSchedule, personnelId),
+                      _buildChartSection(provider, canSchedule),
                     ],
                   ),
                 ),
@@ -94,53 +100,148 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
 
   // ── Admin Banner ──────────────────────────────────────────────────────────
 
-  Widget _buildAdminBanner(AvailabilityProvider provider) {
-    final isOpen = provider.isWindowOpen;
+  /// Drop this widget above the calendar in availability_screen.dart.
+  /// Replace _buildAdminBanner() with this, or call it alongside it.
+
+  Widget _buildWindowBanner(AvailabilityProvider provider) {
+    if (!provider.hasWindow) return const SizedBox.shrink();
+
+    final window   = provider.window!;
+    final isOpen   = provider.isWindowOpen;
+    final isPending = provider.isWindowPending;
+    final isClosed  = provider.isWindowClosed;
+
+    // ── Colours ────────────────────────────────────────────────────────────────
+    final Color borderColor = isOpen
+        ? const Color(0xFF27AE60)
+        : isPending
+        ? const Color(0xFFF39C12)
+        : const Color(0xFF8E8E93);
+
+    final Color iconBg = isOpen
+        ? const Color(0xFF27AE60).withOpacity(0.15)
+        : isPending
+        ? const Color(0xFFF39C12).withOpacity(0.15)
+        : const Color(0xFF8E8E93).withOpacity(0.1);
+
+    final Color iconColor = isOpen
+        ? const Color(0xFF27AE60)
+        : isPending
+        ? const Color(0xFFF39C12)
+        : const Color(0xFF8E8E93);
+
+    // ── Title & subtitle ────────────────────────────────────────────────────────
+    final String title = isOpen
+        ? 'Availability window open for ${_fullMonthName(window.month)}'
+        : isPending
+        ? 'Availability window pending for ${_fullMonthName(window.month)}'
+        : 'Availability window closed for ${_fullMonthName(window.month)}';
+
+    final String subtitle = isOpen
+        ? 'Closes ${_formatDateTime(window.closesAt)}'
+        : isPending
+        ? 'Opens ${_formatDateTime(window.opensAt)}'
+        : 'Closed on ${_formatDateTime(window.closesAt)}';
+
+    // ── Pill label ──────────────────────────────────────────────────────────────
+    final String pillLabel = _pillLabel(provider);
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isOpen
-              ? const Color(0xFF6C47FF).withOpacity(0.3)
-              : const Color(0xFFE5E5EA),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6, offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor, width: 1.2),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Calendar icon ────────────────────────────────────────────────────
           Container(
-            width: 32, height: 32,
+            width: 36, height: 36,
             decoration: BoxDecoration(
-              color: isOpen
-                  ? const Color(0xFF6C47FF).withOpacity(0.1)
-                  : const Color(0xFFF2F2F7),
-              shape: BoxShape.circle,
+              color: iconBg,
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(
-              isOpen ? Icons.info_outline : Icons.lock_outline,
-              size: 16,
-              color: isOpen ? const Color(0xFF6C47FF) : const Color(0xFF8E8E93),
-            ),
+            alignment: Alignment.center,
+            child: Icon(Icons.calendar_month_outlined,
+                color: iconColor, size: 18),
           ),
-          const SizedBox(width: 10),
+
+          const SizedBox(width: 12),
+
+          // ── Text block ───────────────────────────────────────────────────────
           Expanded(
-            child: Text(
-              provider.adminBannerMessage,
-              style: const TextStyle(
-                  fontSize: 12, color: Color(0xFF3C3C43), height: 1.4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ),
           ),
+
+          const SizedBox(width: 10),
+
+          // ── Pill badge ───────────────────────────────────────────────────────
+          if (pillLabel.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: borderColor, width: 1.2),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.timer_outlined, size: 12, color: borderColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    pillLabel,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: borderColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
+  }
+
+// ── Pill label helper ─────────────────────────────────────────────────────────
+
+  String _pillLabel(AvailabilityProvider provider) {
+    if (!provider.hasWindow) return '';
+    final remaining = provider.remaining;
+
+    if (provider.isWindowOpen || provider.isWindowPending) {
+      if (remaining.inSeconds <= 0) return '';
+      final days    = remaining.inDays;
+      final hours   = remaining.inHours % 24;
+      final minutes = remaining.inMinutes % 60;
+
+      if (days > 0)    return '$days day${days == 1 ? '' : 's'} left';
+      if (hours > 0)   return '$hours hr${hours == 1 ? '' : 's'} left';
+      if (minutes > 0) return '$minutes min left';
+      return '< 1 min left';
+    }
+    return '';
   }
 
   // ── Calendar ──────────────────────────────────────────────────────────────
@@ -151,6 +252,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       String? personnelId,
       ) {
     return Container(
+      padding: const EdgeInsets.symmetric(vertical: 15),
       decoration: BoxDecoration(
         color: _cardBg(context),
         borderRadius: BorderRadius.circular(16),
@@ -161,84 +263,112 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
           ),
         ],
       ),
-      child: TableCalendar(
-        firstDay:  DateTime(2020),
-        lastDay:   DateTime(2030),
-        focusedDay: _focusedDay,
-        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-        onDaySelected: canSchedule
-            ? (selected, focused) {
-          setState(() {
-            _selectedDay = selected;
-            _focusedDay  = focused;
-          });
-          // Tap a day → open dialog (set or view/delete)
-          _onDayTapped(selected, provider, personnelId ?? 'demo-placeholder');
-        }
-            : (selected, focused) {
-          // Read-only: just move focus, no dialog
-          setState(() {
-            _selectedDay = selected;
-            _focusedDay  = focused;
-          });
-        },
-        onPageChanged: (focused) {
-          setState(() => _focusedDay = focused);
-          if (personnelId != null) {
-            provider.changeMonth(focused);
-          }
-        },
-        calendarFormat: CalendarFormat.month,
-        availableCalendarFormats: const {CalendarFormat.month: 'Month'},
-        headerStyle: HeaderStyle(
-          titleCentered: true,
-          formatButtonVisible: false,
-          titleTextStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+      child: Column(
+        children: [
+          Wrap(
+            spacing: 8, runSpacing: 8,
+            children: HrAvailabilityStatus.values.map((status) {
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: status.bgColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                      color: status.color
+                  ),
+                ),
+                child: Text(
+                  status.label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            }).toList(),
           ),
-          leftChevronIcon: _chevron(Icons.chevron_left, context),
-          rightChevronIcon: _chevron(Icons.chevron_right, context),
-          headerPadding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-        daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-          weekendStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-        ),
-        calendarStyle: CalendarStyle(
-          outsideDaysVisible: false,
-          todayDecoration: BoxDecoration(
-            border: Border.all(color: Theme.of(context).primaryColor, width: 1.5),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          todayTextStyle: TextStyle(
-            color: Theme.of(context).primaryColor.withOpacity(0.2),
-            fontWeight: FontWeight.bold,
-          ),
-          selectedDecoration: BoxDecoration(
-            color: Theme.of(context).primaryColor,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          defaultTextStyle: const TextStyle(fontSize: 13),
-          cellMargin: const EdgeInsets.all(3),
-        ),
-        calendarBuilders: CalendarBuilders(
-          defaultBuilder: (ctx, day, _) {
-            final slot = _slotForDay(day, provider);
-            if (slot != null) {
-              return _coloredCell(day, slot, isToday: false, isSelected: false);
+          TableCalendar(
+            firstDay:  DateTime(2020),
+            lastDay:   DateTime(2030),
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: canSchedule
+                ? (selected, focused) {
+              setState(() {
+                _selectedDay = selected;
+                _focusedDay  = focused;
+              });
+              // Tap a day → open dialog (set or view/delete)
+              _onDayTapped(selected, provider, personnelId ?? 'demo-placeholder');
             }
-            return null;
-          },
-          todayBuilder: (ctx, day, _) {
-            final slot = _slotForDay(day, provider);
-            return _coloredCell(day, slot, isToday: true, isSelected: false);
-          },
-          selectedBuilder: (ctx, day, _) {
-            final slot = _slotForDay(day, provider);
-            return _coloredCell(day, slot, isToday: false, isSelected: true);
-          },
-        ),
+                : (selected, focused) {
+              // Read-only: just move focus, no dialog
+              setState(() {
+                _selectedDay = selected;
+                _focusedDay  = focused;
+              });
+            },
+            onPageChanged: (focused) {
+              setState(() => _focusedDay = focused);
+              if (personnelId != null) {
+                provider.changeMonth(focused);
+              }
+            },
+            calendarFormat: CalendarFormat.month,
+            availableCalendarFormats: const {CalendarFormat.month: 'Month'},
+            headerStyle: HeaderStyle(
+              titleCentered: true,
+              formatButtonVisible: false,
+              titleTextStyle: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+              leftChevronIcon: _chevron(Icons.chevron_left, context),
+              rightChevronIcon: _chevron(Icons.chevron_right, context),
+              headerPadding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            daysOfWeekStyle: const DaysOfWeekStyle(
+              weekdayStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              weekendStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+            calendarStyle: CalendarStyle(
+              outsideDaysVisible: false,
+              todayDecoration: BoxDecoration(
+                border: Border.all(color: Theme.of(context).primaryColor, width: 1.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              todayTextStyle: TextStyle(
+                color: Theme.of(context).primaryColor.withOpacity(0.2),
+                fontWeight: FontWeight.bold,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              defaultTextStyle: const TextStyle(fontSize: 13),
+              cellMargin: const EdgeInsets.all(3),
+            ),
+            calendarBuilders: CalendarBuilders(
+              defaultBuilder: (ctx, day, _) {
+                final slot = _slotForDay(day, provider);
+                if (slot != null) {
+                  return _coloredCell(day, slot, isToday: false, isSelected: false);
+                }
+                return null;
+              },
+              todayBuilder: (ctx, day, _) {
+                final slot = _slotForDay(day, provider);
+                return _coloredCell(day, slot, isToday: true, isSelected: false);
+              },
+              selectedBuilder: (ctx, day, _) {
+                final slot = _slotForDay(day, provider);
+                return _coloredCell(day, slot, isToday: false, isSelected: true);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -252,8 +382,8 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
         required bool isSelected,
       }) {
     final hasSlot   = slot != null;
-    final slotColor = hasSlot ? slot!.availability.color : null;
-    final slotBg    = hasSlot ? slot!.availability.bgColor : null;
+    final slotColor = hasSlot ? slot.availability.color : null;
+    final slotBg    = hasSlot ? slot.availability.bgColor : null;
 
     // When a slot exists, the cell background shows the availability colour
     Color? bg;
@@ -423,6 +553,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
               TextButton(
                 onPressed: () async {
                   Navigator.pop(ctx);
+                  print('Deleting slot id: ${slot.id}');
                   await _deleteSlot(slot, provider);
                 },
                 child: const Text(
@@ -445,17 +576,21 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       children: [
         Icon(icon, size: 16, color: const Color(0xFF8E8E93)),
         const SizedBox(width: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label,
-                style: const TextStyle(
-                    fontSize: 11, color: Color(0xFF8E8E93))),
-            const SizedBox(height: 2),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w500)),
-          ],
+        Expanded( // <-- Added Expanded here to restrict the Column's width
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -730,7 +865,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                           ),
                         ],
                       );
-                      if (!mounted) return;
                       showMessage(
                         success
                             ? 'Availability saved!'
@@ -742,6 +876,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                             : MessageStatus.error,
                         title: success ? 'Done' : 'Error',
                       );
+                      if (!mounted) return;
                     },
                     child: prov.isSubmitting
                         ? const SizedBox(
@@ -799,7 +934,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
 
   // ── Chart Section ─────────────────────────────────────────────────────────
 
-  Widget _buildChartSection(AvailabilityProvider provider) {
+  Widget _buildChartSection(AvailabilityProvider provider, bool canSchedule,) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -865,96 +1000,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     );
   }
 
-  // ── Bottom Bar ────────────────────────────────────────────────────────────
-
-  Widget _buildBottomBar(
-      AvailabilityProvider provider,
-      bool canSchedule,
-      String? personnelId,
-      ) {
-    final isOpen    = provider.isWindowOpen;
-    final isPending = provider.isWindowPending;
-
-    return Container(
-      width: MediaQuery.of(context).size.width * 0.9,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      decoration: BoxDecoration(
-        color: _scaffoldBg(context),
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 12, offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Countdown timer
-          if (isOpen || isPending) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    provider.timerPrefix,
-                    style: const TextStyle(
-                        fontSize: 13,
-                        color: Color(0xFF8E8E93),
-                        fontWeight: FontWeight.w500),
-                  ),
-                  Text(
-                    provider.timerLabel,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: isOpen
-                          ? const Color(0xFFE74C3C)
-                          : const Color(0xFF27AE60),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-          ],
-
-          if (isOpen && personnelId == null) ...[
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text(
-                'Your personnel ID has not been assigned yet. '
-                    'Please contact HR.',
-                textAlign: TextAlign.center,
-                style:
-                TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
-              ),
-            ),
-          ],
-
-          // Hint: tap a day
-          if (canSchedule) ...[
-            const Padding(
-              padding: EdgeInsets.only(bottom: 8),
-              child: Text(
-                'Tap any day on the calendar to set your availability.',
-                textAlign: TextAlign.center,
-                style:
-                TextStyle(fontSize: 12, color: Color(0xFF8E8E93)),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
 
   // ── Theming helpers ───────────────────────────────────────────────────────
 
@@ -984,8 +1029,26 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     return '$wd, ${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
-  String _monthName(int m) => const [
-    '', 'Jan','Feb','Mar','Apr','May','Jun',
-    'Jul','Aug','Sep','Oct','Nov','Dec',
-  ][m];
+  /// Converts "2026-07" → "July 2026"
+  String _fullMonthName(String monthKey) {
+    final parts = monthKey.split('-');
+    if (parts.length < 2) return monthKey;
+    final year  = parts[0];
+    final month = int.tryParse(parts[1]) ?? 0;
+    const names = [
+      '', 'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    return '${names[month]} $year';
+  }
+
+  /// Formats a DateTime as "dd/MM/yyyy at HH:mm"
+  String _formatDateTime(DateTime dt) {
+    final d  = dt.day.toString().padLeft(2, '0');
+    final mo = dt.month.toString().padLeft(2, '0');
+    final y  = dt.year.toString();
+    final h  = dt.hour.toString().padLeft(2, '0');
+    final mi = dt.minute.toString().padLeft(2, '0');
+    return '$d/$mo/$y at $h:$mi';
+  }
 }

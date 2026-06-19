@@ -56,12 +56,11 @@ class AvailabilityProvider extends ChangeNotifier {
   String get adminBannerMessage {
     if (!hasWindow)       return 'No availability window has been set by admin yet.';
     if (isWindowPending) {
-      return 'Admin: Availability for ${_window!.month} is not yet open. '
+      return 'Availability Window for ${_window!.month} is not yet open. '
         'Opens in $timerLabel.';
     }
     if (isWindowOpen) {
-      return 'Admin: Availability for ${_window!.month} is open. '
-        'Click Schedule to set your availability.';
+      return 'Availability Window open for ${_window!.month}\nCloses ${_window!.month} at ${_window!.closesAt.hour}:${_window!.closesAt.minute.toString().padLeft(2, '0')}';
     }
     return 'Admin: Availability is currently closed for ${_window!.month}. '
         'Check back next month.';
