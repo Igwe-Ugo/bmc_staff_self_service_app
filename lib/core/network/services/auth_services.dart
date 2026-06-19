@@ -65,6 +65,8 @@ class AuthServices {
 
       // Ensure required fields exist before parsing
       print('Parsed JSON keys: ${jsonData.keys}');
+      print('Full parsed JSON: $jsonData');
+      print('Refresh token raw value: ${jsonData['refreshToken'] ?? jsonData['refresh_token'] ?? 'NOT PRESENT'}');
 
       // Create LoginResponse with safe parsing
       final loginResponse = LoginResponse.fromJson(jsonData);

@@ -22,16 +22,15 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // ✅ Uses personnelId from UserModel — null-safe
-      final user = context.read<UserProvider>().user;
+      final user        = context.read<UserProvider>().user;
       final personnelId = user?.personnelId;
+
       debugPrint('🔍 USER DEBUG IN AVAILABILITY SCREEN:');
       debugPrint('   personnelID: ${user?.personnelId}');
-      debugPrint('   Full user: ${user?.toJson()}');   // This will show everything
+      debugPrint('   Full user: ${user?.toJson()}');
 
       if (personnelId == null) {
-        debugPrint('❌ personnelId is null → Button will be disabled');
-        // personnelId not yet assigned by HR — fetch window only
+        debugPrint('❌ personnelId is null → fetching window only');
         context.read<AvailabilityProvider>().refreshWindow();
       } else {
         context.read<AvailabilityProvider>().init();
@@ -39,30 +38,33 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     });
   }
 
-  // ── Status lookup from provider slots ────────────────────────────────────────
-  HrAvailabilityStatus? _statusForDay(
-      DateTime day, AvailabilityProvider provider) {
-    return provider.slotForDate(day)?.availability;
-  }
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  HrAvailabilitySlot? _slotForDay(DateTime day, AvailabilityProvider p) =>
+      p.slotForDate(day);
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Consumer<AvailabilityProvider>(
       builder: (context, provider, _) {
+        final user        = context.read<UserProvider>().user;
+        final personnelId = user?.personnelId;
+        final canSchedule = provider.isWindowOpen; // read-only when window not open
+
         return Scaffold(
-          backgroundColor: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
+          backgroundColor: _scaffoldBg(context),
           appBar: AppBar(
-            backgroundColor: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
+            backgroundColor: _scaffoldBg(context),
             elevation: 0,
             title: const Text(
               'Availability',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-
           ),
           body: Column(
             children: [
-              // Loading bar
               if (provider.isLoading)
                 const LinearProgressIndicator(color: Color(0xFF6C47FF)),
 
@@ -74,11 +76,11 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                     children: [
                       _buildAdminBanner(provider),
                       const SizedBox(height: 16),
-                      _buildCalendar(provider),
-                      const SizedBox(height: 20),
+                      _buildCalendar(provider, canSchedule, personnelId),
+                      const SizedBox(height: 40),
                       _buildChartSection(provider),
                       const SizedBox(height: 20),
-                      _buildBottomBar(provider),
+                      _buildBottomBar(provider, canSchedule, personnelId),
                     ],
                   ),
                 ),
@@ -90,10 +92,10 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     );
   }
 
-  // ── Admin Banner ─────────────────────────────────────────────────────────────
+  // ── Admin Banner ──────────────────────────────────────────────────────────
+
   Widget _buildAdminBanner(AvailabilityProvider provider) {
     final isOpen = provider.isWindowOpen;
-
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -125,15 +127,12 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
             child: Icon(
               isOpen ? Icons.info_outline : Icons.lock_outline,
               size: 16,
-              color: isOpen
-                  ? const Color(0xFF6C47FF)
-                  : const Color(0xFF8E8E93),
+              color: isOpen ? const Color(0xFF6C47FF) : const Color(0xFF8E8E93),
             ),
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              // ✅ Message comes from provider — driven by real window data
               provider.adminBannerMessage,
               style: const TextStyle(
                   fontSize: 12, color: Color(0xFF3C3C43), height: 1.4),
@@ -144,11 +143,16 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     );
   }
 
-  // ── Calendar ──────────────────────────────────────────────────────────────────
-  Widget _buildCalendar(AvailabilityProvider provider) {
+  // ── Calendar ──────────────────────────────────────────────────────────────
+
+  Widget _buildCalendar(
+      AvailabilityProvider provider,
+      bool canSchedule,
+      String? personnelId,
+      ) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor.withOpacity(0.3),
+        color: _cardBg(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -162,15 +166,25 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
         lastDay:   DateTime(2030),
         focusedDay: _focusedDay,
         selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-        onDaySelected: (selected, focused) => setState(() {
-          _selectedDay = selected;
-          _focusedDay  = focused;
-        }),
+        onDaySelected: canSchedule
+            ? (selected, focused) {
+          setState(() {
+            _selectedDay = selected;
+            _focusedDay  = focused;
+          });
+          // Tap a day → open dialog (set or view/delete)
+          _onDayTapped(selected, provider, personnelId ?? 'demo-placeholder');
+        }
+            : (selected, focused) {
+          // Read-only: just move focus, no dialog
+          setState(() {
+            _selectedDay = selected;
+            _focusedDay  = focused;
+          });
+        },
         onPageChanged: (focused) {
           setState(() => _focusedDay = focused);
-          // ✅ Reload slots when user swipes to a new month
-          final user = context.read<UserProvider>().user;
-          if (user?.personnelId != null) {
+          if (personnelId != null) {
             provider.changeMonth(focused);
           }
         },
@@ -183,38 +197,24 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
-          leftChevronIcon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.chevron_left, color: Colors.white, size: 18),
-          ),
-          rightChevronIcon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.chevron_right, color: Colors.white, size: 18),
-          ),
+          leftChevronIcon: _chevron(Icons.chevron_left, context),
+          rightChevronIcon: _chevron(Icons.chevron_right, context),
           headerPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
         daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w600),
-          weekendStyle: TextStyle(
-              fontSize: 12, fontWeight: FontWeight.w600),
+          weekdayStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          weekendStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
         ),
         calendarStyle: CalendarStyle(
           outsideDaysVisible: false,
           todayDecoration: BoxDecoration(
-            border: Border.all(
-                color: Theme.of(context).primaryColor, width: 1.5),
+            border: Border.all(color: Theme.of(context).primaryColor, width: 1.5),
             borderRadius: BorderRadius.circular(8),
           ),
-          todayTextStyle: TextStyle(color: Theme.of(context).primaryColor.withOpacity(0.2), fontWeight: FontWeight.bold),
+          todayTextStyle: TextStyle(
+            color: Theme.of(context).primaryColor.withOpacity(0.2),
+            fontWeight: FontWeight.bold,
+          ),
           selectedDecoration: BoxDecoration(
             color: Theme.of(context).primaryColor,
             borderRadius: BorderRadius.circular(8),
@@ -224,59 +224,84 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
         ),
         calendarBuilders: CalendarBuilders(
           defaultBuilder: (ctx, day, _) {
-            final status = _statusForDay(day, provider);
-            if (status != null) {
-              return _dotCell(day, status, false, false);
+            final slot = _slotForDay(day, provider);
+            if (slot != null) {
+              return _coloredCell(day, slot, isToday: false, isSelected: false);
             }
             return null;
           },
           todayBuilder: (ctx, day, _) {
-            final status = _statusForDay(day, provider);
-            return _dotCell(day, status, true, false);
+            final slot = _slotForDay(day, provider);
+            return _coloredCell(day, slot, isToday: true, isSelected: false);
           },
           selectedBuilder: (ctx, day, _) {
-            final status = _statusForDay(day, provider);
-            return _dotCell(day, status, false, true);
+            final slot = _slotForDay(day, provider);
+            return _coloredCell(day, slot, isToday: false, isSelected: true);
           },
         ),
       ),
     );
   }
 
-  Widget _dotCell(
+  /// A calendar cell that fills with the availability colour when set,
+  /// or falls back to today/selected styling otherwise.
+  Widget _coloredCell(
       DateTime day,
-      HrAvailabilityStatus? status,
-      bool isToday,
-      bool isSelected,
-      ) {
+      HrAvailabilitySlot? slot, {
+        required bool isToday,
+        required bool isSelected,
+      }) {
+    final hasSlot   = slot != null;
+    final slotColor = hasSlot ? slot!.availability.color : null;
+    final slotBg    = hasSlot ? slot!.availability.bgColor : null;
+
+    // When a slot exists, the cell background shows the availability colour
+    Color? bg;
+    Color  textColor = const Color(0xFF1C1C1E);
+    Border? border;
+
+    if (hasSlot && isSelected) {
+      bg        = slotColor;
+      textColor = Colors.white;
+    } else if (hasSlot) {
+      bg        = slotBg;
+      textColor = slotColor!;
+      if (isToday) border = Border.all(color: slotColor, width: 1.5);
+    } else if (isSelected) {
+      bg        = Theme.of(context).primaryColor;
+      textColor = Colors.white;
+    } else if (isToday) {
+      border    = Border.all(color: Theme.of(context).primaryColor, width: 1.5);
+    }
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Container(
-          width: 28, height: 28,
+          width: 30, height: 30,
           decoration: BoxDecoration(
-            color: isSelected ? Theme.of(context).primaryColor : Colors.transparent,
-            border: isToday && !isSelected
-                ? Border.all(color: Theme.of(context).primaryColor, width: 1.5)
-                : null,
-            borderRadius: BorderRadius.circular(6),
+            color:        bg,
+            border:       border,
+            borderRadius: BorderRadius.circular(8),
           ),
           alignment: Alignment.center,
           child: Text(
             '${day.day}',
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: isSelected ? Colors.white : const Color(0xFF1C1C1E),
+              fontWeight: FontWeight.w600,
+              color: textColor,
             ),
           ),
         ),
         const SizedBox(height: 2),
-        if (status != null)
+        // Small dot below cell for extra visibility when not selected
+        if (hasSlot && !isSelected)
           Container(
             width: 5, height: 5,
             decoration: BoxDecoration(
-                color: status.color, shape: BoxShape.circle),
+              color: slotColor, shape: BoxShape.circle,
+            ),
           )
         else
           const SizedBox(height: 5),
@@ -284,20 +309,548 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     );
   }
 
-  // ── Chart Section ─────────────────────────────────────────────────────────────
+  Widget _chevron(IconData icon, BuildContext ctx) => Container(
+    padding: const EdgeInsets.all(6),
+    decoration: BoxDecoration(
+      color: Theme.of(ctx).primaryColor,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Icon(icon, color: Colors.white, size: 18),
+  );
+
+  // ── Day tap → dialog ──────────────────────────────────────────────────────
+
+  void _onDayTapped(
+      DateTime day,
+      AvailabilityProvider provider,
+      String personnelId,
+      ) {
+    final existing = _slotForDay(day, provider);
+
+    if (existing != null) {
+      // Slot already set → show view/delete dialog
+      _showSlotDetailDialog(existing, provider);
+    } else {
+      // No slot → show set-availability dialog
+      _showSetAvailabilityDialog(day, provider, personnelId);
+    }
+  }
+
+  // ── Dialog: view & delete existing slot ──────────────────────────────────
+
+  void _showSlotDetailDialog(
+      HrAvailabilitySlot slot,
+      AvailabilityProvider provider,
+      ) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          title: Row(
+            children: [
+              Container(
+                width: 10, height: 10,
+                decoration: BoxDecoration(
+                  color: slot.availability.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                slot.availability.label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: slot.availability.color,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _detailRow(Icons.calendar_today_outlined, 'Date',
+                  _friendlyDate(slot.date)),
+              const SizedBox(height: 10),
+              _detailRow(Icons.access_time_outlined, 'Shift',
+                  slot.timeSlot.label),
+              if (slot.startTime != null && slot.endTime != null) ...[
+                const SizedBox(height: 10),
+                _detailRow(Icons.timelapse_outlined, 'Time',
+                    '${slot.startTime} – ${slot.endTime}'),
+              ],
+              if (slot.notes != null && slot.notes!.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                _detailRow(Icons.notes_outlined, 'Notes', slot.notes!),
+              ],
+              if (slot.isLocked) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF3E0),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.lock_outline,
+                          size: 14, color: Color(0xFFF39C12)),
+                      SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'This slot is locked and cannot be deleted.',
+                          style: TextStyle(
+                              fontSize: 11, color: Color(0xFFF39C12)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Close',
+                  style: TextStyle(color: Color(0xFF8E8E93))),
+            ),
+            if (!slot.isLocked)
+              TextButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await _deleteSlot(slot, provider);
+                },
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: Color(0xFFE74C3C),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFF8E8E93)),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 11, color: Color(0xFF8E8E93))),
+            const SizedBox(height: 2),
+            Text(value,
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w500)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _deleteSlot(
+      HrAvailabilitySlot slot,
+      AvailabilityProvider provider,
+      ) async {
+    // Confirm before deleting
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('Remove availability?'),
+        content: Text(
+          'This will remove your ${slot.availability.label.toLowerCase()} '
+              'entry for ${_friendlyDate(slot.date)}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: Color(0xFF8E8E93))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text(
+              'Remove',
+              style: TextStyle(
+                color: Color(0xFFE74C3C),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final success = await provider.deleteSlot(slot.id);
+    if (!mounted) return;
+    showMessage(
+      success ? 'Availability removed.' : provider.errorMessage ?? 'Delete failed.',
+      context,
+      status: success ? MessageStatus.success : MessageStatus.error,
+      title:  success ? 'Done' : 'Error',
+    );
+  }
+
+  // ── Dialog: set new availability ─────────────────────────────────────────
+
+  void _showSetAvailabilityDialog(
+      DateTime day,
+      AvailabilityProvider provider,
+      String personnelId,
+      ) {
+    HrAvailabilityStatus _selectedStatus = HrAvailabilityStatus.available;
+    HrTimeSlot           _selectedSlot   = HrTimeSlot.fullDay;
+    final _notesCtrl = TextEditingController();
+    final _startCtrl = TextEditingController();
+    final _endCtrl   = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDlgState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+              contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              title: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Set Availability',
+                      style: TextStyle(
+                          fontSize: 16, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 2),
+                  Text(
+                    _friendlyDate(day),
+                    style: const TextStyle(
+                        fontSize: 13, color: Color(0xFF8E8E93)),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 4),
+
+                    // ── Status picker ─────────────────────────────────────
+                    const Text('Status',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF8E8E93))),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8, runSpacing: 8,
+                      children: HrAvailabilityStatus.values.map((status) {
+                        final selected = _selectedStatus == status;
+                        return GestureDetector(
+                          onTap: () =>
+                              setDlgState(() => _selectedStatus = status),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? status.color
+                                  : status.bgColor,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: selected
+                                    ? status.color
+                                    : Colors.transparent,
+                              ),
+                            ),
+                            child: Text(
+                              status.label,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: selected
+                                    ? Colors.white
+                                    : status.color,
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ── Time slot picker ──────────────────────────────────
+                    const Text('Shift',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF8E8E93))),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8, runSpacing: 8,
+                      children: HrTimeSlot.values.map((ts) {
+                        final selected = _selectedSlot == ts;
+                        return GestureDetector(
+                          onTap: () =>
+                              setDlgState(() => _selectedSlot = ts),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? Theme.of(context).primaryColor
+                                  : const Color(0xFFF2F2F7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              ts.label,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: selected
+                                    ? Colors.white
+                                    : const Color(0xFF3C3C43),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+
+                    // ── Custom time fields ────────────────────────────────
+                    if (_selectedSlot.requiresCustomTime) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _timeField(
+                                _startCtrl, 'Start (HH:mm)', ctx),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _timeField(
+                                _endCtrl, 'End (HH:mm)', ctx),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // ── Notes ─────────────────────────────────────────────
+                    const Text('Notes (optional)',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF8E8E93))),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _notesCtrl,
+                      minLines: 2,
+                      maxLines: 3,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Any additional notes…',
+                        hintStyle: const TextStyle(
+                            fontSize: 13, color: Color(0xFFAEAEB2)),
+                        contentPadding: const EdgeInsets.all(12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFE5E5EA)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFE5E5EA)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide(
+                              color: Theme.of(context).primaryColor),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: Color(0xFF8E8E93))),
+                ),
+                Consumer<AvailabilityProvider>(
+                  builder: (_, prov, __) => TextButton(
+                    onPressed: prov.isSubmitting
+                        ? null
+                        : () async {
+                      Navigator.pop(ctx);
+                      final dateKey = _isoDate(day);
+                      final success =
+                      await provider.submitAvailability(
+                        personnelId: personnelId,
+                        slots: [
+                          HrAvailabilityBulkSlot(
+                            date:         dateKey,
+                            timeSlot:     _selectedSlot,
+                            startTime:    _selectedSlot
+                                .requiresCustomTime
+                                ? _startCtrl.text.trim()
+                                : null,
+                            endTime:      _selectedSlot
+                                .requiresCustomTime
+                                ? _endCtrl.text.trim()
+                                : null,
+                            availability: _selectedStatus,
+                            notes: _notesCtrl.text.trim().isEmpty
+                                ? null
+                                : _notesCtrl.text.trim(),
+                          ),
+                        ],
+                      );
+                      if (!mounted) return;
+                      showMessage(
+                        success
+                            ? 'Availability saved!'
+                            : provider.errorMessage ??
+                            'Submission failed.',
+                        context,
+                        status: success
+                            ? MessageStatus.success
+                            : MessageStatus.error,
+                        title: success ? 'Done' : 'Error',
+                      );
+                    },
+                    child: prov.isSubmitting
+                        ? const SizedBox(
+                      width: 16, height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2),
+                    )
+                        : Text(
+                      'Save',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _timeField(
+      TextEditingController ctrl,
+      String hint,
+      BuildContext ctx,
+      ) {
+    return TextField(
+      controller: ctrl,
+      keyboardType: TextInputType.datetime,
+      style: const TextStyle(fontSize: 13),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle:
+        const TextStyle(fontSize: 12, color: Color(0xFFAEAEB2)),
+        contentPadding:
+        const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFE5E5EA)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFFE5E5EA)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Theme.of(context).primaryColor),
+        ),
+      ),
+    );
+  }
+
+  // ── Chart Section ─────────────────────────────────────────────────────────
+
   Widget _buildChartSection(AvailabilityProvider provider) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Chart Summary',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        Row(
+          children: [
+            const Text('Chart Summary',
+                style:
+                TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Spacer(),
+            Text(
+              provider.currentMonth,
+              style: const TextStyle(
+                  fontSize: 12, color: Color(0xFF8E8E93)),
+            ),
+          ],
         ),
+        const SizedBox(height: 12),
+
+        // Legend
+        Wrap(
+          spacing: 12, runSpacing: 6,
+          children: HrAvailabilityStatus.values.map((s) {
+            final count = provider.chartData[s]?.values.fold(
+              0,
+                  (prev, v) => prev + v,
+            ) ??
+                0;
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 10, height: 10,
+                  decoration: BoxDecoration(
+                      color: s.color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '${s.label} ($count)',
+                  style: const TextStyle(
+                      fontSize: 11, color: Color(0xFF3C3C43)),
+                ),
+              ],
+            );
+          }).toList(),
+        ),
+
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor.withOpacity(0.3),
+            color: _cardBg(context),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
@@ -306,29 +859,27 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
               ),
             ],
           ),
-          // ✅ chartData comes from provider, typed to HrAvailabilityStatus
           child: AvailabilityChart(chartData: provider.chartData),
         ),
       ],
     );
   }
 
-  // ── Bottom Bar ───────────────────────────────────────────────────────────────
-  Widget _buildBottomBar(AvailabilityProvider provider) {
+  // ── Bottom Bar ────────────────────────────────────────────────────────────
+
+  Widget _buildBottomBar(
+      AvailabilityProvider provider,
+      bool canSchedule,
+      String? personnelId,
+      ) {
     final isOpen    = provider.isWindowOpen;
-    final hasClosed = provider.isWindowClosed;
     final isPending = provider.isWindowPending;
 
-    // ✅ personnelId null check — button disabled if HR hasn't assigned one
-    final user        = context.read<UserProvider>().user;
-    final personnelId = user?.personnelId;
-    // Change to (temporary for testing):
-    final canSchedule = isOpen;   // Allow even if personnelId is null
-
     return Container(
+      width: MediaQuery.of(context).size.width * 0.9,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
+        color: _scaffoldBg(context),
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
@@ -340,7 +891,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Timer — shown while open or pending
+          // Countdown timer
           if (isOpen || isPending) ...[
             Container(
               padding: const EdgeInsets.symmetric(
@@ -355,13 +906,15 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                   Text(
                     provider.timerPrefix,
                     style: const TextStyle(
-                        fontSize: 13, color: Color(0xFF8E8E93),
+                        fontSize: 13,
+                        color: Color(0xFF8E8E93),
                         fontWeight: FontWeight.w500),
                   ),
                   Text(
                     provider.timerLabel,
                     style: TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
                       color: isOpen
                           ? const Color(0xFFE74C3C)
                           : const Color(0xFF27AE60),
@@ -373,7 +926,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
             const SizedBox(height: 10),
           ],
 
-          // Disabled hint when personnelId is not yet assigned
           if (isOpen && personnelId == null) ...[
             const Padding(
               padding: EdgeInsets.only(bottom: 8),
@@ -381,82 +933,59 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                 'Your personnel ID has not been assigned yet. '
                     'Please contact HR.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                    fontSize: 11, color: Color(0xFF8E8E93)),
+                style:
+                TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
               ),
             ),
           ],
 
-          // Schedule button
-          GestureDetector(
-            onTap: canSchedule
-                ? () => _showAvailabilitySheet(provider, personnelId ?? "demo-placeholder")
-                : null,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: double.infinity, height: 52,
-              decoration: BoxDecoration(
-                color: canSchedule
-                    ? Theme.of(context).primaryColor
-                    : const Color(0xFFE5E5EA),
-                borderRadius: BorderRadius.circular(35),
-                boxShadow: canSchedule
-                    ? [BoxShadow(
-                  color: Theme.of(context).primaryColor.withOpacity(0.35),
-                  blurRadius: 12, offset: const Offset(0, 4),
-                )]
-                    : [],
-              ),
-              alignment: Alignment.center,
-              child: provider.isSubmitting
-                  ? const SizedBox(
-                width: 22, height: 22,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2.5),
-              )
-                  : Text(
-                'Schedule',
-                style: TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w600,
-                  color: canSchedule
-                      ? Colors.white
-                      : const Color(0xFF8E8E93),
-                ),
+          // Hint: tap a day
+          if (canSchedule) ...[
+            const Padding(
+              padding: EdgeInsets.only(bottom: 8),
+              child: Text(
+                'Tap any day on the calendar to set your availability.',
+                textAlign: TextAlign.center,
+                style:
+                TextStyle(fontSize: 12, color: Color(0xFF8E8E93)),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
   }
 
-  // ── Show Sheet ───────────────────────────────────────────────────────────────
-  void _showAvailabilitySheet(
-      AvailabilityProvider provider, String personnelId) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => AvailabilitySheet(
-        personnelId:     personnelId,   // ✅ HR-assigned personnelId, not userId
-        preselectedDate: _selectedDay,
-        onSubmit: (bulkSlot) async {
-          final success = await provider.submitAvailability(
-            personnelId: personnelId,
-            slots: [bulkSlot],
-          );
-          if (!mounted) return;
-          Navigator.pop(context);
-          showMessage(
-            success
-                ? 'Availability submitted!'
-                : provider.errorMessage ?? 'Submission failed.',
-            context,
-            status: success ? MessageStatus.success : MessageStatus.error,
-            title:  success ? 'Done' : 'Error',
-          );
-        },
-      ),
-    );
+  // ── Theming helpers ───────────────────────────────────────────────────────
+
+  Color _scaffoldBg(BuildContext ctx) =>
+      Theme.of(ctx).brightness == Brightness.light
+          ? Theme.of(ctx).hoverColor
+          : Theme.of(ctx).scaffoldBackgroundColor;
+
+  Color _cardBg(BuildContext ctx) =>
+      Theme.of(ctx).brightness == Brightness.light
+          ? Theme.of(ctx).hoverColor
+          : Theme.of(ctx).scaffoldBackgroundColor.withOpacity(0.3);
+
+  // ── Date helpers ──────────────────────────────────────────────────────────
+
+  String _isoDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}';
+
+  String _friendlyDate(DateTime d) {
+    const months = [
+      'Jan','Feb','Mar','Apr','May','Jun',
+      'Jul','Aug','Sep','Oct','Nov','Dec',
+    ];
+    const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    final wd = days[d.weekday - 1];
+    return '$wd, ${d.day} ${months[d.month - 1]} ${d.year}';
   }
+
+  String _monthName(int m) => const [
+    '', 'Jan','Feb','Mar','Apr','May','Jun',
+    'Jul','Aug','Sep','Oct','Nov','Dec',
+  ][m];
 }

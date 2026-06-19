@@ -22,8 +22,8 @@ class ApiEndpoints {
   static const String refresh = '/mobapp/auth/refresh';
 
   // ── Availability ──────────────────────────────────────────────────────────────
-  static const String availabilityCurrentWindow = '/hr/availability/windows/current'; // getting the open window and can only be seen when made available. WHich would be readonly when not available
-  static const String availabilityMyCalendar = '/hr/availability/my-calendar'; // fetches the calandar itself.
+  static const String availabilityCurrentWindow = '/hr/availability/windows/current'; // getting the open window and can only be seen when made available. Which would be readonly when not available
+  static const String availabilityMyCalendar = '/hr/availability/my-calendar'; // fetches the calendar itself.
   static const String availabilityBulk = '/hr/availability/bulk'; // for saving the availability
   static const String deleteAvailability = '/hr/availability/{slotId}'; // for deleting the availability
 

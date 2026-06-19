@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorage {
@@ -40,7 +41,10 @@ class SecureStorage {
       _storage.delete(key: _refreshTokenKey);
 
   // ── Clear all (on logout / refresh failure) ───────────────────────────────
-  Future<void> clearAll() => _storage.deleteAll();
+  Future<void> clearAll() {
+    debugPrint('⚠️ clearAll() called — stack: ${StackTrace.current}');
+    return _storage.deleteAll();
+  }
 
   // ── Check auth state ──────────────────────────────────────────────────────
   Future<bool> hasValidSession() async {

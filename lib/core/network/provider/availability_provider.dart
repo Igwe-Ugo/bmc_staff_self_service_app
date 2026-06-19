@@ -40,10 +40,11 @@ class AvailabilityProvider extends ChangeNotifier {
 
   String get timerLabel {
     if (_remaining.inSeconds <= 0) return '00:00:00';
+    final d = _remaining.inDays.toString().padLeft(2, '0');
     final h = _remaining.inHours.toString().padLeft(2, '0');
     final m = (_remaining.inMinutes % 60).toString().padLeft(2, '0');
     final s = (_remaining.inSeconds % 60).toString().padLeft(2, '0');
-    return '$h:$m:$s';
+    return '$d:$h:$m:$s days left';
   }
 
   String get timerPrefix {
@@ -174,6 +175,27 @@ class AvailabilityProvider extends ChangeNotifier {
       notifyListeners();
       return true;
 
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+      _submitting   = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // ── ADD THIS METHOD to AvailabilityProvider ───────────────────────────────
+// Place it after submitAvailability()
+
+  Future<bool> deleteSlot(String slotId) async {
+    _submitting = true;
+    notifyListeners();
+
+    try {
+      await _services.deleteAvailability(slotId);
+      _slots = _slots.where((s) => s.id != slotId).toList();
+      _submitting = false;
+      notifyListeners();
+      return true;
     } on ApiException catch (e) {
       _errorMessage = e.message;
       _submitting   = false;
