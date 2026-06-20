@@ -3,7 +3,8 @@ import '../../core/network/models/widget.dart';
 
 class ShiftEventTile extends StatelessWidget {
   final RotaEvent event;
-  const ShiftEventTile({super.key, required this.event});
+  final Color cardBg;
+  const ShiftEventTile({super.key, required this.event, required this.cardBg});
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +12,7 @@ class ShiftEventTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
@@ -39,15 +40,15 @@ class ShiftEventTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    const Icon(Icons.local_hospital_outlined, size: 12, color: Color(0xFF8E8E93)),
+                    const Icon(Icons.local_hospital_outlined, size: 12),
                     const SizedBox(width: 4),
                     Text(event.role,
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93))),
+                        style: const TextStyle(fontSize: 11)),
                     const SizedBox(width: 8),
-                    const Icon(Icons.location_on_outlined, size: 12, color: Color(0xFF8E8E93)),
+                    const Icon(Icons.location_on_outlined, size: 12),
                     const SizedBox(width: 2),
                     Text(event.ward,
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93))),
+                        style: const TextStyle(fontSize: 11)),
                   ],
                 ),
               ],
@@ -73,10 +74,10 @@ class ShiftEventTile extends StatelessWidget {
               const SizedBox(height: 4),
               if (event.endTime.isNotEmpty)
                 Text(event.timeRange,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93)))
+                    style: const TextStyle(fontSize: 11))
               else
                 Text(event.startTime,
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93))),
+                    style: const TextStyle(fontSize: 11)),
             ],
           ),
         ],

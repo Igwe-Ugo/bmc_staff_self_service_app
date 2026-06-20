@@ -38,6 +38,14 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     });
   }
 
+  // 1. Update this validation method to check the tapped day's month accurately
+  bool _isCurrentMonthOpen(AvailabilityProvider provider, DateTime targetDay) {
+    if (!provider.hasWindow) return false;
+    final windowMonthKey = provider.windowMonthKey; // Use the new getter
+    final targetMonthKey = "${targetDay.year}-${targetDay.month.toString().padLeft(2, '0')}";
+    return windowMonthKey == targetMonthKey;
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   HrAvailabilitySlot? _slotForDay(DateTime day, AvailabilityProvider p) =>
@@ -51,7 +59,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       builder: (context, provider, _) {
         final user        = context.read<UserProvider>().user;
         final personnelId = user?.personnelId;
-        final canSchedule = provider.isWindowOpen; // read-only when window not open
+        final canSchedule = provider.isWindowOpen && _isCurrentMonthOpen(provider, _focusedDay);
 
         return Scaffold(
           backgroundColor: _scaffoldBg(context),
@@ -74,9 +82,10 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Align(
+                      const SizedBox(height: 16),
+                      const Align(
                         alignment: Alignment.bottomCenter,
-                        child: const Text(
+                        child: Text(
                           "Submit and manage your availability for upcoming months",
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.w300),
                         ),
@@ -100,16 +109,12 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
 
   // ── Admin Banner ──────────────────────────────────────────────────────────
 
-  /// Drop this widget above the calendar in availability_screen.dart.
-  /// Replace _buildAdminBanner() with this, or call it alongside it.
-
   Widget _buildWindowBanner(AvailabilityProvider provider) {
     if (!provider.hasWindow) return const SizedBox.shrink();
 
     final window   = provider.window!;
     final isOpen   = provider.isWindowOpen;
     final isPending = provider.isWindowPending;
-    final isClosed  = provider.isWindowClosed;
 
     // ── Colours ────────────────────────────────────────────────────────────────
     final Color borderColor = isOpen
@@ -143,7 +148,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
         ? 'Opens ${_formatDateTime(window.opensAt)}'
         : 'Closed on ${_formatDateTime(window.closesAt)}';
 
-    // ── Pill label ──────────────────────────────────────────────────────────────
     final String pillLabel = _pillLabel(provider);
 
     return Container(
@@ -154,7 +158,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       ),
       child: Row(
         children: [
-          // ── Calendar icon ────────────────────────────────────────────────────
           Container(
             width: 36, height: 36,
             decoration: BoxDecoration(
@@ -165,10 +168,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
             child: Icon(Icons.calendar_month_outlined,
                 color: iconColor, size: 18),
           ),
-
           const SizedBox(width: 12),
-
-          // ── Text block ───────────────────────────────────────────────────────
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,17 +184,12 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 11,
-                  ),
+                  style: const TextStyle(fontSize: 11),
                 ),
               ],
             ),
           ),
-
           const SizedBox(width: 10),
-
-          // ── Pill badge ───────────────────────────────────────────────────────
           if (pillLabel.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -223,8 +218,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       ),
     );
   }
-
-// ── Pill label helper ─────────────────────────────────────────────────────────
 
   String _pillLabel(AvailabilityProvider provider) {
     if (!provider.hasWindow) return '';
@@ -275,14 +268,13 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                 decoration: BoxDecoration(
                   color: status.bgColor,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: status.color
-                  ),
+                  border: Border.all(color: status.color),
                 ),
                 child: Text(
                   status.label,
                   style: TextStyle(
                     fontSize: 12,
+                    color: Theme.of(context).hintColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -294,21 +286,14 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
             lastDay:   DateTime(2030),
             focusedDay: _focusedDay,
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            onDaySelected: canSchedule
-                ? (selected, focused) {
+            onDaySelected: (selected, focused) {
               setState(() {
                 _selectedDay = selected;
                 _focusedDay  = focused;
               });
-              // Tap a day → open dialog (set or view/delete)
-              _onDayTapped(selected, provider, personnelId ?? 'demo-placeholder');
-            }
-                : (selected, focused) {
-              // Read-only: just move focus, no dialog
-              setState(() {
-                _selectedDay = selected;
-                _focusedDay  = focused;
-              });
+              // Evaluate if the newly selected day belongs to the admin's open window
+              final dayCanSchedule = provider.hasWindow && _isCurrentMonthOpen(provider, selected);
+              _onDayTapped(selected, provider, personnelId ?? 'demo-placeholder', dayCanSchedule);
             },
             onPageChanged: (focused) {
               setState(() => _focusedDay = focused);
@@ -340,7 +325,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               todayTextStyle: TextStyle(
-                color: Theme.of(context).primaryColor.withOpacity(0.2),
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
                 fontWeight: FontWeight.bold,
               ),
               selectedDecoration: BoxDecoration(
@@ -373,8 +358,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     );
   }
 
-  /// A calendar cell that fills with the availability colour when set,
-  /// or falls back to today/selected styling otherwise.
   Widget _coloredCell(
       DateTime day,
       HrAvailabilitySlot? slot, {
@@ -385,7 +368,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     final slotColor = hasSlot ? slot.availability.color : null;
     final slotBg    = hasSlot ? slot.availability.bgColor : null;
 
-    // When a slot exists, the cell background shows the availability colour
     Color? bg;
     Color  textColor = const Color(0xFF1C1C1E);
     Border? border;
@@ -425,7 +407,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
           ),
         ),
         const SizedBox(height: 2),
-        // Small dot below cell for extra visibility when not selected
         if (hasSlot && !isSelected)
           Container(
             width: 5, height: 5,
@@ -450,18 +431,28 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
 
   // ── Day tap → dialog ──────────────────────────────────────────────────────
 
+  // 3. Clean up the parameters for _onDayTapped to honor the contextual check
   void _onDayTapped(
       DateTime day,
       AvailabilityProvider provider,
       String personnelId,
+      bool canSchedule,
       ) {
     final existing = _slotForDay(day, provider);
 
     if (existing != null) {
-      // Slot already set → show view/delete dialog
-      _showSlotDetailDialog(existing, provider);
+      _showSlotDetailDialog(existing, provider, canSchedule);
     } else {
-      // No slot → show set-availability dialog
+      if (!canSchedule) {
+        // Optionally show a message to the user
+        showMessage(
+          'Availability window is closed for this month',
+          context,
+          status: MessageStatus.info,
+          title: 'Read Only',
+        );
+        return;
+      }
       _showSetAvailabilityDialog(day, provider, personnelId);
     }
   }
@@ -471,6 +462,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
   void _showSlotDetailDialog(
       HrAvailabilitySlot slot,
       AvailabilityProvider provider,
+      bool canSchedule,
       ) {
     showDialog(
       context: context,
@@ -516,7 +508,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                 const SizedBox(height: 10),
                 _detailRow(Icons.notes_outlined, 'Notes', slot.notes!),
               ],
-              if (slot.isLocked) ...[
+              if (slot.isLocked || !canSchedule) ...[
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -524,15 +516,17 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                     color: const Color(0xFFFFF3E0),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.lock_outline,
+                      const Icon(Icons.lock_outline,
                           size: 14, color: Color(0xFFF39C12)),
-                      SizedBox(width: 6),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'This slot is locked and cannot be deleted.',
-                          style: TextStyle(
+                          !canSchedule
+                              ? 'This month window is closed. Read-only.'
+                              : 'This slot is locked and cannot be deleted.',
+                          style: const TextStyle(
                               fontSize: 11, color: Color(0xFFF39C12)),
                         ),
                       ),
@@ -549,11 +543,30 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
               child: const Text('Close',
                   style: TextStyle(color: Color(0xFF8E8E93))),
             ),
-            if (!slot.isLocked)
+            // ── ADD THIS BUTTON ──────────────────────────────────────────────
+            if (!slot.isLocked && canSchedule)
+              TextButton(
+                onPressed: () {
+                  // Close current dialog
+                  Navigator.pop(ctx);
+                  // Open the set availability dialog for the same date
+                  // Get the personnelId from the provider
+                  final user = context.read<UserProvider>().user;
+                  final personnelId = user?.personnelId ?? '';
+                  _showSetAvailabilityDialog(slot.date, provider, personnelId);
+                },
+                child: const Text(
+                  'Add Another',
+                  style: TextStyle(
+                    color: Color(0xFF6C47FF),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            if (!slot.isLocked && canSchedule)
               TextButton(
                 onPressed: () async {
                   Navigator.pop(ctx);
-                  print('Deleting slot id: ${slot.id}');
                   await _deleteSlot(slot, provider);
                 },
                 child: const Text(
@@ -576,7 +589,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       children: [
         Icon(icon, size: 16, color: const Color(0xFF8E8E93)),
         const SizedBox(width: 8),
-        Expanded( // <-- Added Expanded here to restrict the Column's width
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -600,7 +613,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       HrAvailabilitySlot slot,
       AvailabilityProvider provider,
       ) async {
-    // Confirm before deleting
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -634,6 +646,11 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
 
     final success = await provider.deleteSlot(slot.id);
     if (!mounted) return;
+
+    if (success) {
+      await provider.init(); // Realtime state sync
+    }
+
     showMessage(
       success ? 'Availability removed.' : provider.errorMessage ?? 'Delete failed.',
       context,
@@ -650,19 +667,24 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       String personnelId,
       ) {
     HrAvailabilityStatus _selectedStatus = HrAvailabilityStatus.available;
-    HrTimeSlot           _selectedSlot   = HrTimeSlot.fullDay;
+    HrTimeSlot _selectedSlot = HrTimeSlot.fullDay;
     final _notesCtrl = TextEditingController();
     final _startCtrl = TextEditingController();
-    final _endCtrl   = TextEditingController();
+    final _endCtrl = TextEditingController();
+
+    // Local state for dialog-specific loading
+    bool _isDialogSubmitting = false;
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setDlgState) {
             return AlertDialog(
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
+                  borderRadius: BorderRadius.circular(16)
+              ),
               titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
               contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
               title: Column(
@@ -685,8 +707,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const SizedBox(height: 4),
-
-                    // ── Status picker ─────────────────────────────────────
                     const Text('Status',
                         style: TextStyle(
                             fontSize: 12,
@@ -718,12 +738,9 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                             child: Text(
                               status.label,
                               style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: selected
-                                    ? Colors.white
-                                    : status.color,
-                              ),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: selected ? Colors.white : status.color),
                             ),
                           ),
                         );
@@ -731,8 +748,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                     ),
 
                     const SizedBox(height: 16),
-
-                    // ── Time slot picker ──────────────────────────────────
                     const Text('Shift',
                         style: TextStyle(
                             fontSize: 12,
@@ -771,7 +786,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                       }).toList(),
                     ),
 
-                    // ── Custom time fields ────────────────────────────────
                     if (_selectedSlot.requiresCustomTime) ...[
                       const SizedBox(height: 16),
                       Row(
@@ -790,8 +804,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                     ],
 
                     const SizedBox(height: 16),
-
-                    // ── Notes ─────────────────────────────────────────────
                     const Text('Notes (optional)',
                         style: TextStyle(
                             fontSize: 12,
@@ -825,37 +837,35 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 20),
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(ctx),
+                  onPressed: _isDialogSubmitting ? null : () => Navigator.pop(ctx),
                   child: const Text('Cancel',
                       style: TextStyle(color: Color(0xFF8E8E93))),
                 ),
-                Consumer<AvailabilityProvider>(
-                  builder: (_, prov, __) => TextButton(
-                    onPressed: prov.isSubmitting
-                        ? null
-                        : () async {
-                      Navigator.pop(ctx);
+                TextButton(
+                  onPressed: _isDialogSubmitting
+                      ? null
+                      : () async {
+                    // Set local loading state
+                    setDlgState(() => _isDialogSubmitting = true);
+
+                    try {
                       final dateKey = _isoDate(day);
-                      final success =
-                      await provider.submitAvailability(
+                      final success = await provider.submitAvailability(
                         personnelId: personnelId,
                         slots: [
                           HrAvailabilityBulkSlot(
-                            date:         dateKey,
-                            timeSlot:     _selectedSlot,
-                            startTime:    _selectedSlot
-                                .requiresCustomTime
+                            date: dateKey,
+                            timeSlot: _selectedSlot,
+                            startTime: _selectedSlot.requiresCustomTime
                                 ? _startCtrl.text.trim()
                                 : null,
-                            endTime:      _selectedSlot
-                                .requiresCustomTime
+                            endTime: _selectedSlot.requiresCustomTime
                                 ? _endCtrl.text.trim()
                                 : null,
                             availability: _selectedStatus,
@@ -865,31 +875,58 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                           ),
                         ],
                       );
-                      showMessage(
-                        success
-                            ? 'Availability saved!'
-                            : provider.errorMessage ??
-                            'Submission failed.',
-                        context,
-                        status: success
-                            ? MessageStatus.success
-                            : MessageStatus.error,
-                        title: success ? 'Done' : 'Error',
-                      );
-                      if (!mounted) return;
-                    },
-                    child: prov.isSubmitting
-                        ? const SizedBox(
-                      width: 16, height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2),
-                    )
-                        : Text(
-                      'Save',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Theme.of(context).primaryColor,
-                      ),
+                      if (success) {
+                        await provider.init(); // Sync layout immediately on success
+                        // Dismiss dialog first, then show message
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+
+                        if (mounted) {
+                          showMessage(
+                            'Availability saved!',
+                            context,
+                            status: MessageStatus.success,
+                            title: 'Done',
+                          );
+                        }
+                      } else {
+                        // Reset loading state on error
+                        setDlgState(() => _isDialogSubmitting = false);
+                        if (mounted) {
+                          showMessage(
+                            provider.errorMessage ?? 'Submission failed.',
+                            context,
+                            status: MessageStatus.error,
+                            title: 'Error',
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      // Reset loading state on exception
+                      setDlgState(() => _isDialogSubmitting = false);
+
+                      if (mounted) {
+                        showMessage(
+                          'An unexpected error occurred: $e',
+                          context,
+                          status: MessageStatus.error,
+                          title: 'Error',
+                        );
+                      }
+                    }
+                  },
+                  child: _isDialogSubmitting
+                      ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                      : Text(
+                    'Save',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: Theme.of(context).primaryColor,
                     ),
                   ),
                 ),
@@ -934,26 +971,23 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
 
   // ── Chart Section ─────────────────────────────────────────────────────────
 
-  Widget _buildChartSection(AvailabilityProvider provider, bool canSchedule,) {
+  Widget _buildChartSection(AvailabilityProvider provider, bool canSchedule) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           children: [
             const Text('Chart Summary',
-                style:
-                TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const Spacer(),
             Text(
               provider.currentMonth,
-              style: const TextStyle(
-                  fontSize: 12, color: Color(0xFF8E8E93)),
+              style: const TextStyle(fontSize: 12),
             ),
           ],
         ),
         const SizedBox(height: 12),
 
-        // Legend
         Wrap(
           spacing: 12, runSpacing: 6,
           children: HrAvailabilityStatus.values.map((s) {
@@ -973,8 +1007,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                 const SizedBox(width: 4),
                 Text(
                   '${s.label} ($count)',
-                  style: const TextStyle(
-                      fontSize: 11, color: Color(0xFF3C3C43)),
+                  style: const TextStyle(fontSize: 11),
                 ),
               ],
             );
@@ -1000,7 +1033,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     );
   }
 
-
   // ── Theming helpers ───────────────────────────────────────────────────────
 
   Color _scaffoldBg(BuildContext ctx) =>
@@ -1009,9 +1041,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
           : Theme.of(ctx).scaffoldBackgroundColor;
 
   Color _cardBg(BuildContext ctx) =>
-      Theme.of(ctx).brightness == Brightness.light
-          ? Theme.of(ctx).hoverColor
-          : Theme.of(ctx).scaffoldBackgroundColor.withOpacity(0.3);
+      Theme.of(context).cardColor;
 
   // ── Date helpers ──────────────────────────────────────────────────────────
 
@@ -1029,11 +1059,17 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     return '$wd, ${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
-  /// Converts "2026-07" → "July 2026"
   String _fullMonthName(String monthKey) {
-    final parts = monthKey.split('-');
+    // Handle both "2026-07-01" and "2026-07" formats
+    String cleanMonthKey = monthKey;
+    if (monthKey.contains('-') && monthKey.split('-').length >= 2) {
+      final parts = monthKey.split('-');
+      cleanMonthKey = "${parts[0]}-${parts[1].padLeft(2, '0')}";
+    }
+
+    final parts = cleanMonthKey.split('-');
     if (parts.length < 2) return monthKey;
-    final year  = parts[0];
+    final year = parts[0];
     final month = int.tryParse(parts[1]) ?? 0;
     const names = [
       '', 'January', 'February', 'March', 'April', 'May', 'June',
@@ -1042,7 +1078,6 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
     return '${names[month]} $year';
   }
 
-  /// Formats a DateTime as "dd/MM/yyyy at HH:mm"
   String _formatDateTime(DateTime dt) {
     final d  = dt.day.toString().padLeft(2, '0');
     final mo = dt.month.toString().padLeft(2, '0');

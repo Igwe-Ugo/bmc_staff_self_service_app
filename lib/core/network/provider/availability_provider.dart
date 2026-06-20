@@ -114,6 +114,25 @@ class AvailabilityProvider extends ChangeNotifier {
     }
   }
 
+  // Add this getter
+  String get windowMonthKey {
+    if (_window == null) return '';
+    final raw = _window!.month;
+    // Handle both "2026-07-01" and "2026-07" formats
+    if (raw.contains('-') && raw.split('-').length >= 2) {
+      final parts = raw.split('-');
+      return "${parts[0]}-${parts[1].padLeft(2, '0')}";
+    }
+    return raw;
+  }
+
+// Also add this for convenience
+  bool get isWindowOpenForMonth {
+    if (!hasWindow) return false;
+    final currentMonthKey = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
+    return isWindowOpen && windowMonthKey == currentMonthKey;
+  }
+
   // Expose for manual refresh
   Future<void> refreshWindow() async {
     await _fetchCurrentWindow();
@@ -197,7 +216,12 @@ class AvailabilityProvider extends ChangeNotifier {
       return true;
     } on ApiException catch (e) {
       _errorMessage = e.message;
-      _submitting   = false;
+      _submitting = false;  // Make sure to reset on error
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      _submitting = false;  // Make sure to reset on any error
       notifyListeners();
       return false;
     }

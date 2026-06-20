@@ -69,14 +69,11 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
           height: 80,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(50),
-            boxShadow: [
-              BoxShadow(
-                color: Theme.of(context).brightness == Brightness.dark ? Colors.black.withOpacity(0.08) : Colors.white.withOpacity(0.1),
-                blurRadius: 40,
-                spreadRadius: 0,
-                offset: const Offset(0, 6),
+              border: Border.all(
+                color: Theme.of(context).primaryColor, // Set your desired color here
+                width: 1.0,          // Set the thickness of the border
               ),
-            ],
+            color: Theme.of(context).scaffoldBackgroundColor,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,

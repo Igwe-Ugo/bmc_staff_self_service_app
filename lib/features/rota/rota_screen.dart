@@ -15,7 +15,7 @@ class _RotaScreenState extends State<RotaScreen> {
   RotaFilter  _filter      = RotaFilter.allStatus;
   DateTime    _focusedDay  = DateTime.now();
   DateTime?   _selectedDay;
-  bool        _dropdownOpen = false;
+  bool _dropdownOpen = false;
 
   // ── Sample data — replace with API ──────────────────────────────────────────
   final List<RotaEvent> _allEvents = [
@@ -114,7 +114,6 @@ class _RotaScreenState extends State<RotaScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -153,17 +152,20 @@ class _RotaScreenState extends State<RotaScreen> {
     );
   }
 
+  Color _scaffoldBg(BuildContext ctx) =>
+      Theme.of(ctx).brightness == Brightness.light
+          ? Theme.of(ctx).hoverColor
+          : Theme.of(ctx).scaffoldBackgroundColor;
+
+  Color _cardBg(BuildContext ctx) =>
+      Theme.of(context).cardColor;
+
   // ── App Bar ──────────────────────────────────────────────────────────────────
   Widget _buildAppBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.maybePop(context),
-            child: const Icon(Icons.arrow_back_ios, size: 18, color: Color(0xFF1C1C1E)),
-          ),
-          const SizedBox(width: 8),
           const Text('Rota', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const Spacer(),
           GestureDetector(
@@ -171,7 +173,7 @@ class _RotaScreenState extends State<RotaScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: const Color(0xFFE5E5EA)),
               ),
@@ -185,7 +187,7 @@ class _RotaScreenState extends State<RotaScreen> {
                   const SizedBox(width: 4),
                   Icon(
                     _dropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    size: 18, color: const Color(0xFF6C47FF),
+                    size: 18,
                   ),
                 ],
               ),
@@ -206,7 +208,7 @@ class _RotaScreenState extends State<RotaScreen> {
         child: Container(
           width: 160,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -231,7 +233,7 @@ class _RotaScreenState extends State<RotaScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                      color: selected ? const Color(0xFF6C47FF) : const Color(0xFF1C1C1E),
+                      color: selected ? Theme.of(context).primaryColor : Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
                     ),
                   ),
                 ),
@@ -247,10 +249,13 @@ class _RotaScreenState extends State<RotaScreen> {
   Widget _buildCalendar() {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: _cardBg(context),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 2)),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10, offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: TableCalendar(
@@ -379,11 +384,11 @@ class _RotaScreenState extends State<RotaScreen> {
                       style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
                   const SizedBox(width: 8),
                   Text(_formatDate(date),
-                      style: const TextStyle(fontSize: 13, color: Color(0xFF8E8E93))),
+                      style: const TextStyle(fontSize: 13)),
                 ],
               ),
             ),
-            ...events.map((e) => ShiftEventTile(event: e)),
+            ...events.map((e) => ShiftEventTile(event: e, cardBg: _cardBg(context))),
             const SizedBox(height: 16),
           ],
         );

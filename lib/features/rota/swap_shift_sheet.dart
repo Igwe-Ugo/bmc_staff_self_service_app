@@ -99,12 +99,12 @@ class _SwapShiftSheetState extends State<SwapShiftSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + bottom),
+      padding: EdgeInsets.fromLTRB(20, 16, 20, 100 + bottom),
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.92,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -189,7 +189,6 @@ class _SwapShiftSheetState extends State<SwapShiftSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F7),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE5E5EA)),
       ),
@@ -225,7 +224,7 @@ class _SwapShiftSheetState extends State<SwapShiftSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: const Color(0xFFF2F2F7),
+          color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -359,7 +358,7 @@ class _SwapShiftSheetState extends State<SwapShiftSheet> {
   Widget _label(String text) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Text(text,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1C1C1E))),
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
   );
 
   Widget _buildTextField(TextEditingController ctrl, String hint, {int maxLines = 1}) {
@@ -371,7 +370,7 @@ class _SwapShiftSheetState extends State<SwapShiftSheet> {
         hintText: hint,
         hintStyle: const TextStyle(color: Color(0xFFAEAEB2), fontSize: 13),
         filled: true,
-        fillColor: const Color(0xFFF2F2F7),
+        fillColor: Theme.of(context).scaffoldBackgroundColor,
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

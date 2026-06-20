@@ -16,7 +16,7 @@ class ProfileDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Colors.black,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(30, 50, 30, 0),
@@ -41,7 +41,6 @@ class ProfileDrawer extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.all(15),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).primaryColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Row(
@@ -99,26 +98,11 @@ class ProfileDrawer extends StatelessWidget {
               ),
 
               const SizedBox(height: 32),
-
               /// 🔹 PERSONAL ITEMS — no user data needed, no Consumer
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).primaryColor,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _personalMenuItem(context),
-              ),
-
+              _personalMenuItem(context),
               const SizedBox(height: 32),
-
               /// 🔹 SYSTEM ITEMS
-              Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).primaryColor,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _systemMenuItems(context),
-              ),
+              _systemMenuItems(context),
             ],
           ),
         ),
@@ -128,13 +112,15 @@ class ProfileDrawer extends StatelessWidget {
 
   Widget _personalMenuItem(BuildContext context) {
     return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(15),
+      ),
       padding: const EdgeInsets.all(15),
       child: ListView(
         shrinkWrap: true,
         children: [
           ListTile(
-            hoverColor: Theme.of(context).primaryColor.withOpacity(0.5),
-            selectedColor: Theme.of(context).primaryColor,
             leading: const Icon(Iconsax.profile_add),
             trailing: const Icon(Iconsax.arrow_right_3, size: 15),
             title: const Text(
@@ -184,6 +170,10 @@ class ProfileDrawer extends StatelessWidget {
 
   Widget _systemMenuItems(BuildContext context) {
     return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(15),
+      ),
       padding: const EdgeInsets.all(15),
       child: ListView(
         shrinkWrap: true,

@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
-import '../../core/network/provider/widget.dart';
-import '../common/widget.dart';
 import 'package:intl/intl.dart';
 
-import '../models/widget.dart';
+import '../../core/network/provider/widget.dart';
+import '../common/widget.dart';
 
 class BMCHome extends StatefulWidget {
   const BMCHome({super.key});
@@ -20,28 +19,29 @@ class _BMCHomeState extends State<BMCHome> {
   bool _showDrawer = false;
   late String currentDate;
   late String currentTime;
-  late ChatUser user;
 
   @override
   void initState() {
     super.initState();
     _updateDateTime();
 
+    // Initialize availability data when home loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<AvailabilityProvider>(context, listen: false).init();
+    });
+
     // Updates every second
     Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 1));
-
       if (mounted) {
         _updateDateTime();
       }
-
       return mounted;
     });
   }
 
   void _updateDateTime() {
     final now = DateTime.now();
-
     setState(() {
       currentTime = DateFormat('hh:mm a').format(now);
       currentDate = DateFormat('EE, MMMM d').format(now);
@@ -50,123 +50,62 @@ class _BMCHomeState extends State<BMCHome> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, _) {
-        // Show loader while fetching
-        if (userProvider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-        // Show error state
-        if (userProvider.state == UserState.error) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: Colors.red),
-                const SizedBox(height: 12),
-                Text(userProvider.errorMessage ?? 'Failed to load profile'),
-                const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () => userProvider.fetchMe(),
-                  child: const Text('Retry'),
-                ),
-              ],
-            ),
-          );
+    // UI Theme Palette mapping matching your screenshots
+    final secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF888888);
+
+    return Consumer2<UserProvider, AvailabilityProvider>(
+      builder: (context, userProvider, availabilityProvider, _) {
+        if (userProvider.isLoading || availabilityProvider.isLoading) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
 
         return Scaffold(
-          backgroundColor: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
           body: Stack(
             children: [
               SingleChildScrollView(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20, 100, 20, 40),
+                  padding: const EdgeInsets.fromLTRB(20, 110, 20, 40),
                   child: Column(
                     children: [
-                      const SizedBox(height: 5,),
                       _welcomeCard(context, userProvider),
-                      const SizedBox(height: 24,),
-                      _SectionTitle(title: "My Rota", badge: "23", isRota: true,),
-                      SizedBox(height: 18,),
+                      const SizedBox(height: 24),
+
+                      const _SectionTitle(title: "My Rota", badge: "23", isRota: true),
+                      const SizedBox(height: 14),
                       SizedBox(
-                        height: 240,
+                        height: 190,
                         child: ListView(
-                          shrinkWrap: true,
                           scrollDirection: Axis.horizontal,
-                          children: [
-                            ..._buildRotaCard(context, [
-                              {
-                                'color': Theme.of(context).primaryColor,
-                                'active': true,
-                                'day': "Today",
-                                'label': "Morning Shift",
-                                'dayNumber': "01",
-                                'month': "May",
-                                'shiftDuty': "Consultation",
-                                'shiftRoom': "Ward One"
-                              },
-                              {
-                                'color': Theme.of(context).primaryColor.withOpacity(0.2),
-                                'active': false,
-                                'day': "Tue",
-                                'label': "All Day",
-                                'dayNumber': "02",
-                                'month': "May",
-                                'shiftDuty': "",
-                                'shiftRoom': "No shift"
-                              },
-                                {
-                                'color': Colors.orange.shade200,
-                                'active': false,
-                                'day': "Tue",
-                                'label': "Night Shift",
-                                'dayNumber': "03",
-                                'month': "May",
-                                'shiftDuty': "Consultation",
-                                'shiftRoom': "Ward One"
-                                }
-                            ])
-                          ]
+                          children: _buildRotaCard(context),
                         ),
                       ),
-                      SizedBox(height: 32,),
-                      _SectionTitle(title: "My Leave", badge: "18", isRota: false,),
-                      SizedBox(height: 18,),
-                      _buildLeaveCard(),
-                      SizedBox(height: 32,),
-                      _SectionTitle(title: "My Availability", badge: "18", isRota: false,),
-                      SizedBox(height: 18,),
-                      buildWeekCalendar(
-                        selectedIndex: _selectedDayIndex,
-                        onDaySelected: (index) {
-                          setState(() => _selectedDayIndex = index);
-                        },
-                      ),
-                      SizedBox(height: 32,),
-                      _SectionTitle(title: "Recent Notifications", badge: "10", isRota: false,),
-                      SizedBox(height: 18,),
-                      _buildNotificationList(userProvider),
-                      SizedBox(height: 32,),
-                      _SectionTitle(title: "Recent Messages", badge: "5", isRota: false,),
-                      SizedBox(height: 18,),
-                      _buildMessagesList(userProvider),
-                      //_showMoreInfoSheet(),
+                      const SizedBox(height: 24),
+
+                      const _SectionTitle(title: "My Leave", badge: "18", isRota: false),
+                      const SizedBox(height: 14),
+                      _buildLeaveCard(Theme.of(context).cardColor),
+                      const SizedBox(height: 24),
+
+                      const _SectionTitle(title: "My Availability", badge: "14", isRota: false),
+                      const SizedBox(height: 14),
+                      _buildWeekCalendar(availabilityProvider, Theme.of(context).cardColor),
+                      const SizedBox(height: 24),
+
+                      const _SectionTitle(title: "Recent Messages", badge: "5", isRota: false),
+                      const SizedBox(height: 14),
+                      _buildMessagesList(userProvider, Theme.of(context).cardColor),
+                      const SizedBox(height: 24),
+
+                      const _SectionTitle(title: "Recent Notifications", badge: "10", isRota: false),
+                      const SizedBox(height: 14),
+                      _buildNotificationList(userProvider, Theme.of(context).cardColor),
                     ],
                   ),
                 ),
               ),
-              _topNavBar(
-                context,
-                userProvider: userProvider,
-                onProfileTap: () {
-                  setState(() {
-                    _showDrawer = true;
-                    navBarVisible.value = false;
-                  });
-                },
-              ),
+              _topNavBar(context, userProvider: userProvider, onProfileTap: () {setState(() {_showDrawer = true; navBarVisible.value = false;});},),
               AnimatedPositioned(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
@@ -185,914 +124,239 @@ class _BMCHomeState extends State<BMCHome> {
             ],
           ),
         );
-      }
+      },
     );
   }
 
-  Widget _welcomeCard(context, UserProvider userProvider){
+  // --- UI Component Builders ---
+
+  Widget _welcomeCard(BuildContext context, UserProvider userProvider) {
     return Container(
-      height: 185,
+      height: 160,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(10),
-        image: DecorationImage(
+        borderRadius: BorderRadius.circular(16),
+        image: const DecorationImage(
           image: AssetImage("assets/images/beautiful-strawberry-garden-sunrise.png"),
           fit: BoxFit.cover,
         ),
       ),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
-            colors: [
-              Colors.black,
-              Colors.transparent,
-            ],
+            colors: [Colors.black.withOpacity(0.85), Colors.transparent],
           ),
         ),
-        alignment: Alignment.bottomLeft,
         padding: const EdgeInsets.all(16),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 Text(
-                  _getGreeting(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontFamily: 'Lexend',
-                    fontWeight: FontWeight.w700,
-                  ),
+                  "${_getGreeting()}, ",
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(width: 8,),
                 Text(
                   userProvider.displayName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontFamily: 'Lexend',
-                    fontWeight: FontWeight.w100,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w300),
                 ),
                 const Spacer(),
-                SvgPicture.asset('assets/icons/weather.svg')
+                SvgPicture.asset('assets/icons/weather.svg', width: 20, height: 20)
               ],
             ),
-            const SizedBox(height: 19),
-            Text(
-              "Gleanings for the day",
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontFamily: 'Lexend',
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Divider(),
-            const SizedBox(height: 10),
-            Text(
-              "Philippians 4:13",
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontFamily: 'Lexend',
-                fontWeight: FontWeight.w300,
-              ),
-            ),
-            const SizedBox(width: 10,),
-            Text(
-              "I can do all things through Christ who strengthens me.",
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontFamily: 'Lexend',
-                fontWeight: FontWeight.w300,
-              ),
-            ),
+            const SizedBox(height: 6),
+            const Text("Gleanings for the day", style: TextStyle(color: Colors.white70, fontSize: 11)),
+            const Divider(color: Colors.white30, height: 12),
+            const Text("Philippians 4:13", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
+            const Text("I can do all things through Christ who strengthens me.", style: TextStyle(color: Colors.white70, fontSize: 11)),
           ],
         ),
       ),
     );
   }
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
+  List<Widget> _buildRotaCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final List<Map<String, dynamic>> rotas = [
+      {
+        'color': const Color(0xFF6C47FF),
+        'dayNumber': "01", 'month': "May", 'day': "Today",
+        'label': "On Call", 'shiftDuty': "Consultant", 'shiftRoom': "Ward one", 'active': true
+      },
+      {
+        'color': isDark ? const Color(0xFF27273F) : Colors.white,
+        'dayNumber': "02", 'month': "May", 'day': "Tue",
+        'label': "All Day", 'shiftDuty': "No Shift", 'shiftRoom': "", 'active': false
+      },
+      {
+        'color': const Color(0xFFFFF3E0),
+        'dayNumber': "03", 'month': "May", 'day': "Wed",
+        'label': "Night Shift", 'shiftDuty': "Consultant", 'shiftRoom': "Ward two", 'active': false
+      }
+    ];
 
-    if (hour < 12) {
-      return "Good Morning";
-    } else if (hour < 17) {
-      return "Good Afternoon";
-    } else {
-      return "Good Evening";
-    }
-  }
+    return rotas.map((rota) {
+      final bool customColored = rota['active'] || rota['label'] == "Night Shift";
+      final Color textColor = customColored
+          ? (rota['label'] == "Night Shift" ? const Color(0xFFF39C12) : Colors.white)
+          : (isDark ? Colors.white : const Color(0xFF1A1A2E));
 
-  Widget _topNavBar(BuildContext context, {required VoidCallback onProfileTap, required UserProvider userProvider}){
-    return Container(
-      color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).primaryColor.withOpacity(0.8),
-      height: 100,
-      padding: EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () => onProfileTap(),
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Theme.of(context).primaryColor,
-                  child: UserAvatar(
-                    image:    userProvider.avatar,
-                    initials: userProvider.initials,
-                    radius:   18,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10,),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    currentTime,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Lexend',
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    currentDate,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontFamily: 'Lexend',
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 10,),
-              CircleAvatar(
-                radius: 7,
-                backgroundColor: Color(0xff22C55E).withOpacity(0.3),
-                child: CircleAvatar(
-                  radius: 5,
-                  backgroundColor: Color(0xff22C55E),
-                ),
-              ),
-            ],
-          ),
-          Spacer(),
-          GestureDetector(
-            onTap: () {
-              final themeProvider = Provider.of<DarkThemeProvider>(context, listen: false,);
-              themeProvider.darkTheme = !themeProvider.darkTheme;
-              },
-            child: CircleAvatar(
-              radius: 20,
-              backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
-              child: Icon(Provider.of<DarkThemeProvider>(context).darkTheme ? Iconsax.sun_1 : Iconsax.moon, size: 20, color: Theme.of(context).brightness == Brightness.dark ? Colors.white: Colors.black,),
-            ),
-          ),
-          const SizedBox(width: 16,),
-          MessageBadgeIcon(),
-          const SizedBox(width: 16,),
-          NotificationBadgeIcon()
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildRotaCard(
-      BuildContext context, List<Map<String, dynamic>> myRota) {
-    return myRota
-        .map((rota) => _rotaCard(
-      context,
-      color: rota['color']!,
-      dayNumber: rota['dayNumber']!,
-      day: rota['day']!,
-      month: rota['month']!,
-      label: rota['label']!,
-      active: rota['active']!,
-      shiftDuty: rota['shiftDuty']!,
-      shiftRoom: rota['shiftRoom'],
-    )).toList();
-  }
-
-  Widget _rotaCard(
-      BuildContext context, {
-        required Color color,
-        required String dayNumber,
-        required String day,
-        required String month,
-        required String label,
-        required bool active,
-        required String shiftDuty,
-        required String shiftRoom,
-      }) {
-    final textColor = Colors.white;
-    return Container(
-      width: 150,
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.fromLTRB(0, 0, 10, 0),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(dayNumber,
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      )),
-                  Text(month,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: textColor,
-                      )),
-                ],
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  day,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: textColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 30),
-          Text(label,
-              style: TextStyle(
-                color: textColor,
-                fontSize: 13,
-              )),
-
-          const Spacer(),
-
-          if (active)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: CircleAvatar(
-                radius: 15,
-                child: SvgPicture.asset(
-                  "assets/icons/arrow-2.svg",
-                  width: 20,
-                  height: 20,
-                ),
-              ),
-            ),
-          const SizedBox(height: 13),
-          Text(shiftDuty, style: TextStyle(color: textColor, fontFamily: 'Lexend', fontWeight: FontWeight.w500, fontSize: 15)),
-          Text(shiftRoom, style: TextStyle(color: textColor)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLeaveCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left Section - Donut chart
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      return Container(
+        width: 140,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: rota['color'],
+          borderRadius: BorderRadius.circular(16),
+          border: isDark ? null : Border.all(color: Colors.black12.withOpacity(0.05)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Compassionate 2026',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: SizedBox(
-                    width: 110,
-                    height: 110,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 110,
-                          height: 110,
-                          child: CircularProgressIndicator(
-                            value: 0.75,
-                            strokeWidth: 12,
-                            backgroundColor: const Color(0xFFE0E0E0),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Theme.of(context).primaryColor,
-                            ),
-                            strokeCap: StrokeCap.round,
-                          ),
-                        ),
-                        const Text(
-                          '75%',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A1A2E),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Row(
-                  children: [
-                    Text(
-                      'Remaining',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF888888),
-                      ),
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      '0/0 Days',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1A1A2E),
-                      ),
-                    ),
-                  ],
-                ),
+                Text(rota['dayNumber'], style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
+                Text(rota['day'], style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.7))),
               ],
             ),
-          ),
+            Text(rota['month'], style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7))),
+            const SizedBox(height: 16),
+            Text(rota['label'], style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textColor)),
+            const Spacer(),
+            Text(rota['shiftDuty'], style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor)),
+            if (rota['shiftRoom'].toString().isNotEmpty)
+              Text(rota['shiftRoom'], style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6))),
+          ],
+        ),
+      );
+    }).toList();
+  }
 
-          const SizedBox(width: 16),
-
-          // Right Section
+  Widget _buildLeaveCard(Color cardColor) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
+      child: Row(
+        children: [
           Expanded(
             flex: 5,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Estimated / Used card
-                _buildInfoCard(
-                  children: [
-                    _buildInfoRow('Estimated', '0'),
-                    const SizedBox(height: 6),
-                    _buildInfoRow('Used', '0'),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Carried over / Pending card
-                _buildInfoCard(
-                  children: [
-                    _buildInfoRow('Carried over', '0'),
-                    const SizedBox(height: 6),
-                    _buildInfoRow('Pending', '0'),
-                  ],
-                ),
-                const SizedBox(height: 10),
-
-                // Sick tile
-                _buildArrowTile('Sick'),
-                const SizedBox(height: 8),
-
-                // Travel tile
-                _buildArrowTile('Travel'),
+                Text('Compassionate', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                LinearProgressIndicator(value: 0.2, backgroundColor: Colors.black12, color: Theme.of(context).primaryColor),
+                const SizedBox(height: 12),
+                _buildLeaveRow('Estimated', '0'),
+                _buildLeaveRow('Used', '0'),
+                _buildLeaveRow('Carried over', '0'),
+                _buildLeaveRow('Pending', '0'),
               ],
             ),
           ),
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 5,
+            child: Column(
+              children: [
+                _buildLeaveMenuTile('Sick', Colors.orange),
+                const SizedBox(height: 6),
+                _buildLeaveMenuTile('Rest', Colors.red),
+                const SizedBox(height: 6),
+                _buildLeaveMenuTile('Emergency', Colors.green),
+              ],
+            ),
+          )
         ],
       ),
     );
   }
 
-  Widget _buildInfoCard({required List<Widget> children}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xFF888888),
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Color(0xFF1A1A2E),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildArrowTile(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-      ),
+  Widget _buildLeaveRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF1A1A2E),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const Icon(
-            Icons.chevron_right,
-            size: 18,
-            color: Color(0xFF888888),
-          ),
+          Text(label, style: TextStyle(fontSize: 11)),
+          Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _buildNotificationList(UserProvider userProvider) {
-    final List<Map<String, dynamic>> notifications = [
-      {
-        'title': 'Availability window open closes 30/05/2026 at 23:59',
-        'subtitle': '2 Days left',
-        'metaIcon': Icons.access_time_outlined,
-        'badge': 'Admin',
-        'badgeColor': Color(0xFFEDE9FF),
-        'badgeTextColor': Theme.of(context).primaryColor,
-        'time': '12.50pm',
-        'borderColor': Theme.of(context).primaryColor,
-        'icon': Icons.swap_horiz,
-      },
-      {
-        'title': 'Ugoo wants is giving you his shift',
-        'subtitle': 'Swap Request',
-        'metaIcon': Icons.swap_horiz,
-        'badge': 'Ugoo',
-        'badgeColor': Color(0xFFE6F9F0),
-        'badgeTextColor': Color(0xFF27AE60),
-        'time': '12.50pm',
-        'borderColor': Color(0xFF27AE60),
-        'icon': Icons.swap_horiz,
-      },
-      {
-        'title': 'Leave Request',
-        'subtitle': 'Approved',
-        'metaIcon': Icons.check_circle_outline,
-        'badge': 'Admin',
-        'badgeColor': Color(0xFFEDE9FF),
-        'badgeTextColor': Theme.of(context).primaryColor,
-        'time': '12.50pm',
-        'borderColor': Theme.of(context).primaryColor,
-        'icon': Icons.check_circle_outline,
-      },
-      {
-        'title': 'Swap shift with Ugochukwu Igwe',
-        'subtitle': 'Accepted',
-        'metaIcon': Icons.check_circle_outline,
-        'badge': 'Igwe',
-        'badgeColor': Color(0xFFFFF3E0),
-        'badgeTextColor': Color(0xFFF39C12),
-        'time': '12.50pm',
-        'borderColor': Color(0xFFF39C12),
-        'icon': Icons.check_circle_outline,
-      },
-    ];
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: notifications.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final item = notifications[index];
-        return GestureDetector(
-            onTap: () {
-              navBarVisible.value = false;
-              showModalBottomSheet(
-                context: context,
-                builder: (context) => _showMoreInfoSheet(
-                  userProvider: userProvider,
-                  colleague: item['badge'],
-                  color: item['borderColor'],
-                  username: userProvider.displayName,
-                  userDept: "Nursing",
-                  userAvatar: userProvider.avatar!,
-                  title: item['title'],
-                  info: item['subtitle'],
-                  time: "Yesterday | ${item['time']}",
-                ),
-              );
-            },
-            child: _buildCard(item, userProvider),
-        );
-      },
-    );
-  }
-
-  Widget _buildMessagesList(UserProvider userProvider) {
-    final List<Map<String, dynamic>> notifications = [
-      {
-        'title': 'I won’t come to work tomorrow ma',
-        'subtitle': 'Today',
-        'metaIcon': Icons.access_time_outlined,
-        'badge': 'Ugoo',
-        'badgeColor': Color(0xFF27AE60).withOpacity(0.2),
-        'badgeTextColor': Color(0xFF27AE60),
-        'time': '12.50pm',
-        'borderColor': Color(0xFF27AE60),
-        'icon': Icons.swap_horiz,
-      },
-      {
-        'title': 'Please don’t involve me',
-        'subtitle': 'Today',
-        'metaIcon': Icons.access_time_outlined,
-        'badge': 'Ugoo',
-        'badgeColor': Color(0xFFDE2626).withOpacity(0.2),
-        'badgeTextColor': Color(0xFFDE2626),
-        'time': '12.50pm',
-        'borderColor': Color(0xFFDE2626),
-        'icon': Icons.swap_horiz,
-      },
-      {
-        'title': 'Help buy food while coming tomorrow',
-        'subtitle': 'Yesterday',
-        'metaIcon': Icons.access_time_outlined,
-        'badge': 'Uzo',
-        'badgeColor': Color(0xFF3782F3).withOpacity(0.2),
-        'badgeTextColor': Color(0xFF3782F3),
-        'time': '12.50pm',
-        'borderColor': Color(0xFF3782F3),
-        'icon': Icons.check_circle_outline,
-      },
-      {
-        'title': 'Send me that money nah',
-        'subtitle': 'Yesterday',
-        'metaIcon': Icons.access_time_outlined,
-        'badge': 'Igwe',
-        'badgeColor': Color(0xFFF39C12).withOpacity(0.2),
-        'badgeTextColor': Color(0xFFF39C12),
-        'time': '12.50pm',
-        'borderColor': Color(0xFFF39C12),
-        'icon': Icons.check_circle_outline,
-      },
-    ];
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: notifications.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final item = notifications[index];
-        return _buildCard(item, userProvider);
-      },
-    );
-  }
-
-  SingleChildScrollView _showMoreInfoSheet({required UserProvider userProvider, required String colleague, required String title, required Color color, required String username, required String userDept, required String userAvatar, required String info, required String time}){
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.white,
-              ),
-              child: _buildHeaderTile(userProvider: userProvider,color: color, title: title, username: username, userDept: userDept, userAvatar: userAvatar, info: info, time: time),
-            ),
-            const SizedBox(height: 24,),
-            Container(
-              padding: const EdgeInsets.all(26),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                color: Colors.white,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Swap Summary:',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        fontFamily: 'Lexend'
-                    ),
-                  ),
-                  const SizedBox(height: 24,),
-                  Text(
-                    'You get: Fri 29 May Night (17.00-08.00)',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w400,
-                      fontSize: 14,
-                      fontFamily: 'Lexend'
-                    ),
-                  ),
-                  const SizedBox(height: 16,),
-                  Text(
-                    'You give: Sun 31 May Night (17.00 - 08.00)',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14,
-                        fontFamily: 'Lexend'
-                    ),
-                  ),
-                  const SizedBox(height: 16,),
-                  Text(
-                    'With $colleague',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w400,
-                        fontSize: 14,
-                        fontFamily: 'Lexend'
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 50,),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF22C55E),
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    side: BorderSide(color: Color(0xFF27AE60).withOpacity(0.6))
-                  ),
-                ),
-                child: const Text(
-                  "Accept",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontFamily: 'Lexend',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16,),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  navBarVisible.value = true;
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0x88F3C0C0).withOpacity(0.8),
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    side: BorderSide(color: Color(0xFFDE2626).withOpacity(0.6))
-                  ),
-                ),
-                child: const Text(
-                  "Reject",
-                  style: TextStyle(
-                    color: Colors.red,
-                    fontFamily: 'Lexend',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 70,)
-          ],
-        ),
+  Widget _buildLeaveMenuTile(String label, Color indicatorColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8)
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              Icon(Icons.chevron_right, size: 16)
+            ],
+          ),
+          const SizedBox(height: 4),
+          Container(height: 3, width: double.infinity, decoration: BoxDecoration(color: indicatorColor, borderRadius: BorderRadius.circular(2))),
+        ],
       ),
     );
   }
 
-  Widget _buildHeaderTile({required UserProvider userProvider, required Color color, required String title, required String username, required String userDept, required String userAvatar, required String info, required String time}) {
-    return InkWell(
-      onTap: (){},
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            // Avatar
-            UserAvatar(
-              image:    userProvider.avatar,
-              initials: userProvider.initials,
-              radius:   22,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        username,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF1A1A2E),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        info,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        userDept,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        time,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: Color(0xFF888888),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // State variable to track selected index — declare this in your class:
-// int _selectedDayIndex = 1;
-
-  Widget buildWeekCalendar({
-    required int selectedIndex,
-    required ValueChanged<int> onDaySelected,
-  }) {
-    final List<Map<String, dynamic>> days = [
-      {
-        'day': 'S',
-        'date': '30',
-        'dots': [Color(0xFF4CAF50)],
-      },
-      {
-        'day': 'M',
-        'date': '01',
-        'dots': [Color(0xFF4CAF50)],
-      },
-      {
-        'day': 'T',
-        'date': '02',
-        'dots': [Color(0xFF4CAF50), Color(0xFFFFEB3B)],
-      },
-      {
-        'day': 'W',
-        'date': '03',
-        'dots': [Color(0xFF4CAF50), Color(0xFFFFEB3B)],
-      },
-      {
-        'day': 'T',
-        'date': '04',
-        'dots': [Color(0xFFF44336)],
-      },
-      {
-        'day': 'F',
-        'date': '05',
-        'dots': [Color(0xFF4CAF50)],
-      },
-      {
-        'day': 'S',
-        'date': '06',
-        'dots': <Color>[],
-      },
+  Widget _buildWeekCalendar(AvailabilityProvider provider, Color cardColor) {
+    final List<Map<String, dynamic>> staticDays = [
+      {'day': 'S', 'date': '30', 'dots': [Colors.green]},
+      {'day': 'M', 'date': '01', 'dots': [Colors.green]},
+      {'day': 'T', 'date': '02', 'dots': [Colors.green, Colors.orange]},
+      {'day': 'W', 'date': '03', 'dots': [Colors.green, Colors.orange]},
+      {'day': 'T', 'date': '04', 'dots': [Colors.red]},
+      {'day': 'F', 'date': '05', 'dots': [Colors.red]},
+      {'day': 'S', 'date': '06', 'dots': [Colors.green]},
     ];
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(days.length, (index) {
-          final item = days[index];
-          final bool isSelected = index == selectedIndex;
+        children: List.generate(staticDays.length, (index) {
+          final item = staticDays[index];
+          final bool isSelected = index == _selectedDayIndex;
 
           return GestureDetector(
-            onTap: () => onDaySelected(index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              width: 40,
+            onTap: () => setState(() => _selectedDayIndex = index),
+            child: Container(
+              width: 42,
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFFEEEBF8) : Colors.transparent,
+                color: isSelected ? const Color(0xFF6C47FF).withOpacity(0.2) : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
+                border: isSelected ? Border.all(color: const Color(0xFF6C47FF), width: 1.5) : null,
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Day letter
-                  Text(
-                    item['day'] as String,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: isSelected
-                          ? Theme.of(context).primaryColor
-                          : const Color(0xFF999999),
-                    ),
-                  ),
+                  Text(item['day'], style: TextStyle(fontSize: 12)),
+                  const SizedBox(height: 4),
+                  Text(item['date'], style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 6),
-
-                  // Date number
-                  Text(
-                    item['date'] as String,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: isSelected
-                          ? const Color(0xFF6C47FF)
-                          : const Color(0xFF1A1A2E),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-
-                  // Dot indicators
-                  _buildDotRow(item['dots'] as List<Color>),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: (item['dots'] as List<Color>).map((color) => Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 1),
+                      width: 5, height: 5,
+                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    )).toList(),
+                  )
                 ],
               ),
             ),
@@ -1102,141 +366,137 @@ class _BMCHomeState extends State<BMCHome> {
     );
   }
 
-  Widget _buildDotRow(List<Color> dots) {
-    if (dots.isEmpty) {
-      return const SizedBox(height: 6);
-    }
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: dots.asMap().entries.map((entry) {
-        return Container(
-          margin: EdgeInsets.only(left: entry.key > 0 ? 3 : 0),
-          width: 6,
-          height: 6,
-          decoration: BoxDecoration(
-            color: entry.value,
-            shape: BoxShape.circle,
-          ),
-        );
-      }).toList(),
+  Widget _buildMessagesList(UserProvider userProvider, Color cardColor) {
+    final List<Map<String, dynamic>> msgs = [
+      {'title': 'I won’t come to work tomorrow ma', 'subtitle': 'Today', 'badge': 'Ugoo', 'color': Colors.green, 'time': '12:50pm'},
+      {'title': 'Please don’t involve me', 'subtitle': 'Today', 'badge': 'Richard', 'color': Colors.red, 'time': '12:50pm'},
+      {'title': 'Help buy food while coming tomorrow', 'subtitle': 'Yesterday', 'badge': 'Uzo', 'color': Colors.blue, 'time': '12:50pm'},
+      {'title': 'Send me that money nah', 'subtitle': 'Yesterday', 'badge': 'Igwe', 'color': Colors.amber, 'time': '12:50pm'},
+    ];
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: msgs.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) => _listTileCard(msgs[index], cardColor),
     );
   }
 
-  Widget _buildCard(Map<String, dynamic> item, UserProvider userProvider) {
+  Widget _buildNotificationList(UserProvider userProvider, Color cardColor) {
+    final List<Map<String, dynamic>> notes = [
+      {'title': 'Availability window open closes 30/05/2026 at 23:59', 'subtitle': '2 Days left', 'badge': 'Admin', 'color': const Color(0xFF6C47FF), 'time': '12:50pm'},
+      {'title': 'Ugoo wants is giving you his shift', 'subtitle': 'Swap Request', 'badge': 'Ugoo', 'color': Colors.green, 'time': '12:50pm'},
+      {'title': 'Leave Request', 'subtitle': 'Approved', 'badge': 'Admin', 'color': const Color(0xFF6C47FF), 'time': '12:50pm'},
+      {'title': 'Swap shift with Ugochukwu Igwe', 'subtitle': 'Accepted', 'badge': 'Igwe', 'color': Colors.amber, 'time': '12:50pm'},
+    ];
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: notes.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) => _listTileCard(notes[index], cardColor),
+    );
+  }
+
+  Widget _listTileCard(Map<String, dynamic> item, Color cardColor) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border(
-          left: BorderSide(
-            color: item['borderColor'] as Color,
-            width: 4,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(left: BorderSide(color: item['color'], width: 4)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar
           CircleAvatar(
-            radius: 20,
-            backgroundColor: item['badgeTextColor'] as Color,
-            child: UserAvatar(
-                image: userProvider.avatar,
-                initials: userProvider.initials,
-              radius: 18,
-            ),
+            radius: 16,
+            backgroundColor: (item['color'] as Color).withOpacity(0.2),
+            child: Icon(Icons.person, size: 16, color: item['color']),
           ),
           const SizedBox(width: 12),
-
-          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  item['title'] as String,
-                  style: const TextStyle(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
-                    height: 1.3,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    Icon(
-                      item['metaIcon'] as IconData,
-                      size: 13,
-                      color: const Color(0xFF888888),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      item['subtitle'] as String,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF888888),
-                      ),
-                    ),
-                    if (item.containsKey('meta')) ...[
-                      const SizedBox(width: 4),
-                      Text(
-                        item['meta'] as String,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF888888),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                Text(item['title'], maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(item['subtitle'], style: TextStyle(fontSize: 11)),
               ],
             ),
           ),
-
           const SizedBox(width: 8),
-
-          // Right side: badge + time
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                decoration: BoxDecoration(
-                  color: item['badgeColor'] as Color,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  item['badge'] as String,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: item['badgeTextColor'] as Color,
-                  ),
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(color: (item['color'] as Color).withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
+                child: Text(item['badge'], style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: item['color'])),
               ),
-              const SizedBox(height: 10),
-              Text(
-                item['time'] as String,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: Color(0xFF888888),
-                ),
-              ),
+              const SizedBox(height: 4),
+              Text(item['time'], style: TextStyle(fontSize: 10)),
             ],
-          ),
+          )
         ],
       ),
     );
+  }
+
+  Widget _topNavBar(BuildContext context, {required UserProvider userProvider, required VoidCallback onProfileTap}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      color: isDark ? const Color(0xFF1E1E2F) : Colors.white,
+      height: 100,
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 0),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => onProfileTap(),
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: Theme.of(context).primaryColor,
+              child: UserAvatar(image: userProvider.avatar, initials: userProvider.initials, radius: 16),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(currentTime, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+              Text(currentDate, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+            ],
+          ),
+          const SizedBox(width: 6),
+          Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
+          const Spacer(),
+          GestureDetector(
+            onTap: (){
+              final themeProvider = Provider.of<DarkThemeProvider>(context, listen: false);
+              themeProvider.darkTheme = !themeProvider.darkTheme;
+            },
+            child: CircleAvatar(
+              radius: 22,
+              backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
+              child: Icon(isDark ? Iconsax.sun_1 : Iconsax.moon, size: 25),
+            ),
+          ),
+          const SizedBox(width: 12),
+          MessageBadgeIcon(),
+          const SizedBox(width: 12),
+          NotificationBadgeIcon(),
+        ],
+      ),
+    );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
   }
 }
 
@@ -1249,41 +509,24 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1A1A2E);
     return Row(
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16, fontFamily: 'Lexend')),
-        if (isRota)
-          ...[const SizedBox(width: 6),
-          Text(
-            "| This Month",
-              style: const TextStyle(fontWeight: FontWeight.w300, fontSize: 13, fontFamily: 'Lexend')
-          ),],
+        Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: textColor)),
+        if (isRota) ...[
+          const SizedBox(width: 4),
+          Text("| This Month", style: TextStyle(fontWeight: FontWeight.w300, fontSize: 12, color: textColor.withOpacity(0.7))),
+        ],
         const SizedBox(width: 6),
         CircleAvatar(
-          radius: 10,
-          child: Text(
-              badge,
-              style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  fontFamily: 'Lexend'
-              )
-          ),
+          radius: 9,
+          backgroundColor: const Color(0xFF6C47FF).withOpacity(0.2),
+          child: Text(badge, style: const TextStyle(fontSize: 10, color: Color(0xFF6C47FF), fontWeight: FontWeight.bold)),
         ),
         const Spacer(),
-        const Text(
-            "View All",
-          style: TextStyle(
-            fontWeight: FontWeight.w400,
-            fontSize: 14,
-            fontFamily: 'Lexend',
-            decoration: TextDecoration.underline,
-          ),
-        ),
-        GestureDetector(
-            onTap: (){},
-            child: Icon(Iconsax.arrow_right_3, size: 15)
-        ),
+        Text("View All", style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.6), decoration: TextDecoration.underline)),
+        const SizedBox(width: 2),
+        Icon(Iconsax.arrow_right_3, size: 12, color: textColor.withOpacity(0.6)),
       ],
     );
   }

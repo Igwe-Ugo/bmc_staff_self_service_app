@@ -1,3 +1,4 @@
+import 'package:bmc_app/features/common/show_message.dart';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 
@@ -61,7 +62,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -114,9 +114,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFE5E5EA)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -126,7 +125,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1C1C1E),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -197,7 +195,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
   Widget _buildCalendarCard() {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.light ? Theme.of(context).hoverColor : Theme.of(context).scaffoldBackgroundColor,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -333,13 +331,13 @@ class _LeaveScreenState extends State<LeaveScreen> {
       children: [
         const Text(
           'My Leave Balance',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1C1C1E)),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
@@ -353,7 +351,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 children: [
                   Text(
                     _selectedType.label.replaceAll(' Leave', ''),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1C1C1E)),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                   ),
                   Text(
                     ratio,
@@ -372,12 +370,12 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 child: LinearProgressIndicator(
                   value: balance.progress,
                   minHeight: 8,
-                  backgroundColor: const Color(0xFFE5E5EA),
+                  backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.grey : Colors.white,
                   valueColor: AlwaysStoppedAnimation<Color>(balance.progressColor),
                 ),
               ),
               const SizedBox(height: 16),
-              const Divider(height: 1, color: Color(0xFFF2F2F7)),
+              Divider(height: 1, color: Theme.of(context).brightness == Brightness.light ? Colors.grey : Colors.white),
               const SizedBox(height: 12),
               // Stats rows
               _buildBalanceRow('Estimated', balance.estimated),
@@ -397,8 +395,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 13, color: Color(0xFF8E8E93))),
-          Text('$value', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1C1C1E))),
+          Text(label, style: const TextStyle(fontSize: 13)),
+          Text('$value', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -414,7 +412,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
       children: [
         const Text(
           'My Leave Request',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1C1C1E)),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         if (requests.isEmpty)
@@ -422,11 +420,11 @@ class _LeaveScreenState extends State<LeaveScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Center(
-              child: Text('No leave requests yet', style: TextStyle(color: Color(0xFF8E8E93), fontSize: 13)),
+              child: Text('No leave requests yet', style: TextStyle(fontSize: 13)),
             ),
           )
         else
@@ -441,7 +439,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(14),
         border: Border(left: BorderSide(color: color, width: 4)),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
@@ -452,11 +450,11 @@ class _LeaveScreenState extends State<LeaveScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(event.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1C1C1E))),
+                Text(event.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 Text(
                   '${_fmt(event.from)} → ${_fmt(event.to)}',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
+                  style: const TextStyle(fontSize: 11),
                 ),
               ],
             ),
@@ -566,6 +564,9 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
 
   Future<void> _pickDate({required bool isFrom}) async {
     final now = DateTime.now();
+    // 1. Check if the app is currently in dark mode
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     final picked = await showDatePicker(
       context: context,
       initialDate: now,
@@ -574,10 +575,10 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF6C47FF),
-              onPrimary: Colors.white,
-              surface: Colors.white,
+            colorScheme: (isDarkMode ? const ColorScheme.dark() : const ColorScheme.light()).copyWith(
+              primary: Theme.of(context).primaryColor,
+              surface: Theme.of(context).cardColor,
+              onSurface: isDarkMode ? Colors.white : Colors.black87,
             ),
           ),
           child: child!,
@@ -595,13 +596,14 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
     });
   }
 
+
   void _submit() {
     if (_titleController.text.trim().isEmpty) {
-      _snack('Please enter a title');
+      showMessage('Please enter a title', context, status: MessageStatus.error);
       return;
     }
     if (_fromDate == null || _toDate == null) {
-      _snack('Please select from and to dates');
+      showMessage('Please select from and to dates', context, status: MessageStatus.error);
       return;
     }
     widget.onSave(LeaveEvent(
@@ -613,20 +615,14 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
     ));
   }
 
-  void _snack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFE74C3C)),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomInset),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 100 + bottomInset),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
@@ -642,7 +638,7 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
           ),
           const SizedBox(height: 16),
 
-          const Text('Request Leave', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1C1C1E))),
+          const Text('Request Leave', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 20),
 
           // Title
@@ -708,7 +704,7 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
   Widget _sheetLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF8E8E93))),
+      child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 
@@ -721,7 +717,7 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
         hintText: hint,
         hintStyle: const TextStyle(color: Color(0xFFAEAEB2), fontSize: 13),
         filled: true,
-        fillColor: const Color(0xFFF2F2F7),
+        fillColor: Theme.of(context).scaffoldBackgroundColor,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       ),
@@ -732,15 +728,15 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF2F2F7),
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<LeaveType>(
           value: _type,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF6C47FF)),
-          style: const TextStyle(fontSize: 14, color: Color(0xFF1C1C1E), fontWeight: FontWeight.w500),
+          icon: const Icon(Icons.keyboard_arrow_down),
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
           items: widget.leaveTypes.map((t) {
             return DropdownMenuItem(
               value: t,
@@ -766,7 +762,7 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
         decoration: BoxDecoration(
-          color: const Color(0xFFF2F2F7),
+          color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -778,7 +774,7 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
                 label,
                 style: TextStyle(
                   fontSize: 13,
-                  color: date == null ? const Color(0xFFAEAEB2) : const Color(0xFF1C1C1E),
+                  color: date == null ? Theme.of(context).hintColor : Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
                   fontWeight: date == null ? FontWeight.normal : FontWeight.w600,
                 ),
               ),

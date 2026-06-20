@@ -41,24 +41,52 @@ class AvailabilityServices {
       debugPrint('📡 MY-CALENDAR STATUS: ${response.statusCode}');
       debugPrint('📡 MY-CALENDAR RESPONSE: ${response.data}');
 
-      // Unwrap outer "data" envelope → { "personnelId": ..., "slots": [...] }
-      final envelope = _unwrapObject(response.data);
-      if (envelope == null) return [];
-
-      // Pull "slots" array out of the envelope
-      final slotsList = envelope['slots'];
-      if (slotsList == null || slotsList is! List) {
-        debugPrint('⚠️ No "slots" array found in calendar response');
+      // If response is null
+      if (response.data == null) {
+        debugPrint('⚠️ Null response from calendar');
         return [];
       }
 
+      // Unwrap outer "data" envelope
+      dynamic inner;
+      if (response.data is Map<String, dynamic> && response.data.containsKey('data')) {
+        inner = response.data['data'];
+      } else {
+        inner = response.data;
+      }
+
+      if (inner == null) {
+        return [];
+      }
+
+      // Get slots from envelope
+      List<dynamic> slotsList = [];
+      if (inner is Map<String, dynamic>) {
+        slotsList = inner['slots'] as List<dynamic>? ?? [];
+      } else if (inner is List<dynamic>) {
+        slotsList = inner;
+      }
+
       debugPrint('✅ ${slotsList.length} slot(s) found for $month');
-      return slotsList
-          .map((e) => HrAvailabilitySlot.fromJson(e as Map<String, dynamic>))
-          .toList();
+
+      final List<HrAvailabilitySlot> results = [];
+      for (final slotJson in slotsList) {
+        try {
+          if (slotJson is Map<String, dynamic>) {
+            results.add(HrAvailabilitySlot.fromJson(slotJson));
+          }
+        } catch (e) {
+          debugPrint('❌ Error parsing slot: $e');
+        }
+      }
+
+      return results;
     } on DioException catch (e) {
       debugPrint('❌ CALENDAR ERROR: ${e.response?.data}');
-      throw e.error as ApiException;
+      throw ApiException(
+        message: e.response?.data?['message'] ?? 'Failed to fetch calendar',
+        statusCode: e.response?.statusCode,
+      );
     }
   }
 
@@ -67,7 +95,8 @@ class AvailabilityServices {
   /// API may return { "data": { "personnelId": ..., "slots": [...] } }
   /// or { "data": [ ...slots... ] } — handles both.
   Future<List<HrAvailabilitySlot>> submitBulk(
-      HrAvailabilityBulkFormData formData) async {
+      HrAvailabilityBulkFormData formData,
+      ) async {
     try {
       final response = await _dio.post(
         ApiEndpoints.availabilityBulk,
@@ -77,33 +106,74 @@ class AvailabilityServices {
       debugPrint('📡 BULK SUBMIT STATUS: ${response.statusCode}');
       debugPrint('📡 BULK SUBMIT RESPONSE: ${response.data}');
 
-      final inner = _unwrapRaw(response.data); // raw data["data"]
-
-      // Shape A: { "personnelId": ..., "slots": [...] }
-      if (inner is Map<String, dynamic> && inner.containsKey('slots')) {
-        final list = inner['slots'] as List<dynamic>;
-        return list
-            .map((e) => HrAvailabilitySlot.fromJson(e as Map<String, dynamic>))
-            .toList();
+      // If response is null
+      if (response.data == null) {
+        debugPrint('⚠️ Null response from bulk submit');
+        return [];
       }
 
-      // Shape B: [ ...slots... ]
-      if (inner is List) {
-        return inner
-            .map((e) => HrAvailabilitySlot.fromJson(e as Map<String, dynamic>))
-            .toList();
+      // Get the inner data
+      dynamic inner;
+      if (response.data is Map<String, dynamic> && response.data.containsKey('data')) {
+        inner = response.data['data'];
+      } else {
+        inner = response.data;
       }
 
-      // Shape C: single slot object
-      if (inner is Map<String, dynamic>) {
-        return [HrAvailabilitySlot.fromJson(inner)];
+      debugPrint('📡 Inner data type: ${inner.runtimeType}');
+      debugPrint('📡 Inner data: $inner');
+
+      // If inner is null
+      if (inner == null) {
+        return [];
       }
 
-      debugPrint('⚠️ Unexpected bulk response shape: ${inner.runtimeType}');
-      return [];
+      // Try to parse as list of slots
+      List<dynamic> slotsList = [];
+
+      if (inner is List<dynamic>) {
+        slotsList = inner;
+      } else if (inner is Map<String, dynamic>) {
+        // Check if it has a 'slots' key
+        if (inner.containsKey('slots')) {
+          slotsList = inner['slots'] as List<dynamic>? ?? [];
+        } else {
+          // Single slot object
+          slotsList = [inner];
+        }
+      }
+
+      debugPrint('📡 Parsing ${slotsList.length} slots');
+
+      // Parse each slot
+      final List<HrAvailabilitySlot> results = [];
+      for (final slotJson in slotsList) {
+        try {
+          if (slotJson is Map<String, dynamic>) {
+            final slot = HrAvailabilitySlot.fromJson(slotJson);
+            results.add(slot);
+            debugPrint('✅ Parsed slot: ${slot.id} - ${slot.date}');
+          } else {
+            debugPrint('⚠️ Slot is not a Map: ${slotJson.runtimeType}');
+          }
+        } catch (e, stackTrace) {
+          debugPrint('❌ Error parsing slot: $e');
+          debugPrint('Stack trace: $stackTrace');
+          debugPrint('Slot JSON: $slotJson');
+        }
+      }
+
+      return results;
     } on DioException catch (e) {
       debugPrint('❌ BULK SUBMIT ERROR: ${e.response?.data}');
-      throw e.error as ApiException;
+      debugPrint('❌ Error details: ${e.message}');
+      throw ApiException(
+        message: e.response?.data?['message'] ?? 'Failed to submit availability',
+        statusCode: e.response?.statusCode,
+      );
+    } catch (e) {
+      debugPrint('❌ Unexpected error in submitBulk: $e');
+      throw ApiException(message: e.toString());
     }
   }
 
