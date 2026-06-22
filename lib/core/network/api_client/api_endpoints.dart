@@ -27,6 +27,12 @@ class ApiEndpoints {
   static const String availabilityBulk = '/hr/availability/bulk'; // for saving the availability
   static const String deleteAvailability = '/hr/availability/{slotId}'; // for deleting the availability
 
+  // ── Leave Request ─────────────────────────────────────────────────────────────
+  static const String _baseLeaveRequest        = '';
+  static const String leaveRequests    = '/hr/leave/requests';
+  static const String leaveMyRequests  = '/hr/leave/my-requests';
+  static const String leaveSearch      = '/hr/leave/search';
+
   static String fill(String path, Map<String, String> params) {
     var result = path;
     params.forEach((key, value) {

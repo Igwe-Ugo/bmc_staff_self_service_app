@@ -20,90 +20,110 @@ class ProfileDrawer extends StatelessWidget {
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(30, 50, 30, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              /// 🔹 TOP BAR
-              IconButton(
-                onPressed: () async {
-                  onClose();
-                  await Future.delayed(const Duration(milliseconds: 200));
-                  navBarVisible.value = true;
-                },
-                icon: const Icon(Iconsax.arrow_left, size: 20),
-              ),
+          // Fix overflow: wrap Column in SingleChildScrollView
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// 🔹 TOP BAR
+                IconButton(
+                  onPressed: () async {
+                    onClose();
+                    await Future.delayed(const Duration(milliseconds: 200));
+                    navBarVisible.value = true;
+                  },
+                  icon: const Icon(Iconsax.arrow_left, size: 20),
+                ),
 
-              const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-              /// 🔹 PROFILE SECTION — only this section needs user data
-              Consumer<UserProvider>(
-                builder: (context, userProvider, _) {
-                  return Container(
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        // Avatar: show network image if available, else initials
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.15),
-                          child: userProvider.hasAvatar ? UserAvatar(
-                            image:    userProvider.avatar,
-                            initials: userProvider.initials,
-                            radius:   40,
-                          ) : null,
-                        ),
-                        const SizedBox(width: 22),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                userProvider.displayName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 5),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: userProvider.user!.privileges.map((p) {
-                                  return Chip(
-                                    label: Text(
-                                      p.split('~')[1],
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Theme.of(context).primaryColor,
-                                      ),
-                                    ),
-                                    backgroundColor: Theme.of(context).brightness == Brightness.light ?
-                                    Theme.of(context).primaryColor.withOpacity(0.1) : Colors.white,
-                                    side: BorderSide.none,
-                                    padding: EdgeInsets.zero,
-                                  );
-                                }).toList(),
-                              ),
-                            ],
+                /// 🔹 PROFILE SECTION
+                Consumer<UserProvider>(
+                  builder: (context, userProvider, _) {
+                    // Guard: if user is null (mid-logout), show nothing
+                    final user = userProvider.user;
+                    if (user == null) return const SizedBox.shrink();
+
+                    return Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 40,
+                            backgroundColor: Theme.of(context)
+                                .primaryColor
+                                .withOpacity(0.15),
+                            child: userProvider.hasAvatar
+                                ? UserAvatar(
+                              image:    userProvider.avatar,
+                              initials: userProvider.initials,
+                              radius:   40,
+                            )
+                                : null,
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
+                          const SizedBox(width: 22),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  userProvider.displayName,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 5),
+                                // Safe: using local `user` variable, no `!`
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: user.privileges.map((p) {
+                                    final parts = p.split('~');
+                                    final label = parts.length > 1
+                                        ? parts[1]
+                                        : p; // safe split
+                                    return Chip(
+                                      label: Text(
+                                        label,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color:
+                                          Theme.of(context).primaryColor,
+                                        ),
+                                      ),
+                                      backgroundColor:
+                                      Theme.of(context).brightness ==
+                                          Brightness.light
+                                          ? Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.1)
+                                          : Colors.white,
+                                      side: BorderSide.none,
+                                      padding: EdgeInsets.zero,
+                                    );
+                                  }).toList(),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
 
-              const SizedBox(height: 32),
-              /// 🔹 PERSONAL ITEMS — no user data needed, no Consumer
-              _personalMenuItem(context),
-              const SizedBox(height: 32),
-              /// 🔹 SYSTEM ITEMS
-              _systemMenuItems(context),
-            ],
+                const SizedBox(height: 32),
+                _personalMenuItem(context),
+                const SizedBox(height: 32),
+                _systemMenuItems(context),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
@@ -119,6 +139,7 @@ class ProfileDrawer extends StatelessWidget {
       padding: const EdgeInsets.all(15),
       child: ListView(
         shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(), // inside ScrollView
         children: [
           ListTile(
             leading: const Icon(Iconsax.profile_add),
@@ -177,6 +198,7 @@ class ProfileDrawer extends StatelessWidget {
       padding: const EdgeInsets.all(15),
       child: ListView(
         shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(), // inside ScrollView
         children: [
           ListTile(
             leading: const Icon(Iconsax.note_text),
@@ -195,7 +217,6 @@ class ProfileDrawer extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          // ✅ Logout clears UserProvider too
           Consumer<UserProvider>(
             builder: (context, userProvider, _) {
               return ListTile(
@@ -210,8 +231,13 @@ class ProfileDrawer extends StatelessWidget {
                   ),
                 ),
                 onTap: () {
-                  showMessage("Logout Successful!", context, status: MessageStatus.success);
+                  // Navigate FIRST, clear AFTER — avoids null rebuild
                   GoRouter.of(context).go(BMCRouter.loginPath);
+                  showMessage(
+                    'Logout Successful!',
+                    context,
+                    status: MessageStatus.success,
+                  );
                   userProvider.clear();
                 },
               );

@@ -1,63 +1,328 @@
-import 'dart:ui';
+// ─── leave_model.dart ─────────────────────────────────────────────────────────
 
-enum LeaveType {
-  compassionate('Compassionate Leave', Color(0xFF6C47FF)),
-  sick('Sick Leave', Color(0xFFFF6B6B)),
-  emergency('Emergency Leave', Color(0xFFF39C12)),
-  rest('Rest Leave', Color(0xFF27AE60));
+import 'package:flutter/material.dart';
 
-  final String label;
-  final Color color;
-  const LeaveType(this.label, this.color);
+// ── Enums ─────────────────────────────────────────────────────────────────────
+
+enum HrLeaveRequestStatus { pending, approved, rejected, cancelled }
+
+// ── Standardized Leave Types (used across the app) ───────────────────────────
+
+const List<String> availableLeaveTypes = [
+  'Annual',
+  'Sick',
+  'Study',
+  'Maternity',
+  'Paternity',
+  'Compassionate',
+  'Bereavement',
+  'Unpaid',
+];
+
+// Optional: Helper extension for formatting
+extension LeaveTypeExt on String {
+  String get formatted => split('_')
+      .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}' : '')
+      .join(' ');
 }
 
-class LeaveEvent {
-  final String title;
-  final LeaveType type;
-  final DateTime from;
-  final DateTime to;
-  final String description;
-
-  const LeaveEvent({
-    required this.title,
-    required this.type,
-    required this.from,
-    required this.to,
-    required this.description,
-  });
-
-  List<DateTime> get days {
-    final list = <DateTime>[];
-    var d = from;
-    while (!d.isAfter(to)) {
-      list.add(DateTime(d.year, d.month, d.day));
-      d = d.add(const Duration(days: 1));
+extension HrLeaveRequestStatusExt on HrLeaveRequestStatus {
+  String get value {
+    switch (this) {
+      case HrLeaveRequestStatus.pending:   return 'PENDING';
+      case HrLeaveRequestStatus.approved:  return 'APPROVED';
+      case HrLeaveRequestStatus.rejected:  return 'REJECTED';
+      case HrLeaveRequestStatus.cancelled: return 'CANCELLED';
     }
-    return list;
+  }
+
+  String get label {
+    switch (this) {
+      case HrLeaveRequestStatus.pending:   return 'Pending';
+      case HrLeaveRequestStatus.approved:  return 'Approved';
+      case HrLeaveRequestStatus.rejected:  return 'Rejected';
+      case HrLeaveRequestStatus.cancelled: return 'Cancelled';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case HrLeaveRequestStatus.pending:   return const Color(0xFFF39C12);
+      case HrLeaveRequestStatus.approved:  return const Color(0xFF27AE60);
+      case HrLeaveRequestStatus.rejected:  return const Color(0xFFE74C3C);
+      case HrLeaveRequestStatus.cancelled: return const Color(0xFF8E8E93);
+    }
+  }
+
+  Color get bgColor {
+    switch (this) {
+      case HrLeaveRequestStatus.pending:   return const Color(0xFFFFF3E0);
+      case HrLeaveRequestStatus.approved:  return const Color(0xFFE8F5E9);
+      case HrLeaveRequestStatus.rejected:  return const Color(0xFFFFEBEE);
+      case HrLeaveRequestStatus.cancelled: return const Color(0xFFF2F2F7);
+    }
+  }
+
+  static HrLeaveRequestStatus fromString(String value) {
+    switch (value.toUpperCase()) {
+      case 'APPROVED':  return HrLeaveRequestStatus.approved;
+      case 'REJECTED':  return HrLeaveRequestStatus.rejected;
+      case 'CANCELLED': return HrLeaveRequestStatus.cancelled;
+      default:          return HrLeaveRequestStatus.pending;
+    }
   }
 }
 
-class LeaveBalance {
-  final LeaveType type;
-  final int total;
-  final int used;
-  final int carriedOver;
-  final int pending;
+// ── HrLeaveRequest ────────────────────────────────────────────────────────────
 
-  const LeaveBalance({
-    required this.type,
-    required this.total,
-    required this.used,
-    this.carriedOver = 0,
-    this.pending = 0,
+class HrLeaveRequest {
+  final String               id;
+  final String               personnelId;
+  final String               leaveType;
+  final String               startDate;   // yyyy-MM-dd
+  final String               endDate;     // yyyy-MM-dd
+  final int                  totalDays;
+  final String?              reason;
+  final HrLeaveRequestStatus status;
+  final String?              approvedBy;
+  final String?              approvedAt;
+  final String?              decisionNotes;
+  final String               createdBy;
+  final String               createdAt;
+  final String?              updatedBy;
+  final String?              updatedAt;
+
+  // extended query fields (may be null for basic responses)
+  final String? personnelName;
+  final String? staffNumber;
+  final String? personnelCategory;
+  final String? approvedByName;
+  final String? deptName;
+
+  const HrLeaveRequest({
+    required this.id,
+    required this.personnelId,
+    required this.leaveType,
+    required this.startDate,
+    required this.endDate,
+    required this.totalDays,
+    this.reason,
+    required this.status,
+    this.approvedBy,
+    this.approvedAt,
+    this.decisionNotes,
+    required this.createdBy,
+    required this.createdAt,
+    this.updatedBy,
+    this.updatedAt,
+    this.personnelName,
+    this.staffNumber,
+    this.personnelCategory,
+    this.approvedByName,
+    this.deptName,
   });
 
-  int get estimated => total - used;
-  double get progress => total == 0 ? 0 : used / total;
+  DateTime get startDateTime => DateTime.parse(startDate);
+  DateTime get endDateTime   => DateTime.parse(endDate);
 
-  Color get progressColor {
-    if (progress <= 1 / 3) return const Color(0xFF27AE60);
-    if (progress <= 2 / 3) return const Color(0xFFF39C12);
-    return const Color(0xFFE74C3C);
+  /// All calendar days covered by this request (inclusive).
+  List<DateTime> get days {
+    final result = <DateTime>[];
+    var d = startDateTime;
+    final end = endDateTime;
+    while (!d.isAfter(end)) {
+      result.add(d);
+      d = d.add(const Duration(days: 1));
+    }
+    return result;
+  }
+
+  factory HrLeaveRequest.fromJson(Map<String, dynamic> json) {
+    return HrLeaveRequest(
+      id:                json['id']             as String,
+      personnelId:       json['personnelId']     as String,
+      leaveType:         json['leaveType']       as String,
+      startDate:         (json['startDate']      as String).split('T').first,
+      endDate:           (json['endDate']        as String).split('T').first,
+      totalDays:         (json['totalDays'] is int)
+          ? json['totalDays'] as int
+          : int.tryParse(json['totalDays'].toString()) ?? 0,
+      reason:            json['reason']          as String?,
+      status:            HrLeaveRequestStatusExt.fromString(
+          json['status'] as String),
+      approvedBy:        json['approvedBy']      as String?,
+      approvedAt:        json['approvedAt']      as String?,
+      decisionNotes:     json['decisionNotes']   as String?,
+      createdBy:         json['createdBy']       as String,
+      createdAt:         json['createdAt']       as String,
+      updatedBy:         json['updatedBy']       as String?,
+      updatedAt:         json['updatedAt']       as String?,
+      personnelName:     json['personnelName']   as String?,
+      staffNumber:       json['staffNumber']     as String?,
+      personnelCategory: json['personnelCategory'] as String?,
+      approvedByName:    json['approvedByName']  as String?,
+      deptName:          json['deptName']        as String?,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'id':               id,
+    'personnelId':      personnelId,
+    'leaveType':        leaveType,
+    'startDate':        startDate,
+    'endDate':          endDate,
+    'totalDays':        totalDays,
+    'reason':           reason,
+    'status':           status.value,
+    'approvedBy':       approvedBy,
+    'approvedAt':       approvedAt,
+    'decisionNotes':    decisionNotes,
+    'createdBy':        createdBy,
+    'createdAt':        createdAt,
+    'updatedBy':        updatedBy,
+    'updatedAt':        updatedAt,
+  };
+}
+
+// ── Form data ─────────────────────────────────────────────────────────────────
+
+class HrLeaveRequestFormData {
+  final String  personnelId;
+  final String  leaveType;
+  final String  startDate;
+  final String  endDate;
+  final int     totalDays;
+  final String? reason;
+
+  const HrLeaveRequestFormData({
+    required this.personnelId,
+    required this.leaveType,
+    required this.startDate,
+    required this.endDate,
+    required this.totalDays,
+    this.reason,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'personnelId': personnelId,
+    'leaveType':   leaveType,
+    'startDate':   startDate,
+    'endDate':     endDate,
+    'totalDays':   totalDays,
+    if (reason != null && reason!.isNotEmpty) 'reason': reason,
+  };
+}
+
+class HrLeaveUpdateFormData {
+  final String  leaveType;
+  final String  startDate;
+  final String  endDate;
+  final int     totalDays;
+  final String? reason;
+
+  const HrLeaveUpdateFormData({
+    required this.leaveType,
+    required this.startDate,
+    required this.endDate,
+    required this.totalDays,
+    this.reason,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'leaveType': leaveType,
+    'startDate': startDate,
+    'endDate':   endDate,
+    'totalDays': totalDays,
+    if (reason != null && reason!.isNotEmpty) 'reason': reason,
+  };
+}
+
+class HrLeaveDecisionFormData {
+  final String  status; // 'APPROVED' | 'REJECTED'
+  final String? decisionNotes;
+
+  const HrLeaveDecisionFormData({required this.status, this.decisionNotes});
+
+  Map<String, dynamic> toJson() => {
+    'status': status,
+    if (decisionNotes != null) 'decisionNotes': decisionNotes,
+  };
+}
+
+// ── HrLeaveBalance ────────────────────────────────────────────────────────────
+
+class HrLeaveBalance {
+  final String id;
+  final String personnelId;
+  final int    year;
+  final String leaveType;
+  final int    entitlement;
+  final int    carriedOver;
+  final int    used;
+  final int    pending;
+  final String createdBy;
+  final String createdAt;
+
+  const HrLeaveBalance({
+    required this.id,
+    required this.personnelId,
+    required this.year,
+    required this.leaveType,
+    required this.entitlement,
+    required this.carriedOver,
+    required this.used,
+    required this.pending,
+    required this.createdBy,
+    required this.createdAt,
+  });
+
+  int get available => entitlement + carriedOver - used - pending;
+
+  factory HrLeaveBalance.fromJson(Map<String, dynamic> json) {
+    int _i(dynamic v) =>
+        v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
+    return HrLeaveBalance(
+      id:          json['id']          as String,
+      personnelId: json['personnelId'] as String,
+      year:        _i(json['year']),
+      leaveType:   json['leaveType']   as String,
+      entitlement: _i(json['entitlement']),
+      carriedOver: _i(json['carriedOver']),
+      used:        _i(json['used']),
+      pending:     _i(json['pending']),
+      createdBy:   json['createdBy']   as String,
+      createdAt:   json['createdAt']   as String,
+    );
+  }
+}
+
+// ── Filter query ──────────────────────────────────────────────────────────────
+
+class HrLeaveRequestFilters {
+  final String?               personnelId;
+  final String?               deptId;
+  final HrLeaveRequestStatus? status;
+  final String?               leaveType;
+  final String?               startDate;
+  final String?               endDate;
+
+  const HrLeaveRequestFilters({
+    this.personnelId,
+    this.deptId,
+    this.status,
+    this.leaveType,
+    this.startDate,
+    this.endDate,
+  });
+
+  Map<String, String> toQueryParams() {
+    final m = <String, String>{};
+    if (personnelId != null) m['personnelId'] = personnelId!;
+    if (deptId      != null) m['deptId']      = deptId!;
+    if (status      != null) m['status']      = status!.value;
+    if (leaveType   != null) m['leaveType']   = leaveType!;
+    if (startDate   != null) m['startDate']   = startDate!;
+    if (endDate     != null) m['endDate']      = endDate!;
+    return m;
   }
 }

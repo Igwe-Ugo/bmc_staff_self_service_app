@@ -207,6 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _isLoading = false;
       });
       GoRouter.of(context).go(BMCRouter.homePath);
+      navBarVisible.value = true;
     } else {
       setState(() {
         _isLoading = false;

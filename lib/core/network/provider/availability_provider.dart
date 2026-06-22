@@ -161,6 +161,14 @@ class AvailabilityProvider extends ChangeNotifier {
     await _fetchMyCalendar(key);
   }
 
+  // In availability_provider.dart
+  List<HrAvailabilitySlot> slotsForDate(DateTime date) {
+    final key = _dateKey(date);
+    return _slots.where(
+          (s) => _dateKey(s.date) == key,
+    ).toList();
+  }
+
   // ── 3. Submit bulk (single or multiple slots) ─────────────────────────────
   /// For a single slot, pass one item in [slots].
   /// For multiple dates at once, pass multiple items.

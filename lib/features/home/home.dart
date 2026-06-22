@@ -1,11 +1,15 @@
+import 'package:bmc_app/features/home/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/network/provider/widget.dart';
+import '../availability/widget.dart';
 import '../common/widget.dart';
+import '../leave/widget.dart';
 
 class BMCHome extends StatefulWidget {
   const BMCHome({super.key});
@@ -55,8 +59,8 @@ class _BMCHomeState extends State<BMCHome> {
     // UI Theme Palette mapping matching your screenshots
     final secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF888888);
 
-    return Consumer2<UserProvider, AvailabilityProvider>(
-      builder: (context, userProvider, availabilityProvider, _) {
+    return Consumer3<UserProvider, AvailabilityProvider, LeaveProvider>(
+      builder: (context, userProvider, availabilityProvider, leaveProvider, _) {
         if (userProvider.isLoading || availabilityProvider.isLoading) {
           return const Scaffold(body: Center(child: CircularProgressIndicator()));
         }
@@ -82,15 +86,12 @@ class _BMCHomeState extends State<BMCHome> {
                         ),
                       ),
                       const SizedBox(height: 24),
-
-                      const _SectionTitle(title: "My Leave", badge: "18", isRota: false),
-                      const SizedBox(height: 14),
-                      _buildLeaveCard(Theme.of(context).cardColor),
+                      LeaveSummaryCard(),
                       const SizedBox(height: 24),
 
                       const _SectionTitle(title: "My Availability", badge: "14", isRota: false),
                       const SizedBox(height: 14),
-                      _buildWeekCalendar(availabilityProvider, Theme.of(context).cardColor),
+                      const WeeklyAvailabilityWidget(),
                       const SizedBox(height: 24),
 
                       const _SectionTitle(title: "Recent Messages", badge: "5", isRota: false),
@@ -235,46 +236,6 @@ class _BMCHomeState extends State<BMCHome> {
         ),
       );
     }).toList();
-  }
-
-  Widget _buildLeaveCard(Color cardColor) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 5,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Compassionate', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(value: 0.2, backgroundColor: Colors.black12, color: Theme.of(context).primaryColor),
-                const SizedBox(height: 12),
-                _buildLeaveRow('Estimated', '0'),
-                _buildLeaveRow('Used', '0'),
-                _buildLeaveRow('Carried over', '0'),
-                _buildLeaveRow('Pending', '0'),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 5,
-            child: Column(
-              children: [
-                _buildLeaveMenuTile('Sick', Colors.orange),
-                const SizedBox(height: 6),
-                _buildLeaveMenuTile('Rest', Colors.red),
-                const SizedBox(height: 6),
-                _buildLeaveMenuTile('Emergency', Colors.green),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
   }
 
   Widget _buildLeaveRow(String label, String value) {

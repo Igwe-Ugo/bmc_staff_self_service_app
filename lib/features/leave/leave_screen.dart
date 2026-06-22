@@ -1,8 +1,12 @@
-import 'package:bmc_app/features/common/show_message.dart';
-import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
+// ─── leave_screen.dart ────────────────────────────────────────────────────────
 
-import '../../core/network/models/widget.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:table_calendar/table_calendar.dart';
+import '../../../core/network/models/leave_model.dart';
+import '../../../core/network/provider/leave_provider.dart';
+import '../../../core/network/provider/user_provider.dart';
+import '../common/widget.dart';
 
 class LeaveScreen extends StatefulWidget {
   const LeaveScreen({super.key});
@@ -12,139 +16,211 @@ class LeaveScreen extends StatefulWidget {
 }
 
 class _LeaveScreenState extends State<LeaveScreen> {
-  LeaveType _selectedType = LeaveType.compassionate;
-  DateTime _focusedDay = DateTime.now();
+  DateTime  _focusedDay  = DateTime.now();
   DateTime? _selectedDay;
-  bool _dropdownOpen = false;
+  bool      _dropdownOpen = false;
+  // Which leave type to highlight on the calendar
+  String? _calendarFilter; // null = show all
 
-  // Sample leave events — replace with real data
-  final List<LeaveEvent> _allEvents = [
-    LeaveEvent(
-      title: 'Family bereavement',
-      type: LeaveType.compassionate,
-      from: DateTime(2026, 5, 18),
-      to: DateTime(2026, 5, 20),
-      description: 'Family matter',
-    ),
-    LeaveEvent(
-      title: 'Flu recovery',
-      type: LeaveType.sick,
-      from: DateTime(2026, 5, 22),
-      to: DateTime(2026, 5, 23),
-      description: 'Sick',
-    ),
-  ];
-
-  // Leave balances per type
-  final Map<LeaveType, LeaveBalance> _balances = const {
-    LeaveType.compassionate: LeaveBalance(type: LeaveType.compassionate, total: 3, used: 1),
-    LeaveType.sick: LeaveBalance(type: LeaveType.sick, total: 5, used: 2),
-    LeaveType.emergency: LeaveBalance(type: LeaveType.emergency, total: 3, used: 0),
-    LeaveType.rest: LeaveBalance(type: LeaveType.rest, total: 6, used: 4),
-  };
-
-  LeaveBalance get _currentBalance => _balances[_selectedType]!;
-
-  List<LeaveEvent> get _filteredEvents =>
-      _allEvents.where((e) => e.type == _selectedType).toList();
-
-  Set<DateTime> get _markedDays {
-    final days = <DateTime>{};
-    for (final e in _filteredEvents) {
-      days.addAll(e.days);
-    }
-    return days;
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LeaveProvider>().init();
+    });
   }
 
-  bool _isMarked(DateTime day) =>
-      _markedDays.contains(DateTime(day.year, day.month, day.day));
+  // ── Calendar helpers ──────────────────────────────────────────────────────
+
+  List<HrLeaveRequest> _requestsForDay(
+      DateTime day, List<HrLeaveRequest> all) {
+    final key = DateTime(day.year, day.month, day.day);
+    return all.where((r) {
+      if (_calendarFilter != null && r.leaveType != _calendarFilter) {
+        return false;
+      }
+      return r.days.any((d) =>
+      DateTime(d.year, d.month, d.day) == key);
+    }).toList();
+  }
+
+  Color _leaveTypeColor(String leaveType) {
+    final colors = {
+      'ANNUAL':        const Color(0xFF6C47FF),
+      'SICK':          const Color(0xFFE74C3C),
+      'MATERNITY':     const Color(0xFFE91E8C),
+      'PATERNITY':     const Color(0xFF2196F3),
+      'COMPASSIONATE': const Color(0xFFF39C12),
+      'EMERGENCY':     const Color(0xFFFF5722),
+      'STUDY':         const Color(0xFF009688),
+      'UNPAID':        const Color(0xFF8E8E93),
+    };
+    return colors[leaveType.toUpperCase()] ?? const Color(0xFF6C47FF);
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
+    return Consumer<LeaveProvider>(
+      builder: (context, provider, _) {
+        final user        = context.read<UserProvider>().user;
+        final personnelId = user?.personnelId ?? '';
+
+        return Scaffold(
+          body: SafeArea(
+            child: Stack(
               children: [
-                _buildAppBar(),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildCalendarCard(),
-                        const SizedBox(height: 20),
-                        _buildBalanceSection(),
-                        const SizedBox(height: 20),
-                        _buildLeaveRequestSection(),
-                        const SizedBox(height: 20),
-                        _buildRequestButton(),
-                      ],
-                    ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 7),
+                  child: Column(
+                    children: [
+                      _buildAppBar(provider),
+                      if (provider.isLoading)
+                        LinearProgressIndicator(color: Theme.of(context).primaryColor),
+                      Expanded(
+                        child: RefreshIndicator(
+                          color: Theme.of(context).primaryColor,
+                          onRefresh: provider.refresh,
+                          child: SingleChildScrollView(
+                            physics:
+                            const AlwaysScrollableScrollPhysics(),
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+                                _buildCalendarCard(provider),
+                                const SizedBox(height: 20),
+                                _buildFilterRow(provider),
+                                const SizedBox(height: 16),
+                                _buildRequestList(
+                                    provider, personnelId),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+                Positioned(
+                  bottom: 20,
+                  right: 20,
+                  child: FloatingActionButton.extended(
+                    elevation: 6,
+                    backgroundColor: Theme.of(context).primaryColor,
+                    onPressed: () => _openRequestSheet(
+                        context, provider, personnelId),
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    label: const Text('Request Leave',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+
+                // Leave-type dropdown overlay
+                if (_dropdownOpen)
+                  _buildDropdownOverlay(provider),
               ],
             ),
-
-            // Dropdown overlay
-            if (_dropdownOpen) _buildDropdownOverlay(),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  // ── App Bar ─────────────────────────────────────────────────────────────────
+  // ── App Bar ───────────────────────────────────────────────────────────────
 
-  Widget _buildAppBar() {
+  Widget _buildAppBar(LeaveProvider provider) {
+    final uniqueTypes = provider.myRequests
+        .map((r) => r.leaveType)
+        .toSet()
+        .toList();
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding:
+      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const Text(
-            'Leave',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          const Text('Leave',
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.bold)),
           const Spacer(),
-          // Dropdown trigger
-          GestureDetector(
-            onTap: () => setState(() => _dropdownOpen = !_dropdownOpen),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+
+          // Pending badge
+          if (provider.pendingRequests.isNotEmpty)
+            Container(
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(20),
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: const Color(0xFFF39C12), width: 1),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    _selectedType.label,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  const Icon(Icons.hourglass_top_outlined,
+                      size: 12, color: Color(0xFFF39C12)),
                   const SizedBox(width: 4),
-                  Icon(
-                    _dropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    size: 18,
-                    color: Theme.of(context).primaryColor,
+                  Text(
+                    '${provider.pendingRequests.length} pending',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFF39C12),
+                        fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
             ),
-          ),
+
+          // Calendar type filter dropdown
+          if (uniqueTypes.isNotEmpty)
+            GestureDetector(
+              onTap: () =>
+                  setState(() => _dropdownOpen = !_dropdownOpen),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _calendarFilter ?? 'All types',
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _dropdownOpen
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down,
+                      size: 18,
+                      color: Theme.of(context).primaryColor,
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  // ── Dropdown Overlay ────────────────────────────────────────────────────────
+  // ── Type dropdown overlay ─────────────────────────────────────────────────
 
-  Widget _buildDropdownOverlay() {
+  Widget _buildDropdownOverlay(LeaveProvider provider) {
+    final types = ['All', ...provider.myRequests
+        .map((r) => r.leaveType)
+        .toSet()
+        .toList()];
+
     return Positioned(
       top: 52,
       right: 16,
@@ -152,34 +228,56 @@ class _LeaveScreenState extends State<LeaveScreen> {
         elevation: 8,
         borderRadius: BorderRadius.circular(12),
         child: Container(
-          width: 200,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          width: 180,
+          decoration:
+          BoxDecoration(borderRadius: BorderRadius.circular(12)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: LeaveType.values.map((type) {
-              final isSelected = type == _selectedType;
+            children: types.map((t) {
+              final isAll = t == 'All';
+              final isSelected = isAll
+                  ? _calendarFilter == null
+                  : _calendarFilter == t;
               return GestureDetector(
                 onTap: () => setState(() {
-                  _selectedType = type;
-                  _dropdownOpen = false;
+                  _calendarFilter = isAll ? null : t;
+                  _dropdownOpen   = false;
                 }),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? Colors.white.withOpacity(0.15)
+                        ? Theme.of(context).primaryColor.withOpacity(0.1)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Text(
-                    type.label,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Row(
+                    children: [
+                      if (!isAll)
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: _leaveTypeColor(t),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      if (!isAll) const SizedBox(width: 8),
+                      Text(
+                        isAll ? 'All types' : _formatType(t),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: isSelected
+                              ? Theme.of(context).primaryColor
+                              : null,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -190,9 +288,11 @@ class _LeaveScreenState extends State<LeaveScreen> {
     );
   }
 
-  // ── Calendar Card ───────────────────────────────────────────────────────────
+  // ── Calendar Card ─────────────────────────────────────────────────────────
 
-  Widget _buildCalendarCard() {
+  Widget _buildCalendarCard(LeaveProvider provider) {
+    final all = provider.calendarRequests;
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -205,183 +305,594 @@ class _LeaveScreenState extends State<LeaveScreen> {
           ),
         ],
       ),
-      child: TableCalendar(
-        firstDay: DateTime(2020),
-        lastDay: DateTime(2030),
-        focusedDay: _focusedDay,
-        selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-        onDaySelected: (selected, focused) {
-          setState(() {
-            _selectedDay = selected;
-            _focusedDay = focused;
-          });
-        },
-        onPageChanged: (focused) {
-          setState(() => _focusedDay = focused);
-        },
-        calendarFormat: CalendarFormat.month,
-        availableCalendarFormats: const {CalendarFormat.month: 'Month'},
-        headerStyle: HeaderStyle(
-          titleCentered: true,
-          formatButtonVisible: false,
-          titleTextStyle: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-          leftChevronIcon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.circular(8),
+      child: Column(
+        children: [
+          TableCalendar(
+            firstDay:  DateTime(2020),
+            lastDay:   DateTime(2030),
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (selected, focused) {
+              setState(() {
+                _selectedDay = selected;
+                _focusedDay  = focused;
+              });
+              final hits = _requestsForDay(selected, all);
+              if (hits.isNotEmpty) _showDayRequests(hits);
+            },
+            onPageChanged: (focused) =>
+                setState(() => _focusedDay = focused),
+            calendarFormat: CalendarFormat.month,
+            availableCalendarFormats: const {
+              CalendarFormat.month: 'Month'
+            },
+            headerStyle: HeaderStyle(
+              titleCentered: true,
+              formatButtonVisible: false,
+              titleTextStyle: const TextStyle(
+                  fontWeight: FontWeight.bold, fontSize: 16),
+              leftChevronIcon: _chevron(Icons.chevron_left),
+              rightChevronIcon: _chevron(Icons.chevron_right),
+              headerPadding:
+              const EdgeInsets.symmetric(vertical: 12),
             ),
-            child: const Icon(Icons.chevron_left, color: Colors.white, size: 18),
-          ),
-          rightChevronIcon: Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Theme.of(context).primaryColor,
-              borderRadius: BorderRadius.circular(8),
+            daysOfWeekStyle: const DaysOfWeekStyle(
+              weekdayStyle: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600),
+              weekendStyle: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w600),
             ),
-            child: const Icon(Icons.chevron_right, color: Colors.white, size: 18),
+            calendarStyle: CalendarStyle(
+              outsideDaysVisible: false,
+              todayDecoration: BoxDecoration(
+                border: Border.all(
+                    color: Theme.of(context).primaryColor,
+                    width: 1.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              todayTextStyle: TextStyle(
+                color: Theme.of(context).brightness ==
+                    Brightness.dark
+                    ? Colors.white
+                    : Colors.black,
+                fontWeight: FontWeight.bold,
+              ),
+              selectedDecoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              defaultTextStyle:
+              const TextStyle(fontSize: 13),
+              cellMargin: const EdgeInsets.all(3),
+            ),
+            calendarBuilders: CalendarBuilders(
+              defaultBuilder: (ctx, day, _) {
+                final hits = _requestsForDay(day, all);
+                if (hits.isEmpty) return null;
+                return _leaveCell(
+                    day, hits, isToday: false, isSelected: false);
+              },
+              todayBuilder: (ctx, day, _) {
+                final hits = _requestsForDay(day, all);
+                return _leaveCell(
+                    day, hits, isToday: true, isSelected: false);
+              },
+              selectedBuilder: (ctx, day, _) {
+                final hits = _requestsForDay(day, all);
+                return _leaveCell(
+                    day, hits, isToday: false, isSelected: true);
+              },
+            ),
           ),
-          headerPadding: const EdgeInsets.symmetric(vertical: 12),
-        ),
-        daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-          weekendStyle: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        calendarStyle: CalendarStyle(
-          outsideDaysVisible: false,
-          todayDecoration: BoxDecoration(
-            border: Border.all(color: Theme.of(context).primaryColor, width: 1.5),
+
+          // Legend
+          if (all.isNotEmpty) _buildCalendarLegend(all),
+        ],
+      ),
+    );
+  }
+
+  Widget _leaveCell(
+      DateTime day,
+      List<HrLeaveRequest> hits, {
+        required bool isToday,
+        required bool isSelected,
+      }) {
+    final hasLeave = hits.isNotEmpty;
+    final firstColor = hasLeave
+        ? _leaveTypeColor(hits.first.leaveType)
+        : null;
+
+    Color? bg;
+    Color  textColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF1C1C1E);
+    Border? border;
+
+    if (hasLeave && isSelected) {
+      bg        = firstColor;
+      textColor = Colors.white;
+    } else if (hasLeave) {
+      bg        = firstColor!.withOpacity(0.18);
+      textColor = firstColor;
+      if (isToday) border = Border.all(color: firstColor, width: 1.5);
+    } else if (isSelected) {
+      bg        = Theme.of(context).primaryColor;
+      textColor = Colors.white;
+    } else if (isToday) {
+      border = Border.all(
+          color: Theme.of(context).primaryColor, width: 1.5);
+    }
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 30, height: 30,
+          decoration: BoxDecoration(
+            color: bg,
+            border: border,
             borderRadius: BorderRadius.circular(8),
           ),
-          todayTextStyle: TextStyle(
-            color: Theme.of(context).primaryColor,
-            fontWeight: FontWeight.bold,
+          alignment: Alignment.center,
+          child: Text(
+            '${day.day}',
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: textColor),
           ),
-          selectedDecoration: BoxDecoration(
-            color: Theme.of(context).primaryColor,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          defaultTextStyle: const TextStyle(fontSize: 13),
-          weekendTextStyle: const TextStyle(fontSize: 13),
-          cellMargin: const EdgeInsets.all(3),
         ),
-        calendarBuilders: CalendarBuilders(
-          // Custom builder to show leave-marked days
-          defaultBuilder: (context, day, focusedDay) {
-            if (_isMarked(day)) {
-              return _buildMarkedDay(day, isToday: false, isSelected: false);
-            }
-            return null;
-          },
-          todayBuilder: (context, day, focusedDay) {
-            if (_isMarked(day)) {
-              return _buildMarkedDay(day, isToday: true, isSelected: false);
-            }
-            return null;
-          },
-          selectedBuilder: (context, day, focusedDay) {
-            if (_isMarked(day)) {
-              return _buildMarkedDay(day, isToday: false, isSelected: true);
-            }
-            return null;
-          },
+        const SizedBox(height: 2),
+        if (hasLeave && !isSelected)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: hits
+                .take(3)
+                .map((r) => Container(
+              width: 4,
+              height: 4,
+              margin: const EdgeInsets.symmetric(horizontal: 1),
+              decoration: BoxDecoration(
+                color: _leaveTypeColor(r.leaveType),
+                shape: BoxShape.circle,
+              ),
+            ))
+                .toList(),
+          )
+        else
+          const SizedBox(height: 4),
+      ],
+    );
+  }
+
+  Widget _buildCalendarLegend(List<HrLeaveRequest> all) {
+    final types = all.map((r) => r.leaveType).toSet().toList();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Wrap(
+        spacing: 12, runSpacing: 6,
+        children: types.map((t) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 10, height: 10,
+                decoration: BoxDecoration(
+                    color: _leaveTypeColor(t),
+                    shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 4),
+              Text(_formatType(t),
+                  style: const TextStyle(
+                      fontSize: 11, color: Color(0xFF8E8E93))),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _chevron(IconData icon) => Container(
+    padding: const EdgeInsets.all(6),
+    decoration: BoxDecoration(
+      color: Theme.of(context).primaryColor,
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Icon(icon, color: Colors.white, size: 18),
+  );
+
+  // ── Day-tap dialog ────────────────────────────────────────────────────────
+
+  void _showDayRequests(List<HrLeaveRequest> hits) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Leave on this day',
+                style: TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            ...hits.map((r) => _requestTile(r,
+                compact: true, onTap: () {
+                  Navigator.pop(ctx);
+                  _showRequestDetail(r);
+                })),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildMarkedDay(DateTime day, {required bool isToday, required bool isSelected}) {
-    final color = _selectedType.color;
-    return Container(
-      margin: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: isSelected ? color : color.withOpacity(0.15),
-        border: isToday ? Border.all(color: color, width: 1.5) : null,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      alignment: Alignment.center,
-      child: Text(
-        '${day.day}',
-        style: TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: isSelected ? Colors.white : color,
-        ),
+  // ── Filter row ────────────────────────────────────────────────────────────
+
+  Widget _buildFilterRow(LeaveProvider provider) {
+    final statuses = [
+      null,
+      HrLeaveRequestStatus.pending,
+      HrLeaveRequestStatus.approved,
+      HrLeaveRequestStatus.rejected,
+      HrLeaveRequestStatus.cancelled,
+    ];
+
+    return SizedBox(
+      height: 36,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: statuses.map((s) {
+          final isAll      = s == null;
+          final isSelected = provider.filterStatus == s;
+          final label      = isAll ? 'All' : s!.label;
+          final color      = isAll
+              ? Theme.of(context).primaryColor
+              : s!.color;
+
+          return GestureDetector(
+            onTap: () => provider.setStatusFilter(s),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              margin: const EdgeInsets.only(right: 8),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: isSelected ? color : color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: isSelected ? color : color.withOpacity(0.3),
+                ),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : color,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
 
-  // ── Balance Section ─────────────────────────────────────────────────────────
+  // ── Request list ──────────────────────────────────────────────────────────
 
-  Widget _buildBalanceSection() {
-    final balance = _currentBalance;
-    final ratio = '${balance.used}/${balance.total}';
+  Widget _buildRequestList(LeaveProvider provider, String personnelId) {
+    if (provider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (provider.state == LeaveState.error) {
+      return Center(
+        child: Column(
+          children: [
+            Text(provider.errorMessage ?? 'Something went wrong',
+                style: const TextStyle(color: Color(0xFFE74C3C))),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: provider.refresh,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final requests = provider.myRequests;
+
+    if (requests.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 40),
+          child: Column(
+            children: [
+              Icon(Icons.event_busy_outlined,
+                  size: 48,
+                  color: Theme.of(context).hintColor),
+              const SizedBox(height: 12),
+              Text('No leave requests yet',
+                  style: TextStyle(
+                      color: Theme.of(context).hintColor,
+                      fontSize: 14)),
+              const SizedBox(height: 6),
+              const Text('Tap the button below to request leave',
+                  style: TextStyle(
+                      color: Color(0xFF8E8E93), fontSize: 12)),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'My Leave Balance',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        Text(
+          '${requests.length} request${requests.length == 1 ? '' : 's'}',
+          style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF8E8E93)),
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
-            ],
+        ...requests.map((r) => _requestTile(r,
+            onTap: () => _showRequestDetail(r))),
+      ],
+    );
+  }
+
+  Widget _requestTile(
+      HrLeaveRequest r, {
+        bool compact = false,
+        VoidCallback? onTap,
+      }) {
+    final color = _leaveTypeColor(r.leaveType);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                _formatType(r.leaveType).characters.first
+                    .toUpperCase(),
+                style: TextStyle(
+                    color: color,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_formatType(r.leaveType),
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${_fmtDate(r.startDate)} → ${_fmtDate(r.endDate)}  ·  ${r.totalDays} day${r.totalDays == 1 ? '' : 's'}',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFF8E8E93)),
+                  ),
+                  if (!compact && r.reason != null &&
+                      r.reason!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(r.reason!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFAEAEB2))),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: r.status.bgColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(r.status.label,
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: r.status.color)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Detail / edit sheet ───────────────────────────────────────────────────
+
+  void _showRequestDetail(HrLeaveRequest r) {
+    final provider = context.read<LeaveProvider>();
+    final canModify = r.status == HrLeaveRequestStatus.pending;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.fromLTRB(
+            20, 20, 20,
+            120 + MediaQuery.of(ctx).viewInsets.bottom,
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Label + ratio
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    _selectedType.label.replaceAll(' Leave', ''),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              // Handle
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(2)
                   ),
-                  Text(
-                    ratio,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: balance.progressColor,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(_formatType(r.leaveType),
+                      style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 5
+                    ),
+                    decoration: BoxDecoration(
+                      color: r.status.bgColor,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(r.status.label,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: r.status.color
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              // Progress bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(
-                  value: balance.progress,
-                  minHeight: 8,
-                  backgroundColor: Theme.of(context).brightness == Brightness.light ? Colors.grey : Colors.white,
-                  valueColor: AlwaysStoppedAnimation<Color>(balance.progressColor),
-                ),
-              ),
               const SizedBox(height: 16),
-              Divider(height: 1, color: Theme.of(context).brightness == Brightness.light ? Colors.grey : Colors.white),
-              const SizedBox(height: 12),
-              // Stats rows
-              _buildBalanceRow('Estimated', balance.estimated),
-              _buildBalanceRow('Used', balance.used),
-              _buildBalanceRow('Carried over', balance.carriedOver),
-              _buildBalanceRow('Pending', balance.pending),
+
+              _detailRow(Icons.calendar_today_outlined, 'Start',
+                  _fmtDate(r.startDate)),
+              const SizedBox(height: 8),
+              _detailRow(Icons.event_outlined, 'End',
+                  _fmtDate(r.endDate)),
+              const SizedBox(height: 8),
+              _detailRow(Icons.timelapse_outlined, 'Duration',
+                  '${r.totalDays} day${r.totalDays == 1 ? '' : 's'}'),
+              if (r.reason != null && r.reason!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _detailRow(Icons.notes_outlined, 'Reason', r.reason!),
+              ],
+              if (r.decisionNotes != null &&
+                  r.decisionNotes!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _detailRow(Icons.comment_outlined, 'Decision note',
+                    r.decisionNotes!),
+              ],
+
+              const SizedBox(height: 20),
+
+              if (canModify)
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          _openEditSheet(r, provider);
+                        },
+                        icon: const Icon(Icons.edit_outlined,
+                            size: 16),
+                        label: const Text('Edit'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Theme.of(context).primaryColor,
+                          side: BorderSide(
+                              color: Theme.of(context).primaryColor),
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          Navigator.pop(ctx);
+                          await _confirmDelete(r, provider);
+                        },
+                        icon: const Icon(Icons.delete_outline,
+                            size: 16),
+                        label: const Text('Delete'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFE74C3C),
+                          side: const BorderSide(
+                              color: Color(0xFFE74C3C)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _detailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: const Color(0xFF8E8E93)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 11, color: Color(0xFF8E8E93))),
+              const SizedBox(height: 2),
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500)),
             ],
           ),
         ),
@@ -389,196 +900,220 @@ class _LeaveScreenState extends State<LeaveScreen> {
     );
   }
 
-  Widget _buildBalanceRow(String label, int value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 13)),
-          Text('$value', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
+  // ── Delete confirm ────────────────────────────────────────────────────────
 
-  // ── Leave Request Section ───────────────────────────────────────────────────
-
-  Widget _buildLeaveRequestSection() {
-    final requests = _filteredEvents;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'My Leave Request',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+  Future<void> _confirmDelete(
+      HrLeaveRequest r,
+      LeaveProvider provider
+      ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14)
         ),
-        const SizedBox(height: 12),
-        if (requests.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Center(
-              child: Text('No leave requests yet', style: TextStyle(fontSize: 13)),
-            ),
-          )
-        else
-          ...requests.map((e) => _buildRequestTile(e)),
-      ],
-    );
-  }
-
-  Widget _buildRequestTile(LeaveEvent event) {
-    final color = event.type.color;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(14),
-        border: Border(left: BorderSide(color: color, width: 4)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(event.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Text(
-                  '${_fmt(event.from)} → ${_fmt(event.to)}',
-                  style: const TextStyle(fontSize: 11),
-                ),
-              ],
-            ),
+        title: const Text('Delete request?'),
+        content: Text(
+            'This will permanently remove your '
+                '${_formatType(r.leaveType)} request '
+                '(${_fmtDate(r.startDate)} – ${_fmtDate(r.endDate)}).'
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: Color(0xFF8E8E93))),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '${event.days.length}d',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete',
+              style: TextStyle(
+                  color: Color(0xFFE74C3C),
+                  fontWeight: FontWeight.w600
+              ),
             ),
           ),
         ],
       ),
     );
+
+    if (confirmed != true) return;
+
+    // Delete the request - provider will auto-refresh internally
+    final success = await provider.deleteRequest(r.id);
+
+    final msg = success
+        ? 'Leave request deleted.'
+        : provider.errorMessage ?? 'Delete failed.';
+
+    if (!mounted) return;
+    showMessage(msg, context,
+        status: success ? MessageStatus.success : MessageStatus.error,
+        title: success ? 'Done' : 'Error');
   }
 
-  String _fmt(DateTime d) => '${d.day}/${d.month}/${d.year}';
+  // ── Request sheet ─────────────────────────────────────────────────────────
 
-  // ── Request Leave Button ────────────────────────────────────────────────────
-
-  Widget _buildRequestButton() {
-    return GestureDetector(
-      onTap: () => _showRequestSheet(),
-      child: Container(
-        height: 52,
-        decoration: BoxDecoration(
-          color: const Color(0xFF6C47FF),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(color: const Color(0xFF6C47FF).withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4)),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: const Text(
-          'Request Leave',
-          style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
-        ),
-      ),
-    );
-  }
-
-  // ── Request Leave Bottom Sheet ──────────────────────────────────────────────
-
-  void _showRequestSheet() {
+  void _openRequestSheet(
+      BuildContext context,
+      LeaveProvider provider,
+      String personnelId
+      ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _RequestLeaveSheet(
-        leaveTypes: LeaveType.values,
-        defaultType: _selectedType,
-        onSave: (event) {
-          setState(() => _allEvents.add(event));
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Leave request submitted!'),
-              backgroundColor: Color(0xFF27AE60),
-            ),
-          );
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))
+      ),
+      builder: (ctx) => _LeaveFormSheet(
+        personnelId: personnelId,
+        onSave: (data) async {
+          // Close the bottom sheet first
+          Navigator.pop(ctx);
+
+          // Submit the request - provider will auto-refresh internally
+          final success = await provider.createRequest(data);
+
+          final msg = success
+              ? 'Leave request submitted!'
+              : provider.errorMessage ?? 'Submission failed.';
+
+          if (!mounted) return;
+          showMessage(msg, context,
+              status: success ? MessageStatus.success : MessageStatus.error,
+              title: success ? 'Done' : 'Error');
         },
       ),
     );
   }
+
+// Updated _openEditSheet
+  void _openEditSheet(HrLeaveRequest r, LeaveProvider provider) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))
+      ),
+      builder: (ctx) => _LeaveFormSheet(
+        personnelId: r.personnelId,
+        existing: r,
+        onSave: (data) async {
+          // Close the bottom sheet first
+          Navigator.pop(ctx);
+
+          final updateData = HrLeaveUpdateFormData(
+            leaveType: data.leaveType,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            totalDays: data.totalDays,
+            reason: data.reason,
+          );
+
+          // Update the request - provider will auto-refresh internally
+          final success = await provider.updateRequest(r.id, updateData);
+
+          final msg = success
+              ? 'Leave request updated!'
+              : provider.errorMessage ?? 'Update failed.';
+
+          if (!mounted) return;
+          showMessage(msg, context,
+              status: success ? MessageStatus.success : MessageStatus.error,
+              title: success ? 'Done' : 'Error');
+        },
+      ),
+    );
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  String _formatType(String raw) =>
+      raw.split('_').map((w) =>
+      w.isEmpty ? '' : '${w[0]}${w.substring(1).toLowerCase()}')
+          .join(' ');
+
+  String _fmtDate(String iso) {
+    try {
+      final d = DateTime.parse(iso);
+      return '${d.day.toString().padLeft(2, '0')}/'
+          '${d.month.toString().padLeft(2, '0')}/'
+          '${d.year}';
+    } catch (_) {
+      return iso;
+    }
+  }
 }
 
-// ─── Request Leave Bottom Sheet Widget ────────────────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// _LeaveFormSheet — shared by create & edit
+// ═════════════════════════════════════════════════════════════════════════════
 
-class _RequestLeaveSheet extends StatefulWidget {
-  final List<LeaveType> leaveTypes;
-  final LeaveType defaultType;
-  final ValueChanged<LeaveEvent> onSave;
+class _LeaveFormSheet extends StatefulWidget {
+  final String               personnelId;
+  final HrLeaveRequest?      existing;   // null → create mode
+  final void Function(HrLeaveRequestFormData) onSave;
 
-  const _RequestLeaveSheet({
-    required this.leaveTypes,
-    required this.defaultType,
+  const _LeaveFormSheet({
+    required this.personnelId,
     required this.onSave,
+    this.existing,
   });
 
   @override
-  State<_RequestLeaveSheet> createState() => _RequestLeaveSheetState();
+  State<_LeaveFormSheet> createState() => _LeaveFormSheetState();
 }
 
-class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
-  final _titleController = TextEditingController();
-  final _descController = TextEditingController();
-  late LeaveType _type;
+class _LeaveFormSheetState extends State<_LeaveFormSheet> {
+  String? _selectedLeaveType;
+  final _reasonCtrl = TextEditingController();
   DateTime? _fromDate;
   DateTime? _toDate;
+  bool      _saving = false;
+
+  bool get _isEdit => widget.existing != null;
 
   @override
   void initState() {
     super.initState();
-    _type = widget.defaultType;
+    if (_isEdit) {
+      final r = widget.existing!;
+      _selectedLeaveType   = r.leaveType;
+      _reasonCtrl.text = r.reason ?? '';
+      _fromDate        = DateTime.parse(r.startDate);
+      _toDate          = DateTime.parse(r.endDate);
+    }
   }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descController.dispose();
+    _reasonCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate({required bool isFrom}) async {
-    final now = DateTime.now();
-    // 1. Check if the app is currently in dark mode
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+  int get _totalDays {
+    if (_fromDate == null || _toDate == null) return 0;
+    return _toDate!.difference(_fromDate!).inDays + 1;
+  }
 
+  Future<void> _pickDate({required bool isFrom}) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final now    = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: now,
+      initialDate: (isFrom ? _fromDate : _toDate) ?? now,
       firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 2),
+      lastDate:  DateTime(now.year + 2),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: (isDarkMode ? const ColorScheme.dark() : const ColorScheme.light()).copyWith(
-              primary: Theme.of(context).primaryColor,
-              surface: Theme.of(context).cardColor,
-              onSurface: isDarkMode ? Colors.white : Colors.black87,
+            colorScheme: (isDark
+                ? const ColorScheme.dark()
+                : const ColorScheme.light())
+                .copyWith(
+              primary:   Theme.of(context).primaryColor,
+              surface:   Theme.of(context).cardColor,
+              onSurface: isDark ? Colors.white : Colors.black87,
             ),
           ),
           child: child!,
@@ -589,77 +1124,119 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
     setState(() {
       if (isFrom) {
         _fromDate = picked;
-        if (_toDate != null && _toDate!.isBefore(_fromDate!)) _toDate = null;
+        if (_toDate != null && _toDate!.isBefore(_fromDate!)) {
+          _toDate = null;
+        }
       } else {
+        if (_fromDate != null && picked.isBefore(_fromDate!)) {
+          showMessage('End date cannot be before start date', context,
+              status: MessageStatus.error);
+          return;
+        }
         _toDate = picked;
       }
     });
   }
 
-
-  void _submit() {
-    if (_titleController.text.trim().isEmpty) {
-      showMessage('Please enter a title', context, status: MessageStatus.error);
+  Future<void> _submit() async {
+    if (_selectedLeaveType == null) {
+      showMessage('Please select a leave type', context,
+          status: MessageStatus.error);
       return;
     }
     if (_fromDate == null || _toDate == null) {
-      showMessage('Please select from and to dates', context, status: MessageStatus.error);
+      showMessage('Please select start and end dates', context,
+          status: MessageStatus.error);
       return;
     }
-    widget.onSave(LeaveEvent(
-      title: _titleController.text.trim(),
-      type: _type,
-      from: _fromDate!,
-      to: _toDate!,
-      description: _descController.text.trim(),
-    ));
+
+    setState(() => _saving = true);
+
+    final data = HrLeaveRequestFormData(
+      personnelId: widget.personnelId,
+      leaveType:   _selectedLeaveType!.toUpperCase(),
+      startDate:   _isoDate(_fromDate!),
+      endDate:     _isoDate(_toDate!),
+      totalDays:   _totalDays,
+      reason:      _reasonCtrl.text.trim().isEmpty
+          ? null
+          : _reasonCtrl.text.trim(),
+    );
+
+    widget.onSave(data);
+    // onSave pops the sheet so no setState needed after
   }
+
+  String _isoDate(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}'
+          '-${d.day.toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 100 + bottomInset),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 150 + bottomInset),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius:
+        const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle bar
+          // Handle
           Center(
             child: Container(
               width: 40, height: 4,
-              decoration: BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(2)),
             ),
           ),
           const SizedBox(height: 16),
 
-          const Text('Request Leave', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(
+            _isEdit ? 'Edit Leave Request' : 'Request Leave',
+            style: const TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 20),
 
-          // Title
-          _sheetLabel('Title'),
-          _sheetTextField(_titleController, 'e.g. Family bereavement'),
+          // Leave type text field
+          _label('Leave Type'),
+          DropdownButtonFormField<String>(
+            value: _selectedLeaveType,
+            hint: const Text('Select leave type'),
+            items: availableLeaveTypes.map((type) {
+              return DropdownMenuItem(value: type, child: Text(type));
+            }).toList(),
+            onChanged: (value) => setState(() => _selectedLeaveType = value),
+            decoration: InputDecoration(
+              hintStyle:
+              const TextStyle(color: Color(0xFFAEAEB2), fontSize: 13),
+              filled: true,
+              fillColor: Theme.of(context).scaffoldBackgroundColor,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 12),
+            ),
+          ),
           const SizedBox(height: 14),
 
-          // Leave type dropdown
-          _sheetLabel('Leave Type'),
-          _buildTypeDropdown(),
-          const SizedBox(height: 14),
-
-          // From / To date pickers
+          // Date pickers
           Row(
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _sheetLabel('From'),
-                    _dateTile(_fromDate, () => _pickDate(isFrom: true)),
+                    _label('From'),
+                    _dateTile(
+                        _fromDate, () => _pickDate(isFrom: true)),
                   ],
                 ),
               ),
@@ -668,32 +1245,70 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _sheetLabel('To'),
-                    _dateTile(_toDate, () => _pickDate(isFrom: false)),
+                    _label('To'),
+                    _dateTile(
+                        _toDate, () => _pickDate(isFrom: false)),
                   ],
                 ),
               ),
             ],
           ),
+
+          // Total days badge
+          if (_totalDays > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.1).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '$_totalDays day${_totalDays == 1 ? '' : 's'}',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+            ),
+          ],
+
           const SizedBox(height: 14),
 
-          // Description
-          _sheetLabel('Description'),
-          _sheetTextField(_descController, 'Optional details...', maxLines: 3),
+          // Reason
+          _label('Reason (optional)'),
+          _field(_reasonCtrl, 'Brief reason for leave…',
+              maxLines: 3),
           const SizedBox(height: 24),
 
           // Save button
           GestureDetector(
-            onTap: _submit,
-            child: Container(
-              width: double.infinity,
-              height: 52,
+            onTap: _saving ? null : _submit,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: double.infinity, height: 52,
               decoration: BoxDecoration(
-                color: const Color(0xFF6C47FF),
+                color: _saving
+                    ? Theme.of(context).primaryColor.withOpacity(0.6)
+                    : Theme.of(context).primaryColor,
                 borderRadius: BorderRadius.circular(14),
               ),
               alignment: Alignment.center,
-              child: const Text('Save Request', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+              child: _saving
+                  ? const SizedBox(
+                width: 22, height: 22,
+                child: CircularProgressIndicator(
+                    color: Colors.white, strokeWidth: 2.5),
+              )
+                  : Text(
+                _isEdit ? 'Update Request' : 'Submit Request',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600),
+              ),
             ),
           ),
         ],
@@ -701,81 +1316,69 @@ class _RequestLeaveSheetState extends State<_RequestLeaveSheet> {
     );
   }
 
-  Widget _sheetLabel(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-    );
-  }
+  Widget _label(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(text,
+        style: const TextStyle(
+            fontSize: 12, fontWeight: FontWeight.w600)),
+  );
 
-  Widget _sheetTextField(TextEditingController ctrl, String hint, {int maxLines = 1}) {
+  Widget _field(TextEditingController ctrl, String hint,
+      {int maxLines = 1}) {
     return TextField(
       controller: ctrl,
       maxLines: maxLines,
-      style: const TextStyle(fontSize: 14, color: Color(0xFF1C1C1E)),
+      textCapitalization: TextCapitalization.characters,
+      style: const TextStyle(fontSize: 14),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFFAEAEB2), fontSize: 13),
+        hintStyle:
+        const TextStyle(color: Color(0xFFAEAEB2), fontSize: 13),
         filled: true,
         fillColor: Theme.of(context).scaffoldBackgroundColor,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      ),
-    );
-  }
-
-  Widget _buildTypeDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<LeaveType>(
-          value: _type,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down),
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white),
-          items: widget.leaveTypes.map((t) {
-            return DropdownMenuItem(
-              value: t,
-              child: Row(
-                children: [
-                  Container(width: 10, height: 10, decoration: BoxDecoration(color: t.color, shape: BoxShape.circle)),
-                  const SizedBox(width: 8),
-                  Text(t.label),
-                ],
-              ),
-            );
-          }).toList(),
-          onChanged: (v) => setState(() => _type = v!),
-        ),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
+        contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14, vertical: 12),
       ),
     );
   }
 
   Widget _dateTile(DateTime? date, VoidCallback onTap) {
-    final label = date == null ? 'Select date' : '${date.day}/${date.month}/${date.year}';
+    final label = date == null
+        ? 'Select date'
+        : '${date.day.toString().padLeft(2, '0')}/'
+        '${date.month.toString().padLeft(2, '0')}/'
+        '${date.year}';
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+        padding: const EdgeInsets.symmetric(
+            horizontal: 12, vertical: 13),
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            const Icon(Icons.calendar_today_outlined, size: 15, color: Color(0xFF6C47FF)),
+            Icon(Icons.calendar_today_outlined,
+                size: 15, color: Theme.of(context).primaryColor),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 label,
                 style: TextStyle(
                   fontSize: 13,
-                  color: date == null ? Theme.of(context).hintColor : Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
-                  fontWeight: date == null ? FontWeight.normal : FontWeight.w600,
+                  color: date == null
+                      ? Theme.of(context).hintColor
+                      : Theme.of(context).brightness ==
+                      Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
+                  fontWeight: date == null
+                      ? FontWeight.normal
+                      : FontWeight.w600,
                 ),
               ),
             ),
