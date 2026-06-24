@@ -1,6 +1,6 @@
 export 'home.dart';
 export 'about_app.dart';
-export 'profile.dart';
+export '../profile/profile.dart';
 export 'chart_screen.dart';
 export 'chat_list.dart';
-export 'profile_summary.dart';
+export '../profile/stats.dart';

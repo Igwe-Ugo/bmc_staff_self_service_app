@@ -6,6 +6,7 @@ import '../home/widget.dart';
 import '../leave/widget.dart';
 import '../models/widget.dart';
 import '../on_boarding/widget.dart';
+import '../profile/widget.dart';
 import '../rota/widget.dart';
 import 'widget.dart';
 
@@ -44,8 +45,12 @@ class BMCRouter {
   static const String homePath = '/home';
   static const String chatPath = 'chat';
   static const String aboutAppPath = 'about';
+
+  // profile page
   static const String profilePath = 'profile';
-  static const String profileSummaryPath = 'profile_summary';
+  static const String statsPath = 'stats';
+  static const String documentsPath = 'documents';
+
   static const String messagePath = 'message';
   
   // availability
@@ -105,14 +110,16 @@ class BMCRouter {
                           builder: (context, state) => AboutApp()
                       ),
                       GoRoute(
-                        path: profileSummaryPath,
-                        builder: (context, state) => ProfileSummary(),
-                        routes: [
-                          GoRoute(
-                              path: profilePath,
-                              builder: (context, state) => Profile()
-                          ),
-                        ]
+                          path: profilePath,
+                          builder: (context, state) => Profile()
+                      ),
+                      GoRoute(
+                          path: documentsPath,
+                          builder: (context, state) => Documents()
+                      ),
+                      GoRoute(
+                        path: statsPath,
+                        builder: (context, state) => Stats(),
                       ),
                     ]
                   ),

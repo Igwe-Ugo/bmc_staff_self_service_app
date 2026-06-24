@@ -153,7 +153,7 @@ class ProfileDrawer extends StatelessWidget {
               ),
             ),
             onTap: () => GoRouter.of(context).go(
-              '${BMCRouter.homePath}/${BMCRouter.profileSummaryPath}',
+              '${BMCRouter.homePath}/${BMCRouter.profilePath}',
             ),
           ),
           const SizedBox(height: 14),
@@ -161,14 +161,32 @@ class ProfileDrawer extends StatelessWidget {
             leading: const Icon(Iconsax.folder_cloud),
             trailing: const Icon(Iconsax.arrow_right_3, size: 15),
             title: const Text(
-              'Notes',
+              'My Documents',
               style: TextStyle(
                 fontFamily: 'Lexend',
                 fontWeight: FontWeight.w400,
                 fontSize: 14,
               ),
             ),
-            onTap: () {},
+            onTap: () => GoRouter.of(context).go(
+              '${BMCRouter.homePath}/${BMCRouter.documentsPath}',
+            ),
+          ),
+          const SizedBox(height: 14),
+          ListTile(
+            leading: const Icon(Iconsax.chart_1),
+            trailing: const Icon(Iconsax.arrow_right_3, size: 15),
+            title: const Text(
+              'Stats',
+              style: TextStyle(
+                fontFamily: 'Lexend',
+                fontWeight: FontWeight.w400,
+                fontSize: 14,
+              ),
+            ),
+            onTap: () => GoRouter.of(context).go(
+    '${BMCRouter.homePath}/${BMCRouter.statsPath}',
+    ),
           ),
           const SizedBox(height: 14),
           ListTile(

@@ -359,19 +359,14 @@ class _ProfileState extends State<Profile> {
                           height: 52,
                           child: ElevatedButton(
                             onPressed: _saveChanges,
-
                             style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                              const Color(0xFF6C5DD3),
-
+                              backgroundColor: Theme.of(context).primaryColor,
                               elevation: 0,
-
                               shape: RoundedRectangleBorder(
                                 borderRadius:
                                 BorderRadius.circular(30),
                               ),
                             ),
-
                             child: const Text(
                               "Save",
                               style: TextStyle(

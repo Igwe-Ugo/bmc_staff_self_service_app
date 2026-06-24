@@ -224,7 +224,7 @@ class _RotaScreenState extends State<RotaScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: selected
-                        ? const Color(0xFF6C47FF).withOpacity(0.08)
+                        ? Theme.of(context).primaryColor.withOpacity(0.08)
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -409,11 +409,11 @@ class _RotaScreenState extends State<RotaScreen> {
       child: Container(
         height: 52,
         decoration: BoxDecoration(
-          color: const Color(0xFF6C47FF),
+          color: Theme.of(context).primaryColor,
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF6C47FF).withOpacity(0.4),
+              color: Theme.of(context).primaryColor.withOpacity(0.4),
               blurRadius: 12, offset: const Offset(0, 4),
             ),
           ],

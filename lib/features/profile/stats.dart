@@ -8,8 +8,8 @@ import 'package:provider/provider.dart';
 
 import '../common/widget.dart';
 
-class ProfileSummary extends StatelessWidget {
-  const ProfileSummary({super.key});
+class Stats extends StatelessWidget {
+  const Stats({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +90,7 @@ class ProfileSummary extends StatelessWidget {
                         _buildButton(
                           label: 'Update Profile',
                           filled: true,
-                          onTap: () => GoRouter.of(context).go("${BMCRouter.homePath}/${BMCRouter.profileSummaryPath}/${BMCRouter.profilePath}"),
+                          onTap: () => GoRouter.of(context).go("${BMCRouter.homePath}/${BMCRouter.statsPath}/${BMCRouter.profilePath}"),
                         )
                       ],
                     ),

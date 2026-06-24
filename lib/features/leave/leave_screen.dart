@@ -1,5 +1,3 @@
-// ─── leave_screen.dart ────────────────────────────────────────────────────────
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -15,18 +13,60 @@ class LeaveScreen extends StatefulWidget {
   State<LeaveScreen> createState() => _LeaveScreenState();
 }
 
-class _LeaveScreenState extends State<LeaveScreen> {
-  DateTime  _focusedDay  = DateTime.now();
+class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStateMixin {
+  DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  bool      _dropdownOpen = false;
-  // Which leave type to highlight on the calendar
+  bool _dropdownOpen = false;
   String? _calendarFilter; // null = show all
+
+  // ── Animation Controllers ──────────────────────────────────────────────────
+  late AnimationController _animationController;
+  late Animation<double> _sizeAnimation;
+  late Animation<double> _fadeAnimation;
+  bool _isCalendarVisible = false;
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize animation controller
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    // Initialize animations with proper values
+    _sizeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<LeaveProvider>().init();
+    });
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  // ── Toggle Calendar ──────────────────────────────────────────────────────
+
+  void _toggleCalendar() {
+    setState(() {
+      _isCalendarVisible = !_isCalendarVisible;
+      if (_isCalendarVisible) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
     });
   }
 
@@ -46,14 +86,15 @@ class _LeaveScreenState extends State<LeaveScreen> {
 
   Color _leaveTypeColor(String leaveType) {
     final colors = {
-      'ANNUAL':        const Color(0xFF6C47FF),
-      'SICK':          const Color(0xFFE74C3C),
-      'MATERNITY':     const Color(0xFFE91E8C),
-      'PATERNITY':     const Color(0xFF2196F3),
+      'ANNUAL': const Color(0xFF6C47FF),
+      'SICK': const Color(0xFFE74C3C),
+      'MATERNITY': const Color(0xFFE91E8C),
+      'PATERNITY': const Color(0xFF2196F3),
       'COMPASSIONATE': const Color(0xFFF39C12),
-      'EMERGENCY':     const Color(0xFFFF5722),
-      'STUDY':         const Color(0xFF009688),
-      'UNPAID':        const Color(0xFF8E8E93),
+      'EMERGENCY': const Color(0xFFFF5722),
+      'STUDY': const Color(0xFF009688),
+      'UNPAID': const Color(0xFF8E8E93),
+      'BEREAVEMENT': const Color(0xFF474354),
     };
     return colors[leaveType.toUpperCase()] ?? const Color(0xFF6C47FF);
   }
@@ -64,7 +105,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
   Widget build(BuildContext context) {
     return Consumer<LeaveProvider>(
       builder: (context, leaveProvider, _) {
-        final user        = context.read<UserProvider>().user;
+        final user = context.read<UserProvider>().user;
         final personnelId = user?.personnelId ?? '';
 
         return Scaffold(
@@ -83,18 +124,31 @@ class _LeaveScreenState extends State<LeaveScreen> {
                           color: Theme.of(context).primaryColor,
                           onRefresh: leaveProvider.refresh,
                           child: SingleChildScrollView(
-                            physics:
-                            const AlwaysScrollableScrollPhysics(),
+                            physics: const AlwaysScrollableScrollPhysics(),
                             child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildCalendarCard(leaveProvider),
+                                // ── Toggle Button ──
+                                _buildToggleButton(),
+
+                                const SizedBox(height: 12),
+
+                                // ── Animated Calendar ──
+                                if (_isCalendarVisible)
+                                  SizeTransition(
+                                    sizeFactor: _sizeAnimation,
+                                    axis: Axis.vertical,
+                                    child: FadeTransition(
+                                      opacity: _fadeAnimation,
+                                      child: _buildCalendarCard(leaveProvider),
+                                    ),
+                                  ),
+
                                 const SizedBox(height: 20),
+
                                 _buildFilterRow(leaveProvider),
                                 const SizedBox(height: 16),
-                                _buildRequestList(
-                                    leaveProvider, personnelId),
+                                _buildRequestList(leaveProvider, personnelId),
                               ],
                             ),
                           ),
@@ -116,8 +170,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
                         style: TextStyle(color: Colors.white)),
                   ),
                 ),
-
-                // Leave-type dropdown overlay
                 if (_dropdownOpen)
                   _buildDropdownOverlay(leaveProvider),
               ],
@@ -125,6 +177,59 @@ class _LeaveScreenState extends State<LeaveScreen> {
           ),
         );
       },
+    );
+  }
+
+  // ── Toggle Button ─────────────────────────────────────────────────────────
+
+  Widget _buildToggleButton() {
+    return GestureDetector(
+      onTap: _toggleCalendar,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.calendar_today_outlined,
+                  size: 18,
+                  color: Theme.of(context).primaryColor,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  _isCalendarVisible ? 'Hide Calendar' : 'Show Calendar',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            AnimatedRotation(
+              turns: _isCalendarVisible ? 0.5 : 0.0,
+              duration: const Duration(milliseconds: 400),
+              child: Icon(
+                Icons.keyboard_arrow_down,
+                color: Theme.of(context).primaryColor,
+                size: 24,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -137,16 +242,13 @@ class _LeaveScreenState extends State<LeaveScreen> {
         .toList();
 
     return Padding(
-      padding:
-      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
           const Text('Leave',
               style: TextStyle(
                   fontSize: 18, fontWeight: FontWeight.bold)),
           const Spacer(),
-
-          // Pending badge
           if (provider.pendingRequests.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(right: 10),
@@ -174,8 +276,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 ],
               ),
             ),
-
-          // Calendar type filter dropdown
           if (uniqueTypes.isNotEmpty)
             GestureDetector(
               onTap: () =>
@@ -229,8 +329,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           width: 180,
-          decoration:
-          BoxDecoration(borderRadius: BorderRadius.circular(12)),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(12)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: types.map((t) {
@@ -241,7 +340,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
               return GestureDetector(
                 onTap: () => setState(() {
                   _calendarFilter = isAll ? null : t;
-                  _dropdownOpen   = false;
+                  _dropdownOpen = false;
                 }),
                 child: Container(
                   width: double.infinity,
@@ -291,7 +390,10 @@ class _LeaveScreenState extends State<LeaveScreen> {
   // ── Calendar Card ─────────────────────────────────────────────────────────
 
   Widget _buildCalendarCard(LeaveProvider provider) {
-    final all = provider.calendarRequests;
+    // Filter the requests list to completely exclude cancelled leave requests
+    final all = provider.calendarRequests
+        .where((r) => r.status != HrLeaveRequestStatus.cancelled)
+        .toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -308,14 +410,14 @@ class _LeaveScreenState extends State<LeaveScreen> {
       child: Column(
         children: [
           TableCalendar(
-            firstDay:  DateTime(2020),
-            lastDay:   DateTime(2030),
+            firstDay: DateTime(2020),
+            lastDay: DateTime(2030),
             focusedDay: _focusedDay,
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             onDaySelected: (selected, focused) {
               setState(() {
                 _selectedDay = selected;
-                _focusedDay  = focused;
+                _focusedDay = focused;
               });
               final hits = _requestsForDay(selected, all);
               if (hits.isNotEmpty) _showDayRequests(hits);
@@ -333,8 +435,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                   fontWeight: FontWeight.bold, fontSize: 16),
               leftChevronIcon: _chevron(Icons.chevron_left),
               rightChevronIcon: _chevron(Icons.chevron_right),
-              headerPadding:
-              const EdgeInsets.symmetric(vertical: 12),
+              headerPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
             daysOfWeekStyle: const DaysOfWeekStyle(
               weekdayStyle: TextStyle(
@@ -361,8 +462,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 color: Theme.of(context).primaryColor,
                 borderRadius: BorderRadius.circular(8),
               ),
-              defaultTextStyle:
-              const TextStyle(fontSize: 13),
+              defaultTextStyle: const TextStyle(fontSize: 13),
               cellMargin: const EdgeInsets.all(3),
             ),
             calendarBuilders: CalendarBuilders(
@@ -384,8 +484,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
               },
             ),
           ),
-
-          // Legend
           if (all.isNotEmpty) _buildCalendarLegend(all),
         ],
       ),
@@ -404,20 +502,20 @@ class _LeaveScreenState extends State<LeaveScreen> {
         : null;
 
     Color? bg;
-    Color  textColor = Theme.of(context).brightness == Brightness.dark
+    Color textColor = Theme.of(context).brightness == Brightness.dark
         ? Colors.white
         : const Color(0xFF1C1C1E);
     Border? border;
 
     if (hasLeave && isSelected) {
-      bg        = firstColor;
+      bg = firstColor;
       textColor = Colors.white;
     } else if (hasLeave) {
-      bg        = firstColor!.withOpacity(0.18);
+      bg = firstColor!.withOpacity(0.18);
       textColor = firstColor;
       if (isToday) border = Border.all(color: firstColor, width: 1.5);
     } else if (isSelected) {
-      bg        = Theme.of(context).primaryColor;
+      bg = Theme.of(context).primaryColor;
       textColor = Colors.white;
     } else if (isToday) {
       border = Border.all(
@@ -541,15 +639,26 @@ class _LeaveScreenState extends State<LeaveScreen> {
       HrLeaveRequestStatus.cancelled,
     ];
 
+    // Get the unfiltered requests list from your provider
+    final allRequests = leaveProvider.myRequests;
+
     return SizedBox(
       height: 36,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: statuses.map((s) {
-          final isAll      = s == null;
+          final isAll = s == null;
           final isSelected = leaveProvider.filterStatus == s;
-          final label      = isAll ? 'All' : s!.label;
-          final color      = isAll
+
+          // Calculate count dynamically per chip
+          final count = isAll
+              ? allRequests.length
+              : allRequests.where((r) => r.status == s).length;
+
+          // Append count to the text label: e.g., "All (5)" or "Pending (2)"
+          final label = isAll ? 'All ($count)' : '${s!.label} ($count)';
+
+          final color = isAll
               ? Theme.of(context).primaryColor
               : s!.color;
 
@@ -558,8 +667,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               margin: const EdgeInsets.only(right: 8),
-              padding:
-              const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
                 color: isSelected ? color : color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(20),
@@ -749,8 +857,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.fromLTRB(
@@ -761,48 +868,39 @@ class _LeaveScreenState extends State<LeaveScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle
               Center(
                 child: Container(
                   width: 40, height: 4,
                   decoration: BoxDecoration(
                       color: Theme.of(context).cardColor,
-                      borderRadius: BorderRadius.circular(2)
-                  ),
+                      borderRadius: BorderRadius.circular(2)),
                 ),
               ),
               const SizedBox(height: 16),
-
               Row(
                 children: [
                   Expanded(
                     child: Text(_formatType(r.leaveType),
-                      style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold
-                      ),
-                    ),
+                        style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold)),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5
-                    ),
+                        horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: r.status.bgColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(r.status.label,
-                      style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: r.status.color
-                      ),
-                    ),
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: r.status.color)),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-
               _detailRow(Icons.calendar_today_outlined, 'Start',
                   _fmtDate(r.startDate)),
               const SizedBox(height: 8),
@@ -821,9 +919,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 _detailRow(Icons.comment_outlined, 'Decision note',
                     r.decisionNotes!),
               ],
-
               const SizedBox(height: 20),
-
               if (canModify)
                 Row(
                   children: [
@@ -904,20 +1000,17 @@ class _LeaveScreenState extends State<LeaveScreen> {
 
   Future<void> _confirmDelete(
       HrLeaveRequest r,
-      LeaveProvider provider
-      ) async {
+      LeaveProvider provider) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)
-        ),
+            borderRadius: BorderRadius.circular(14)),
         title: const Text('Delete request?'),
         content: Text(
             'This will permanently remove your '
                 '${_formatType(r.leaveType)} request '
-                '(${_fmtDate(r.startDate)} – ${_fmtDate(r.endDate)}).'
-        ),
+                '(${_fmtDate(r.startDate)} – ${_fmtDate(r.endDate)}).'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -927,11 +1020,9 @@ class _LeaveScreenState extends State<LeaveScreen> {
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete',
-              style: TextStyle(
-                  color: Color(0xFFE74C3C),
-                  fontWeight: FontWeight.w600
-              ),
-            ),
+                style: TextStyle(
+                    color: Color(0xFFE74C3C),
+                    fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -939,7 +1030,6 @@ class _LeaveScreenState extends State<LeaveScreen> {
 
     if (confirmed != true) return;
 
-    // Delete the request - provider will auto-refresh internally
     final success = await provider.deleteRequest(r.id);
 
     final msg = success
@@ -957,27 +1047,20 @@ class _LeaveScreenState extends State<LeaveScreen> {
   void _openRequestSheet(
       BuildContext context,
       LeaveProvider provider,
-      String personnelId
-      ) {
+      String personnelId) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => _LeaveFormSheet(
         personnelId: personnelId,
         onSave: (data) async {
-          // Close the bottom sheet first
           Navigator.pop(ctx);
-
-          // Submit the request - provider will auto-refresh internally
           final success = await provider.createRequest(data);
-
           final msg = success
               ? 'Leave request submitted!'
               : provider.errorMessage ?? 'Submission failed.';
-
           if (!mounted) return;
           showMessage(msg, context,
               status: success ? MessageStatus.success : MessageStatus.error,
@@ -987,21 +1070,17 @@ class _LeaveScreenState extends State<LeaveScreen> {
     );
   }
 
-// Updated _openEditSheet
   void _openEditSheet(HrLeaveRequest r, LeaveProvider provider) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))
-      ),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (ctx) => _LeaveFormSheet(
         personnelId: r.personnelId,
         existing: r,
         onSave: (data) async {
-          // Close the bottom sheet first
           Navigator.pop(ctx);
-
           final updateData = HrLeaveUpdateFormData(
             leaveType: data.leaveType,
             startDate: data.startDate,
@@ -1009,14 +1088,10 @@ class _LeaveScreenState extends State<LeaveScreen> {
             totalDays: data.totalDays,
             reason: data.reason,
           );
-
-          // Update the request - provider will auto-refresh internally
           final success = await provider.updateRequest(r.id, updateData);
-
           final msg = success
               ? 'Leave request updated!'
               : provider.errorMessage ?? 'Update failed.';
-
           if (!mounted) return;
           showMessage(msg, context,
               status: success ? MessageStatus.success : MessageStatus.error,
@@ -1089,6 +1164,32 @@ class _LeaveFormSheetState extends State<_LeaveFormSheet> {
   void dispose() {
     _reasonCtrl.dispose();
     super.dispose();
+  }
+
+  bool get _hasOverlap {
+    if (_fromDate == null || _toDate == null) return false;
+
+    // Access the current requests from LeaveProvider
+    final provider = context.read<LeaveProvider>();
+    final existingRequests = provider.myRequests;
+
+    for (final request in existingRequests) {
+      // If we are in EDIT mode, ignore the request we are currently editing
+      if (_isEdit && request.id == widget.existing!.id) continue;
+
+      // Convert existing request strings to DateTime objects for comparison
+      final existingStart = DateTime.parse(request.startDate);
+      final existingEnd = DateTime.parse(request.endDate);
+
+      // Standard overlap check formula: (StartA <= EndB) && (EndA >= StartB)
+      final isOverlapping = !_fromDate!.isAfter(existingEnd) && !_toDate!.isBefore(existingStart);
+
+      if (isOverlapping) {
+        return true; // Conflict found
+      }
+    }
+
+    return false; // No conflicts
   }
 
   int get _totalDays {
@@ -1207,10 +1308,15 @@ class _LeaveFormSheetState extends State<_LeaveFormSheet> {
           // Leave type text field
           _label('Leave Type'),
           DropdownButtonFormField<String>(
-            value: _selectedLeaveType,
+            value:availableLeaveTypes.any((type) => type.toUpperCase() == _selectedLeaveType?.toUpperCase())
+                ? availableLeaveTypes.firstWhere((type) => type.toUpperCase() == _selectedLeaveType?.toUpperCase())
+                : null,
             hint: const Text('Select leave type'),
             items: availableLeaveTypes.map((type) {
-              return DropdownMenuItem(value: type, child: Text(type));
+              return DropdownMenuItem(
+                value: type,
+                child: Text(type),
+              );
             }).toList(),
             onChanged: (value) => setState(() => _selectedLeaveType = value),
             decoration: InputDecoration(
@@ -1255,13 +1361,35 @@ class _LeaveFormSheetState extends State<_LeaveFormSheet> {
           ),
 
           // Total days badge
-          if (_totalDays > 0) ...[
+          if (_hasOverlap) ...[
             const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 6),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor.withOpacity(0.1).withOpacity(0.1),
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.withOpacity(0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Selected dates overlap with an existing leave request. Please choose another date',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ] else if (_totalDays > 0) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -1274,7 +1402,6 @@ class _LeaveFormSheetState extends State<_LeaveFormSheet> {
               ),
             ),
           ],
-
           const SizedBox(height: 14),
 
           // Reason
@@ -1285,13 +1412,15 @@ class _LeaveFormSheetState extends State<_LeaveFormSheet> {
 
           // Save button
           GestureDetector(
-            onTap: _saving ? null : _submit,
+            // Disable tap trigger if saving OR if there's an active calendar overlap conflict
+            onTap: (_saving || _hasOverlap) ? null : _submit,
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              width: double.infinity, height: 52,
+              width: double.infinity,
+              height: 52,
               decoration: BoxDecoration(
-                color: _saving
-                    ? Theme.of(context).primaryColor.withOpacity(0.6)
+                color: (_saving || _hasOverlap)
+                    ? Colors.grey.withOpacity(0.5) // Grayed out if disabled
                     : Theme.of(context).primaryColor,
                 borderRadius: BorderRadius.circular(14),
               ),
@@ -1299,8 +1428,7 @@ class _LeaveFormSheetState extends State<_LeaveFormSheet> {
               child: _saving
                   ? const SizedBox(
                 width: 22, height: 22,
-                child: CircularProgressIndicator(
-                    color: Colors.white, strokeWidth: 2.5),
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
               )
                   : Text(
                 _isEdit ? 'Update Request' : 'Submit Request',

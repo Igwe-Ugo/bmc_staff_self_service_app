@@ -1,12 +1,38 @@
 // leave_summary.dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/network/models/leave_model.dart';
 import '../../../core/network/provider/leave_provider.dart';
 
-class LeaveSummaryCard extends StatelessWidget {
+class LeaveSummaryCard extends StatefulWidget {
   const LeaveSummaryCard({
-    super.key,});
+    super.key,
+  });
+
+  @override
+  State<LeaveSummaryCard> createState() => _LeaveSummaryCardState();
+}
+
+class _LeaveSummaryCardState extends State<LeaveSummaryCard> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start a timer to update the UI every minute
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
 
   // ───────────────── COLORS ─────────────────
 
@@ -58,14 +84,100 @@ class LeaveSummaryCard extends StatelessWidget {
 
   Color _progressColor(double progress) {
     if (progress <= 1 / 3) {
-      return const Color(0xFF22C55E);
+      return const Color(0xFF22C55E); // Green
     }
 
     if (progress <= 2 / 3) {
-      return const Color(0xFFF59E0B);
+      return const Color(0xFFF59E0B); // Yellow/Orange
     }
 
-    return const Color(0xFFDC2626);
+    return const Color(0xFFDC2626); // Red
+  }
+
+  // ───────────────── COUNTDOWN ─────────────────
+
+  int _getRemainingDays(HrLeaveRequest request) {
+    if (request.status != HrLeaveRequestStatus.approved) return 0;
+
+    final now = DateTime.now();
+    final end = DateTime.parse(request.endDate);
+
+    if (now.isAfter(end)) return 0;
+
+    final remaining = end.difference(now);
+    return remaining.inDays + 1; // +1 to include the current day
+  }
+
+  String _getCountdownText(HrLeaveRequest request) {
+    if (request.status != HrLeaveRequestStatus.approved) return '';
+
+    final now = DateTime.now();
+    final end = DateTime.parse(request.endDate);
+
+    if (now.isAfter(end)) return 'Completed';
+
+    final remaining = end.difference(now);
+
+    if (remaining.inSeconds <= 0) return 'Completed';
+
+    final days = remaining.inDays;
+    final hours = remaining.inHours % 24;
+    final minutes = remaining.inMinutes % 60;
+
+    if (days > 0) {
+      return '$days day${days == 1 ? '' : 's'} left';
+    } else if (hours > 0) {
+      return '$hours hr${hours == 1 ? '' : 's'} left';
+    } else if (minutes > 0) {
+      return '$minutes min left';
+    } else {
+      return '< 1 min left';
+    }
+  }
+
+  // ───────────────── STATUS LABEL ─────────────────
+
+  String _getStatusLabel(HrLeaveRequest request) {
+    if (request.status == HrLeaveRequestStatus.approved) {
+      final now = DateTime.now();
+      final start = DateTime.parse(request.startDate);
+      final end = DateTime.parse(request.endDate);
+
+      if (now.isAfter(end)) {
+        return 'Completed';
+      }
+
+      final daysSinceStart = now.difference(start).inDays;
+
+      // If within 7 days of start and not ended, show "Ongoing"
+      if (daysSinceStart >= 0 && daysSinceStart <= 7) {
+        return 'Ongoing';
+      }
+      return 'Approved';
+    }
+    return request.status.label;
+  }
+
+  Color _getStatusColor(HrLeaveRequest request) {
+    final label = _getStatusLabel(request);
+    if (label == 'Ongoing') {
+      return const Color(0xFF6C47FF);
+    }
+    if (label == 'Completed') {
+      return const Color(0xFF22C55E);
+    }
+    return request.status.color;
+  }
+
+  Color _getStatusBgColor(HrLeaveRequest request) {
+    final label = _getStatusLabel(request);
+    if (label == 'Ongoing') {
+      return const Color(0xFFEDE9FF);
+    }
+    if (label == 'Completed') {
+      return const Color(0xFFE8F5E9);
+    }
+    return request.status.bgColor;
   }
 
   @override
@@ -107,9 +219,15 @@ class LeaveSummaryCard extends StatelessWidget {
 
           if (request.status == HrLeaveRequestStatus.approved) {
             item.used += request.totalDays;
+            final remainingDays = _getRemainingDays(request);
+            item.remainingDays += remainingDays;
             final progress = _progress(request);
             if (progress > item.highestProgress) {
               item.highestProgress = progress;
+            }
+            // Store the first approved request for countdown display
+            if (item.approvedRequest == null) {
+              item.approvedRequest = request;
             }
           }
 
@@ -206,6 +324,12 @@ class LeaveSummaryCard extends StatelessWidget {
     final hasApproved = s.used > 0;
     final color = _typeColor(s.type);
 
+    // Get the countdown display text
+    String countdownText = '';
+    if (s.approvedRequest != null) {
+      countdownText = _getCountdownText(s.approvedRequest!);
+    }
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -243,13 +367,46 @@ class LeaveSummaryCard extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          Text(
-            "${s.used}/${s.total}",
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
+          // Show remaining days / total days for approved leaves
+          if (hasApproved && s.remainingDays > 0)
+            Text(
+              '${s.remainingDays}/${s.total}',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else
+            Text(
+              '${s.used}/${s.total}',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
+
+          const SizedBox(height: 4),
+
+          // Countdown text
+          if (hasApproved && countdownText.isNotEmpty)
+            Row(
+              children: [
+                Icon(
+                  Icons.timer_outlined,
+                  size: 14,
+                  color: _progressColor(progress),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  countdownText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: _progressColor(progress),
+                  ),
+                ),
+              ],
+            ),
 
           const SizedBox(height: 10),
 
@@ -273,7 +430,7 @@ class LeaveSummaryCard extends StatelessWidget {
                 minHeight: 6,
                 backgroundColor: Colors.grey.shade300,
                 valueColor: AlwaysStoppedAnimation(
-                  Colors.greenAccent,
+                  const Color(0xFF22C55E),
                 ),
               ),
             ),
@@ -296,12 +453,26 @@ class LeaveSummaryCard extends StatelessWidget {
     final hasPending = s.pending > 0;
     final color = _typeColor(s.type);
 
+    // Determine status for display
     String status = "Pending";
     Color statusColor = const Color(0xFFF59E0B);
 
     if (hasApproved) {
-      status = "Approved";
-      statusColor = const Color(0xFF22C55E);
+      // Check if there's an approved request with countdown
+      if (s.approvedRequest != null) {
+        final now = DateTime.now();
+        final end = DateTime.parse(s.approvedRequest!.endDate);
+        if (now.isAfter(end)) {
+          status = "Completed";
+          statusColor = const Color(0xFF22C55E);
+        } else {
+          status = "Approved";
+          statusColor = const Color(0xFF22C55E);
+        }
+      } else {
+        status = "Approved";
+        statusColor = const Color(0xFF22C55E);
+      }
     } else if (hasPending) {
       status = "Pending";
       statusColor = const Color(0xFFF59E0B);
@@ -311,6 +482,12 @@ class LeaveSummaryCard extends StatelessWidget {
     }
 
     final double progress = hasApproved ? s.highestProgress : 0;
+
+    // Get countdown text for small tile
+    String countdownText = '';
+    if (s.approvedRequest != null) {
+      countdownText = _getCountdownText(s.approvedRequest!);
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -378,15 +555,48 @@ class LeaveSummaryCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Text(
-                '${s.used}/${s.total}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
+              // Show remaining days / total days for approved leaves
+              if (hasApproved && s.remainingDays > 0)
+                Text(
+                  '${s.remainingDays}/${s.total}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                )
+              else
+                Text(
+                  '${s.used}/${s.total}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
             ],
           ),
+
+          // Countdown text for small tile
+          if (hasApproved && countdownText.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(
+                  Icons.timer_outlined,
+                  size: 10,
+                  color: _progressColor(progress),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  countdownText,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: _progressColor(progress),
+                  ),
+                ),
+              ],
+            ),
+          ],
 
           const SizedBox(height: 8),
 
@@ -519,7 +729,9 @@ class _LeaveSummary {
   int total = 0;
   int used = 0;
   int pending = 0;
+  int remainingDays = 0;
   double highestProgress = 0;
+  HrLeaveRequest? approvedRequest;
 
   _LeaveSummary({
     required this.type,
