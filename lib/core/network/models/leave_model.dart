@@ -137,31 +137,43 @@ class HrLeaveRequest {
     return result;
   }
 
+  // In leave_model.dart - Update the HrLeaveRequest.fromJson factory
+
   factory HrLeaveRequest.fromJson(Map<String, dynamic> json) {
+    // Helper to safely get string values
+    String? _safeString(dynamic value) => value?.toString();
+
+    // Helper to safely get int values
+    int _safeInt(dynamic value) {
+      if (value == null) return 0;
+      if (value is int) return value;
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
     return HrLeaveRequest(
-      id:                json['id']             as String,
-      personnelId:       json['personnelId']     as String,
-      leaveType:         json['leaveType']       as String,
-      startDate:         (json['startDate']      as String).split('T').first,
-      endDate:           (json['endDate']        as String).split('T').first,
-      totalDays:         (json['totalDays'] is int)
-          ? json['totalDays'] as int
-          : int.tryParse(json['totalDays'].toString()) ?? 0,
-      reason:            json['reason']          as String?,
-      status:            HrLeaveRequestStatusExt.fromString(
-          json['status'] as String),
-      approvedBy:        json['approvedBy']      as String?,
-      approvedAt:        json['approvedAt']      as String?,
-      decisionNotes:     json['decisionNotes']   as String?,
-      createdBy:         json['createdBy']       as String,
-      createdAt:         json['createdAt']       as String,
-      updatedBy:         json['updatedBy']       as String?,
-      updatedAt:         json['updatedAt']       as String?,
-      personnelName:     json['personnelName']   as String?,
-      staffNumber:       json['staffNumber']     as String?,
-      personnelCategory: json['personnelCategory'] as String?,
-      approvedByName:    json['approvedByName']  as String?,
-      deptName:          json['deptName']        as String?,
+      id: _safeString(json['id']) ?? '',
+      personnelId: _safeString(json['personnelId']) ?? '',
+      leaveType: _safeString(json['leaveType']) ?? '',
+      startDate: (_safeString(json['startDate']) ?? '').split('T').first,
+      endDate: (_safeString(json['endDate']) ?? '').split('T').first,
+      totalDays: _safeInt(json['totalDays']),
+      reason: _safeString(json['reason']),
+      status: json['status'] != null
+          ? HrLeaveRequestStatusExt.fromString(json['status'].toString())
+          : HrLeaveRequestStatus.pending,
+      approvedBy: _safeString(json['approvedBy']),
+      approvedAt: _safeString(json['approvedAt']),
+      decisionNotes: _safeString(json['decisionNotes']),
+      createdBy: _safeString(json['createdBy']) ?? '',
+      createdAt: _safeString(json['createdAt']) ?? DateTime.now().toIso8601String(),
+      updatedBy: _safeString(json['updatedBy']),
+      updatedAt: _safeString(json['updatedAt']),
+      personnelName: _safeString(json['personnelName']),
+      staffNumber: _safeString(json['staffNumber']),
+      personnelCategory: _safeString(json['personnelCategory']),
+      approvedByName: _safeString(json['approvedByName']),
+      deptName: _safeString(json['deptName']),
     );
   }
 

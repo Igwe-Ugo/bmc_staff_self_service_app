@@ -274,7 +274,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
                   status.label,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).hintColor,
+                    color: status.color,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

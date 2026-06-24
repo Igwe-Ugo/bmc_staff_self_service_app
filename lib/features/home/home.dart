@@ -66,63 +66,67 @@ class _BMCHomeState extends State<BMCHome> {
         }
 
         return Scaffold(
-          body: Stack(
-            children: [
-              SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 110, 20, 40),
-                  child: Column(
-                    children: [
-                      _welcomeCard(context, userProvider),
-                      const SizedBox(height: 24),
+          body: RefreshIndicator(
+            color: Theme.of(context).primaryColor,
+            onRefresh: leaveProvider.refresh,
+            child: Stack(
+              children: [
+                SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 110, 20, 40),
+                    child: Column(
+                      children: [
+                        _welcomeCard(context, userProvider),
+                        const SizedBox(height: 24),
 
-                      const _SectionTitle(title: "My Rota", badge: "23", isRota: true),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        height: 190,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
-                          children: _buildRotaCard(context),
+                        const _SectionTitle(title: "My Rota", badge: "23", isRota: true),
+                        const SizedBox(height: 14),
+                        SizedBox(
+                          height: 190,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: _buildRotaCard(context),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                      LeaveSummaryCard(),
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
+                        LeaveSummaryCard(),
+                        const SizedBox(height: 24),
 
-                      const _SectionTitle(title: "My Availability", badge: "14", isRota: false),
-                      const SizedBox(height: 14),
-                      const WeeklyAvailabilityWidget(),
-                      const SizedBox(height: 24),
+                        const _SectionTitle(title: "My Availability", badge: "14", isRota: false),
+                        const SizedBox(height: 14),
+                        const WeeklyAvailabilityWidget(),
+                        const SizedBox(height: 24),
 
-                      const _SectionTitle(title: "Recent Messages", badge: "5", isRota: false),
-                      const SizedBox(height: 14),
-                      _buildMessagesList(userProvider, Theme.of(context).cardColor),
-                      const SizedBox(height: 24),
+                        const _SectionTitle(title: "Recent Messages", badge: "5", isRota: false),
+                        const SizedBox(height: 14),
+                        _buildMessagesList(userProvider, Theme.of(context).cardColor),
+                        const SizedBox(height: 24),
 
-                      const _SectionTitle(title: "Recent Notifications", badge: "10", isRota: false),
-                      const SizedBox(height: 14),
-                      _buildNotificationList(userProvider, Theme.of(context).cardColor),
-                    ],
+                        const _SectionTitle(title: "Recent Notifications", badge: "10", isRota: false),
+                        const SizedBox(height: 14),
+                        _buildNotificationList(userProvider, Theme.of(context).cardColor),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              _topNavBar(context, userProvider: userProvider, onProfileTap: () {setState(() {_showDrawer = true; navBarVisible.value = false;});},),
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                top: 0,
-                bottom: 0,
-                left: _showDrawer ? 0 : -MediaQuery.of(context).size.width,
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width,
-                  child: ProfileDrawer(
-                    onClose: () {
-                      setState(() => _showDrawer = false);
-                    },
+                _topNavBar(context, userProvider: userProvider, onProfileTap: () {setState(() {_showDrawer = true; navBarVisible.value = false;});},),
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                  top: 0,
+                  bottom: 0,
+                  left: _showDrawer ? 0 : -MediaQuery.of(context).size.width,
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width,
+                    child: ProfileDrawer(
+                      onClose: () {
+                        setState(() => _showDrawer = false);
+                      },
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },

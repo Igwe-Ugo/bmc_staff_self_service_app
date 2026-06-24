@@ -63,7 +63,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer<LeaveProvider>(
-      builder: (context, provider, _) {
+      builder: (context, leaveProvider, _) {
         final user        = context.read<UserProvider>().user;
         final personnelId = user?.personnelId ?? '';
 
@@ -75,13 +75,13 @@ class _LeaveScreenState extends State<LeaveScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 7),
                   child: Column(
                     children: [
-                      _buildAppBar(provider),
-                      if (provider.isLoading)
+                      _buildAppBar(leaveProvider),
+                      if (leaveProvider.isLoading)
                         LinearProgressIndicator(color: Theme.of(context).primaryColor),
                       Expanded(
                         child: RefreshIndicator(
                           color: Theme.of(context).primaryColor,
-                          onRefresh: provider.refresh,
+                          onRefresh: leaveProvider.refresh,
                           child: SingleChildScrollView(
                             physics:
                             const AlwaysScrollableScrollPhysics(),
@@ -89,12 +89,12 @@ class _LeaveScreenState extends State<LeaveScreen> {
                               crossAxisAlignment:
                               CrossAxisAlignment.start,
                               children: [
-                                _buildCalendarCard(provider),
+                                _buildCalendarCard(leaveProvider),
                                 const SizedBox(height: 20),
-                                _buildFilterRow(provider),
+                                _buildFilterRow(leaveProvider),
                                 const SizedBox(height: 16),
                                 _buildRequestList(
-                                    provider, personnelId),
+                                    leaveProvider, personnelId),
                               ],
                             ),
                           ),
@@ -110,7 +110,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
                     elevation: 6,
                     backgroundColor: Theme.of(context).primaryColor,
                     onPressed: () => _openRequestSheet(
-                        context, provider, personnelId),
+                        context, leaveProvider, personnelId),
                     icon: const Icon(Icons.add, color: Colors.white),
                     label: const Text('Request Leave',
                         style: TextStyle(color: Colors.white)),
@@ -119,7 +119,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
 
                 // Leave-type dropdown overlay
                 if (_dropdownOpen)
-                  _buildDropdownOverlay(provider),
+                  _buildDropdownOverlay(leaveProvider),
               ],
             ),
           ),
@@ -510,7 +510,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -532,7 +532,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
 
   // ── Filter row ────────────────────────────────────────────────────────────
 
-  Widget _buildFilterRow(LeaveProvider provider) {
+  Widget _buildFilterRow(LeaveProvider leaveProvider) {
     final statuses = [
       null,
       HrLeaveRequestStatus.pending,
@@ -547,14 +547,14 @@ class _LeaveScreenState extends State<LeaveScreen> {
         scrollDirection: Axis.horizontal,
         children: statuses.map((s) {
           final isAll      = s == null;
-          final isSelected = provider.filterStatus == s;
+          final isSelected = leaveProvider.filterStatus == s;
           final label      = isAll ? 'All' : s!.label;
           final color      = isAll
               ? Theme.of(context).primaryColor
               : s!.color;
 
           return GestureDetector(
-            onTap: () => provider.setStatusFilter(s),
+            onTap: () => leaveProvider.setStatusFilter(s),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               margin: const EdgeInsets.only(right: 8),
@@ -584,20 +584,20 @@ class _LeaveScreenState extends State<LeaveScreen> {
 
   // ── Request list ──────────────────────────────────────────────────────────
 
-  Widget _buildRequestList(LeaveProvider provider, String personnelId) {
-    if (provider.isLoading) {
+  Widget _buildRequestList(LeaveProvider leaveProvider, String personnelId) {
+    if (leaveProvider.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (provider.state == LeaveState.error) {
+    if (leaveProvider.state == LeaveState.error) {
       return Center(
         child: Column(
           children: [
-            Text(provider.errorMessage ?? 'Something went wrong',
+            Text(leaveProvider.errorMessage ?? 'Something went wrong',
                 style: const TextStyle(color: Color(0xFFE74C3C))),
             const SizedBox(height: 12),
             TextButton.icon(
-              onPressed: provider.refresh,
+              onPressed: leaveProvider.refresh,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
             ),
@@ -606,7 +606,7 @@ class _LeaveScreenState extends State<LeaveScreen> {
       );
     }
 
-    final requests = provider.myRequests;
+    final requests = leaveProvider.myRequests;
 
     if (requests.isEmpty) {
       return Center(
