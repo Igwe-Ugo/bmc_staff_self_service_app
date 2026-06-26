@@ -33,6 +33,11 @@ class ApiEndpoints {
   static const String leaveMyRequests  = '/hr/leave/my-requests';
   static const String leaveSearch      = '/hr/leave/search';
 
+  // ── Rota ──────────────────────────────────────────────────────────────────────
+  static const String rotaMyShifts = '/hr/rota/my-shifts';
+  static const String rotaSwapRequests = '/hr/rota/swap-requests';
+  static const String rotaEligibleStaff = '/hr/rota/eligible-staff';
+
   static String fill(String path, Map<String, String> params) {
     var result = path;
     params.forEach((key, value) {

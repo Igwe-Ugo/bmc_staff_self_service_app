@@ -52,6 +52,7 @@ class _BMCStaffSelfServiceState extends State<BMCStaffSelfService>{
         ChangeNotifierProvider(create: (_) => UserProvider()),
         ChangeNotifierProvider(create: (_) => AvailabilityProvider()),
         ChangeNotifierProvider(create: (_) => LeaveProvider()),
+        ChangeNotifierProvider(create: (_) => RotaProvider()),
       ],
       child: Consumer<DarkThemeProvider>(
           builder: (context, themeData, child){

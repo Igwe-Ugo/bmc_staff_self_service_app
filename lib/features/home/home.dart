@@ -10,6 +10,7 @@ import '../../core/network/provider/widget.dart';
 import '../availability/widget.dart';
 import '../common/widget.dart';
 import '../leave/widget.dart';
+import '../rota/widget.dart';
 
 class BMCHome extends StatefulWidget {
   const BMCHome({super.key});
@@ -78,16 +79,7 @@ class _BMCHomeState extends State<BMCHome> {
                       children: [
                         _welcomeCard(context, userProvider),
                         const SizedBox(height: 24),
-
-                        const _SectionTitle(title: "My Rota", badge: "23", isRota: true),
-                        const SizedBox(height: 14),
-                        SizedBox(
-                          height: 190,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: _buildRotaCard(context),
-                          ),
-                        ),
+                        RotaSummary(),
                         const SizedBox(height: 24),
                         LeaveSummaryCard(),
                         const SizedBox(height: 24),
@@ -182,64 +174,6 @@ class _BMCHomeState extends State<BMCHome> {
         ),
       ),
     );
-  }
-
-  List<Widget> _buildRotaCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final List<Map<String, dynamic>> rotas = [
-      {
-        'color': const Color(0xFF6C47FF),
-        'dayNumber': "01", 'month': "May", 'day': "Today",
-        'label': "On Call", 'shiftDuty': "Consultant", 'shiftRoom': "Ward one", 'active': true
-      },
-      {
-        'color': isDark ? const Color(0xFF27273F) : Colors.white,
-        'dayNumber': "02", 'month': "May", 'day': "Tue",
-        'label': "All Day", 'shiftDuty': "No Shift", 'shiftRoom': "", 'active': false
-      },
-      {
-        'color': const Color(0xFFFFF3E0),
-        'dayNumber': "03", 'month': "May", 'day': "Wed",
-        'label': "Night Shift", 'shiftDuty': "Consultant", 'shiftRoom': "Ward two", 'active': false
-      }
-    ];
-
-    return rotas.map((rota) {
-      final bool customColored = rota['active'] || rota['label'] == "Night Shift";
-      final Color textColor = customColored
-          ? (rota['label'] == "Night Shift" ? const Color(0xFFF39C12) : Colors.white)
-          : (isDark ? Colors.white : const Color(0xFF1A1A2E));
-
-      return Container(
-        width: 140,
-        margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: rota['color'],
-          borderRadius: BorderRadius.circular(16),
-          border: isDark ? null : Border.all(color: Colors.black12.withOpacity(0.05)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(rota['dayNumber'], style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
-                Text(rota['day'], style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.7))),
-              ],
-            ),
-            Text(rota['month'], style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.7))),
-            const SizedBox(height: 16),
-            Text(rota['label'], style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: textColor)),
-            const Spacer(),
-            Text(rota['shiftDuty'], style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor)),
-            if (rota['shiftRoom'].toString().isNotEmpty)
-              Text(rota['shiftRoom'], style: TextStyle(fontSize: 11, color: textColor.withOpacity(0.6))),
-          ],
-        ),
-      );
-    }).toList();
   }
 
   Widget _buildLeaveRow(String label, String value) {
@@ -485,8 +419,8 @@ class _SectionTitle extends StatelessWidget {
         const SizedBox(width: 6),
         CircleAvatar(
           radius: 9,
-          backgroundColor: const Color(0xFF6C47FF).withOpacity(0.2),
-          child: Text(badge, style: const TextStyle(fontSize: 10, color: Color(0xFF6C47FF), fontWeight: FontWeight.bold)),
+          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
+          child: Text(badge, style: TextStyle(fontSize: 10, color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
         ),
         const Spacer(),
         Text("View All", style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.6), decoration: TextDecoration.underline)),

@@ -2,7 +2,7 @@
 
 import 'dart:ui';
 
-enum HrTimeSlot { am, pm, night, fullDay, onCall, custom }
+enum HrTimeSlot {am, pm, night, fullDay, /*onCall,*/ custom }
 
 extension HrTimeSlotExt on HrTimeSlot {
   String get value {
@@ -11,7 +11,7 @@ extension HrTimeSlotExt on HrTimeSlot {
       case HrTimeSlot.pm:      return 'PM';
       case HrTimeSlot.night:   return 'NIGHT';
       case HrTimeSlot.fullDay: return 'FULL_DAY';
-      case HrTimeSlot.onCall:  return 'ON_CALL';
+      // case HrTimeSlot.onCall:  return 'ON_CALL';
       case HrTimeSlot.custom:  return 'CUSTOM';
     }
   }
@@ -22,7 +22,7 @@ extension HrTimeSlotExt on HrTimeSlot {
       case HrTimeSlot.pm:      return 'PM';
       case HrTimeSlot.night:   return 'Night';
       case HrTimeSlot.fullDay: return 'Full Day';
-      case HrTimeSlot.onCall:  return 'On Call';
+      // case HrTimeSlot.onCall:  return 'On Call';
       case HrTimeSlot.custom:  return 'Custom';
     }
   }
@@ -33,7 +33,7 @@ extension HrTimeSlotExt on HrTimeSlot {
       case 'PM':       return HrTimeSlot.pm;
       case 'NIGHT':    return HrTimeSlot.night;
       case 'FULL_DAY': return HrTimeSlot.fullDay;
-      case 'ON_CALL':  return HrTimeSlot.onCall;
+      //case 'ON_CALL':  return HrTimeSlot.onCall;
       case 'CUSTOM':   return HrTimeSlot.custom;
       default:         return HrTimeSlot.fullDay;
     }

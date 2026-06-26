@@ -56,51 +56,55 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
   @override
   Widget build(BuildContext context) {
     return Consumer<AvailabilityProvider>(
-      builder: (context, provider, _) {
+      builder: (context, availabilityProvider, _) {
         final user        = context.read<UserProvider>().user;
         final personnelId = user?.personnelId;
-        final canSchedule = provider.isWindowOpen && _isCurrentMonthOpen(provider, _focusedDay);
+        final canSchedule = availabilityProvider.isWindowOpen && _isCurrentMonthOpen(availabilityProvider, _focusedDay);
 
-        return Scaffold(
-          backgroundColor: _scaffoldBg(context),
-          appBar: AppBar(
+        return RefreshIndicator(
+          color: Theme.of(context).primaryColor,
+          onRefresh: availabilityProvider.refreshWindow,
+          child: Scaffold(
             backgroundColor: _scaffoldBg(context),
-            elevation: 0,
-            title: const Text(
-              'Availability',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            appBar: AppBar(
+              backgroundColor: _scaffoldBg(context),
+              elevation: 0,
+              title: const Text(
+                'Availability',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, fontFamily: 'Lexend'),
+              ),
             ),
-          ),
-          body: Column(
-            children: [
-              if (provider.isLoading)
-                LinearProgressIndicator(color: Theme.of(context).primaryColor),
+            body: Column(
+              children: [
+                if (availabilityProvider.isLoading)
+                  LinearProgressIndicator(color: Theme.of(context).primaryColor),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 16),
-                      const Align(
-                        alignment: Alignment.bottomCenter,
-                        child: Text(
-                          "Submit and manage your availability for upcoming months",
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w300),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        const Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Text(
+                            "Submit and manage your availability for upcoming months",
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w300),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildWindowBanner(provider),
-                      const SizedBox(height: 16),
-                      _buildCalendar(provider, canSchedule, personnelId),
-                      const SizedBox(height: 40),
-                      _buildChartSection(provider, canSchedule),
-                    ],
+                        const SizedBox(height: 16),
+                        _buildWindowBanner(availabilityProvider),
+                        const SizedBox(height: 16),
+                        _buildCalendar(availabilityProvider, canSchedule, personnelId),
+                        const SizedBox(height: 40),
+                        _buildChartSection(availabilityProvider, canSchedule),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
