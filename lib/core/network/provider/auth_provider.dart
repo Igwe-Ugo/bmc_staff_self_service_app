@@ -2,6 +2,7 @@
 
 import 'package:bmc_app/core/storage/secure_storage.dart';
 import 'package:flutter/material.dart';
+import '../api_client/widget.dart';
 import '../models/widget.dart';
 import '../services/auth_services.dart';
 import '../../../core/errors/api_exceptions.dart';
@@ -11,6 +12,9 @@ enum AuthState { idle, loading, success, error }
 
 class AuthProvider extends ChangeNotifier {
   final AuthServices _authServices = AuthServices();
+
+  String? _token;
+  String? get token => _token;
 
   AuthState _state = AuthState.idle;
   String? _errorTitle;
@@ -118,13 +122,19 @@ class AuthProvider extends ChangeNotifier {
       if (e.statusCode == 401) {
         // Token expired AND refresh failed — clear and force login
         await SecureStorage.instance.clearAll();
-        userProvider.clear();
+        userProvider.clearUser();
         _state = AuthState.idle;
       }
     }
   }
 
   void reset() {
+    _token = null;
+    _state = AuthState.idle;
+
+    // Explicitly strip headers from the dynamic ApiClient instance here as a safety net
+    ApiClient.instance.dio.options.headers.remove('Authorization');
+
     _state = AuthState.idle;
     _errorTitle = null;
     _errorMessage = null;

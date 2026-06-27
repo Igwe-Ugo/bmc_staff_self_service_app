@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 import '../../core/network/api_client/widget.dart';
 import '../../core/network/provider/widget.dart';
@@ -26,6 +28,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -34,16 +38,29 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               children: [
                 /// 🔹 BACK BUTTON
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: GestureDetector(
-                    onTap: Navigator.of(context).pop,
-                    child: CircleAvatar(
-                      radius: 14,
-                      backgroundColor: Colors.grey.shade300,
-                      child: Icon(Icons.arrow_back, size: 16, weight: 20, color: Theme.of(context).brightness == Brightness.dark ? Colors.black : Colors.grey.shade300,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    GestureDetector(
+                      onTap: () => GoRouter.of(context).push(BMCRouter.landingPagePath),
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
+                        child: Icon(Iconsax.arrow_left, size: 20),
+                      ),
                     ),
-                  ),
+                    GestureDetector(
+                      onTap: (){
+                        final themeProvider = Provider.of<DarkThemeProvider>(context, listen: false);
+                        themeProvider.darkTheme = !themeProvider.darkTheme;
+                      },
+                      child: CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
+                        child: Icon(isDark ? Iconsax.sun_1 : Iconsax.moon, size: 25),
+                      ),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 120),
@@ -72,7 +89,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w300,
                     fontFamily: 'Lexend',
-                    color: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.grey,
+                    color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.grey,
                   ),
                 ),
                 const SizedBox(height: 25),
@@ -82,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text(
                     "Username",
                     style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.grey,
+                        color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.grey,
                         fontFamily: 'Lexend',
                         fontWeight: FontWeight.w400,
                         fontSize: 16),
@@ -101,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text(
                     "Password",
                     style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.light ? Colors.white : Colors.grey,
+                        color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.grey,
                         fontFamily: 'Lexend',
                         fontWeight: FontWeight.w400,
                         fontSize: 16),
@@ -135,6 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 /// 🔹 LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
+                  height: 60,
                   child: ElevatedButton(
                     onPressed: _isLoading == true ? null : _login,
                     style: ElevatedButton.styleFrom(
@@ -145,14 +163,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     child: _isLoading == true
-                        ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    ): const Text(
+                        ? LoadingAnimationWidget.staggeredDotsWave(
+                          color: Colors.white,
+                          size: 40,
+                        ): const Text(
                       "Login",
                       style: TextStyle(
                         color: Colors.white,

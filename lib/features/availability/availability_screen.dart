@@ -1,5 +1,7 @@
 import 'package:bmc_app/features/availability/widget.dart';
+import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/network/models/availability_model.dart';
@@ -61,9 +63,18 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
         final personnelId = user?.personnelId;
         final canSchedule = availabilityProvider.isWindowOpen && _isCurrentMonthOpen(availabilityProvider, _focusedDay);
 
-        return RefreshIndicator(
-          color: Theme.of(context).primaryColor,
+        return CustomMaterialIndicator(
+          backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
           onRefresh: availabilityProvider.refreshWindow,
+          indicatorBuilder: (context, controller) {
+            return Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                  color: Theme.of(context).primaryColor,
+                  size: 50,
+                )
+            );
+          },
           child: Scaffold(
             backgroundColor: _scaffoldBg(context),
             appBar: AppBar(

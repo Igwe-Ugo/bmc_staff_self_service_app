@@ -196,7 +196,7 @@ class RotaProvider extends ChangeNotifier {
   static bool _sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  void clear() {
+  void clearUserData() {
     _myShifts = [];
     _rotaEvents = [];
     _fetchedMonths.clear();

@@ -1,6 +1,10 @@
+// profile.dart
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:bmc_app/core/network/models/user_model.dart';
 import 'package:bmc_app/core/network/provider/widget.dart';
+import 'package:bmc_app/features/common/show_message.dart';
 import 'package:bmc_app/features/common/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
@@ -15,78 +19,160 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
-  File? _imageFile;
+  // ── Image ─────────────────────────────────────────────────────────────────
+  File?             _imageFile;
+  String?           _base64Avatar; // encoded for upload
   final ImagePicker _imagePicker = ImagePicker();
 
-  /// CONTROLLERS
-  final TextEditingController fullNameController = TextEditingController(text: "Ugochukwu Orji");
-  final TextEditingController phoneController = TextEditingController(text: "+234 9061 686 915");
-  final TextEditingController addressController = TextEditingController(text: "329 Agbani Road");
-  final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
+  // ── Controllers ───────────────────────────────────────────────────────────
+  final _phoneCtrl   = TextEditingController();
+  final _addressCtrl = TextEditingController();
+  final _passCtrl    = TextEditingController();
+  final _confirmCtrl = TextEditingController();
 
-  /// DROPDOWNS
-  String country = "Nigeria";
-  String state = "Enugu";
-  String city = "Enugu";
+  // ── Dropdowns ─────────────────────────────────────────────────────────────
+  String _country = '';
+  String _state   = '';
+  String _city    = '';
 
-  /// SHOW SAVE BUTTONS
-  bool hasChanges = false;
+  // ── Dirty tracking ────────────────────────────────────────────────────────
+  bool _hasChanges = false;
+
+  // Pre-populate from provider on first load
+  bool _initialised = false;
 
   @override
-  void initState() {
-    super.initState();
-
-    /// LISTEN FOR FIELD CHANGES
-    fullNameController.addListener(_onFieldChanged);
-    phoneController.addListener(_onFieldChanged);
-    addressController.addListener(_onFieldChanged);
-    passwordController.addListener(_onFieldChanged);
-    confirmPasswordController.addListener(_onFieldChanged);
-  }
-
-  void _onFieldChanged() {
-    if (!hasChanges) {
-      setState(() {
-        hasChanges = true;
-      });
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_initialised) {
+      _initialised = true;
+      _populateFromProvider();
     }
   }
 
-  void _onDropdownChanged() {
-    setState(() {
-      hasChanges = true;
-    });
+  void _populateFromProvider() {
+    final u = context.read<UserProvider>().user;
+    if (u == null) return;
+    _phoneCtrl.text   = u.telno    ?? '';
+    _addressCtrl.text = u.address  ?? '';
+    _country          = u.country  ?? '';
+    _state            = u.state    ?? '';
+    _city             = u.city     ?? '';
+
+    _phoneCtrl.addListener(_markDirty);
+    _addressCtrl.addListener(_markDirty);
+    _passCtrl.addListener(_markDirty);
+    _confirmCtrl.addListener(_markDirty);
   }
 
-  void _saveChanges() {
-    setState(() {
-      hasChanges = false;
-    });
+  void _markDirty() {
+    if (!_hasChanges) setState(() => _hasChanges = true);
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Profile Updated")),
+  @override
+  void dispose() {
+    _phoneCtrl.dispose();
+    _addressCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Image picking ─────────────────────────────────────────────────────────
+  Future<void> _pickImage(ImageSource source) async {
+    final picked = await _imagePicker.pickImage(
+      source: source,
+      imageQuality: 70,
+      maxWidth: 512,
     );
-  }
+    if (picked == null) return;
+    final file   = File(picked.path);
+    final bytes  = await file.readAsBytes();
+    final base64 = base64Encode(bytes);
+    final ext    = picked.path.split('.').last.toLowerCase();
+    final mime   = ext == 'png' ? 'image/png' : 'image/jpeg';
 
-  void _cancelChanges() {
     setState(() {
-      hasChanges = false;
+      _imageFile    = file;
+      _base64Avatar = 'data:$mime;base64,$base64';
+      _hasChanges   = true;
     });
-
-    /// RESET VALUES IF YOU WANT
-    fullNameController.text = "Ugochukwu Orji";
-    phoneController.text = "+234 9061 686 915";
-    addressController.text = "329 Agbani Road";
-
-    passwordController.clear();
-    confirmPasswordController.clear();
   }
 
+  void _removeAvatar() {
+    setState(() {
+      _imageFile    = null;
+      _base64Avatar = null;
+      _hasChanges   = true;
+    });
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  Future<void> _save() async {
+    // Password validation
+    if (_passCtrl.text.isNotEmpty) {
+      if (_passCtrl.text != _confirmCtrl.text) {
+        showMessage('Passwords do not match', context,
+            status: MessageStatus.error, title: 'Validation');
+        return;
+      }
+      if (_passCtrl.text.length < 6) {
+        showMessage('Password must be at least 6 characters', context,
+            status: MessageStatus.error, title: 'Validation');
+        return;
+      }
+    }
+
+    final data = UserProfileUpdateData(
+      id:         context.read<UserProvider>().user?.id,
+      avatar:   _base64Avatar,
+      address:  _addressCtrl.text.trim().isEmpty ? null : _addressCtrl.text.trim(),
+      city:     _city.isEmpty    ? null : _city,
+      telno:    _phoneCtrl.text.trim().isEmpty   ? null : _phoneCtrl.text.trim(),
+      state:    _state.isEmpty   ? null : _state,
+      country:  _country.isEmpty ? null : _country,
+      password: _passCtrl.text.trim().isEmpty    ? null : _passCtrl.text.trim(),
+    );
+
+    final success = await context.read<UserProvider>().updateProfile(data);
+
+    if (!mounted) return;
+
+    if (success) {
+      setState(() {
+        _hasChanges = false;
+        _imageFile  = null;   // now using the updated avatar from provider
+        _passCtrl.clear();
+        _confirmCtrl.clear();
+      });
+      showMessage('Profile updated successfully!', context,
+          status: MessageStatus.success, title: 'Saved');
+    } else {
+      final err = context.read<UserProvider>().errorMessage ?? 'Update failed.';
+      showMessage(err, context,
+          status: MessageStatus.error, title: 'Error');
+    }
+  }
+
+  void _cancel() {
+    _populateFromProvider();
+    setState(() {
+      _hasChanges   = false;
+      _imageFile    = null;
+      _base64Avatar = null;
+    });
+    _passCtrl.clear();
+    _confirmCtrl.clear();
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Consumer<UserProvider>(
       builder: (context, userProvider, _) {
+        final user      = userProvider.user;
+        final updating  = userProvider.isUpdating;
+
         return Scaffold(
           appBar: AppBar(
             elevation: 0,
@@ -95,21 +181,21 @@ class _ProfileState extends State<Profile> {
               icon: const Icon(Icons.arrow_back, size: 18),
             ),
             title: const Text(
-            "Update profile",
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Lexend',
+              'Update Profile',
+              style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Lexend'),
             ),
-          ),
           ),
           body: SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 30, vertical: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// PROFILE IMAGE
+                  // ── Avatar ──────────────────────────────────────────────
                   Center(
                     child: Stack(
                       clipBehavior: Clip.none,
@@ -124,162 +210,166 @@ class _ProfileState extends State<Profile> {
                               width: 2,
                             ),
                           ),
-                          child: _imageFile == null ? CircleAvatar() // should love at this tomorrow.
-                              : UserAvatar(
-                              image: userProvider.avatar,
+                          child: ClipOval(
+                            child: _imageFile != null
+                                ? Image.file(_imageFile!, fit: BoxFit.cover)
+                                : UserAvatar(
+                              image:    userProvider.avatar,
                               initials: userProvider.initials,
+                              radius:   60,
+                            ),
                           ),
                         ),
 
-                        Positioned(
-                          right: 0,
-                          top: 6,
-                          child: Container(
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              color: Colors.white,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Iconsax.trash,
-                              size: 14,
-                              color: Colors.red,
+                        // Remove button
+                        if (_imageFile != null || userProvider.hasAvatar)
+                          Positioned(
+                            right: 0,
+                            top: 6,
+                            child: GestureDetector(
+                              onTap: _removeAvatar,
+                              child: Container(
+                                width: 24,
+                                height: 24,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [BoxShadow(
+                                    color: Colors.black12,
+                                    blurRadius: 4,
+                                  )],
+                                ),
+                                child: const Icon(Iconsax.trash,
+                                    size: 14, color: Colors.red),
+                              ),
                             ),
                           ),
-                        ),
                       ],
                     ),
                   ),
 
                   const SizedBox(height: 18),
 
-                  /// IMAGE BUTTONS
+                  // ── Image action buttons ─────────────────────────────────
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _imageButton(
                         icon: Icons.camera_outlined,
-                        text: "Snap",
-                        onTap: _pickImageFromCamera,
+                        text: 'Snap',
+                        onTap: () => _pickImage(ImageSource.camera),
                       ),
                       const SizedBox(width: 12),
                       _imageButton(
                         icon: Icons.cloud_upload_outlined,
-                        text: "Upload",
-                        onTap: _pickImageFromGallery,
+                        text: 'Upload',
+                        onTap: () => _pickImage(ImageSource.gallery),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 26),
 
-                  /// FULL NAME
-                  _fieldLabel("Full Name"),
-                  const SizedBox(height: 8),
+                  // ── Read-only info ────────────────────────────────────────
+                  if (user != null) ...[
+                    _fieldLabel('Full Name'),
+                    const SizedBox(height: 8),
+                    _readonlyField(user.name),
+                    const SizedBox(height: 18),
 
+                    _fieldLabel('Email'),
+                    const SizedBox(height: 8),
+                    _readonlyField(user.email),
+                    const SizedBox(height: 18),
+
+                    if (user.rank?.isNotEmpty == true) ...[
+                      _fieldLabel('Rank / Role'),
+                      const SizedBox(height: 8),
+                      _readonlyField(user.rank!),
+                      const SizedBox(height: 18),
+                    ],
+                  ],
+
+                  // ── Editable fields ───────────────────────────────────────
+                  _fieldLabel('Phone Number'),
+                  const SizedBox(height: 8),
                   _customField(
-                    controller: fullNameController,
-                    hint: "Enter full name",
+                    controller: _phoneCtrl,
+                    hint: 'e.g. +234 800 000 0000',
+                    keyboardType: TextInputType.phone,
                   ),
 
                   const SizedBox(height: 18),
 
-                  /// PHONE
-                  _fieldLabel("Phone Number"),
+                  _fieldLabel('Address'),
                   const SizedBox(height: 8),
-
                   _customField(
-                    controller: phoneController,
-                    hint: "Enter phone number",
-                    prefix: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(width: 10),
-
-                        Container(
-                          width: 20,
-                          height: 14,
-                          decoration: const BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage(
-                                "assets/images/nigeria_flag.png",
-                              ),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(width: 8),
-                      ],
-                    ),
+                    controller: _addressCtrl,
+                    hint: 'Street address',
                   ),
 
                   const SizedBox(height: 18),
 
-                  /// COUNTRY
-                  _fieldLabel("Country"),
+                  // Country
+                  _fieldLabel('Country'),
                   const SizedBox(height: 8),
-
                   _dropdownField(
-                    value: country,
-                    items: const ["Nigeria", "Ghana", "Kenya"],
-                    onChanged: (value) {
-                      setState(() {
-                        country = value!;
-                      });
-
-                      _onDropdownChanged();
+                    value: _country.isEmpty ? null : _country,
+                    hint: 'Select country',
+                    items: const [
+                      'Nigeria', 'Ghana', 'Kenya', 'South Africa',
+                      'Ethiopia', 'Tanzania', 'Uganda', 'Rwanda',
+                    ],
+                    onChanged: (v) {
+                      setState(() { _country = v ?? ''; _hasChanges = true; });
                     },
                   ),
 
                   const SizedBox(height: 18),
 
-                  /// STATE + CITY
+                  // State + City side by side
                   Row(
                     children: [
-
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
-                            _fieldLabel("State"),
+                            _fieldLabel('State'),
                             const SizedBox(height: 8),
-
                             _dropdownField(
-                              value: state,
-                              items: const ["Enugu", "Lagos", "Abuja"],
-                              onChanged: (value) {
-                                setState(() {
-                                  state = value!;
-                                });
-
-                                _onDropdownChanged();
+                              value: _state.isEmpty ? null : _state,
+                              hint: 'State',
+                              items: const [
+                                'Abia', 'Adamawa', 'Akwa Ibom', 'Anambra',
+                                'Bauchi', 'Bayelsa', 'Benue', 'Borno',
+                                'Cross River', 'Delta', 'Ebonyi', 'Edo',
+                                'Ekiti', 'Enugu', 'FCT', 'Gombe', 'Imo',
+                                'Jigawa', 'Kaduna', 'Kano', 'Katsina',
+                                'Kebbi', 'Kogi', 'Kwara', 'Lagos', 'Nasarawa',
+                                'Niger', 'Ogun', 'Ondo', 'Osun', 'Oyo',
+                                'Plateau', 'Rivers', 'Sokoto', 'Taraba',
+                                'Yobe', 'Zamfara',
+                              ],
+                              onChanged: (v) {
+                                setState(() { _state = v ?? ''; _hasChanges = true; });
                               },
                             ),
                           ],
                         ),
                       ),
-
                       const SizedBox(width: 12),
-
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-
-                            _fieldLabel("City"),
+                            _fieldLabel('City'),
                             const SizedBox(height: 8),
-
-                            _dropdownField(
-                              value: city,
-                              items: const ["Enugu", "Nsukka", "Awgu"],
-                              onChanged: (value) {
-                                setState(() {
-                                  city = value!;
-                                });
-
-                                _onDropdownChanged();
+                            _customField(
+                              controller: TextEditingController(text: _city),
+                              hint: 'City',
+                              onChanged: (v) {
+                                _city = v;
+                                _markDirty();
                               },
                             ),
                           ],
@@ -288,87 +378,69 @@ class _ProfileState extends State<Profile> {
                     ],
                   ),
 
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
 
-                  /// ADDRESS
-                  _fieldLabel("Address"),
+                  // ── Change password ────────────────────────────────────────
+                  _fieldLabel('New Password'),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Leave blank to keep your current password',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).hintColor),
+                  ),
                   const SizedBox(height: 8),
-
                   _customField(
-                    controller: addressController,
-                    hint: "Enter address",
+                    controller: _passCtrl,
+                    hint: '••••••••',
+                    obscure: true,
                   ),
 
                   const SizedBox(height: 18),
 
-                  /// PASSWORDS
-                  Row(
-                    children: [
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-
-                            _fieldLabel("New Password"),
-                            const SizedBox(height: 8),
-
-                            _customField(
-                              controller: passwordController,
-                              hint: "********",
-                              obscure: true,
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-
-                            _fieldLabel("Confirm Password"),
-                            const SizedBox(height: 8),
-
-                            _customField(
-                              controller: confirmPasswordController,
-                              hint: "********",
-                              obscure: true,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  _fieldLabel('Confirm New Password'),
+                  const SizedBox(height: 8),
+                  _customField(
+                    controller: _confirmCtrl,
+                    hint: '••••••••',
+                    obscure: true,
                   ),
 
-                  const SizedBox(height: 26),
+                  const SizedBox(height: 32),
 
-                  /// SHOW BUTTONS ONLY WHEN EDITED
+                  // ── Action buttons — only shown when dirty ─────────────────
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
-
-                    child: hasChanges
+                    child: _hasChanges
                         ? Column(
+                      key: const ValueKey('buttons'),
                       children: [
-
-                        /// SAVE BUTTON
+                        // Save
                         SizedBox(
                           width: double.infinity,
                           height: 52,
                           child: ElevatedButton(
-                            onPressed: _saveChanges,
+                            onPressed: updating ? null : _save,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Theme.of(context).primaryColor,
+                              backgroundColor:
+                              Theme.of(context).primaryColor,
                               elevation: 0,
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                BorderRadius.circular(30),
-                              ),
+                                  borderRadius:
+                                  BorderRadius.circular(30)),
                             ),
-                            child: const Text(
-                              "Save",
+                            child: updating
+                                ? const SizedBox(
+                              width: 22, height: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                                : const Text(
+                              'Save Changes',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
@@ -381,27 +453,22 @@ class _ProfileState extends State<Profile> {
 
                         const SizedBox(height: 12),
 
-                        /// CANCEL BUTTON
+                        // Cancel
                         SizedBox(
                           width: double.infinity,
                           height: 52,
                           child: ElevatedButton(
-                            onPressed: _cancelChanges,
-
+                            onPressed: updating ? null : _cancel,
                             style: ElevatedButton.styleFrom(
                               backgroundColor:
                               const Color(0xFFFBE3E3),
-
                               elevation: 0,
-
                               shape: RoundedRectangleBorder(
-                                borderRadius:
-                                BorderRadius.circular(30),
-                              ),
+                                  borderRadius:
+                                  BorderRadius.circular(30)),
                             ),
-
                             child: const Text(
-                              "Cancel",
+                              'Cancel',
                               style: TextStyle(
                                 color: Colors.red,
                                 fontWeight: FontWeight.w600,
@@ -413,7 +480,7 @@ class _ProfileState extends State<Profile> {
                         ),
                       ],
                     )
-                        : const SizedBox.shrink(),
+                        : const SizedBox.shrink(key: ValueKey('empty')),
                   ),
 
                   const SizedBox(height: 40),
@@ -422,179 +489,144 @@ class _ProfileState extends State<Profile> {
             ),
           ),
         );
-      }
+      },
     );
   }
 
-  /// =========================================================
-  /// FIELD LABEL
-  /// =========================================================
+  // ── Widget helpers ─────────────────────────────────────────────────────────
 
-  Widget _fieldLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
+  Widget _fieldLabel(String text) => Text(
+    text,
+    style: const TextStyle(
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      fontFamily: 'Lexend',
+    ),
+  );
+
+  Widget _readonlyField(String value) => Container(
+    height: 52,
+    alignment: Alignment.centerLeft,
+    padding: const EdgeInsets.symmetric(horizontal: 14),
+    decoration: BoxDecoration(
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Colors.white10
+          : Colors.grey.shade100,
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: Colors.grey.shade300),
+    ),
+    child: Text(
+      value,
+      style: TextStyle(
+        fontSize: 13,
         fontFamily: 'Lexend',
+        color: Theme.of(context).hintColor,
       ),
-    );
-  }
-
-  // Image Picker - from camera
-  Future<void> _pickImageFromCamera() async {
-    final pickedFile = await _imagePicker.pickImage(source: ImageSource.camera);
-    if (pickedFile != null){
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
-    }
-  }
-  // Image picker - from gallery
-  Future<void> _pickImageFromGallery() async {
-    final pickedFile = await _imagePicker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null){
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
-    }
-  }
-
-  /// =========================================================
-  /// CUSTOM INPUT FIELD
-  /// =========================================================
+    ),
+  );
 
   Widget _customField({
     required TextEditingController controller,
     required String hint,
     bool obscure = false,
     Widget? prefix,
-  }) {
-    return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Colors.grey.shade300,
+    TextInputType keyboardType = TextInputType.text,
+    void Function(String)? onChanged,
+  }) =>
+      Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white10
+              : Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.grey.shade300),
         ),
-      ),
-
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-
-        decoration: InputDecoration(
-          hintText: hint,
-
-          hintStyle: TextStyle(
-            color: Colors.grey.shade400,
-            fontSize: 13,
-            fontFamily: 'Lexend',
-          ),
-
-          prefixIcon: prefix,
-
-          suffixIcon: const Icon(
-            Icons.edit_outlined,
-            size: 18,
-            color: Colors.black54,
-          ),
-
-          border: InputBorder.none,
-
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 15,
+        child: TextField(
+          controller: controller,
+          obscureText: obscure,
+          keyboardType: keyboardType,
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(
+                color: Colors.grey.shade400,
+                fontSize: 13,
+                fontFamily: 'Lexend'),
+            prefixIcon: prefix,
+            suffixIcon: const Icon(Icons.edit_outlined,
+                size: 18),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14, vertical: 15),
           ),
         ),
-      ),
-    );
-  }
-
-  /// =========================================================
-  /// DROPDOWN FIELD
-  /// =========================================================
+      );
 
   Widget _dropdownField({
-    required String value,
+    required String? value,
+    required String hint,
     required List<String> items,
-    required Function(String?) onChanged,
-  }) {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Colors.grey.shade300,
+    required void Function(String?) onChanged,
+  }) =>
+      Container(
+        height: 52,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white10
+              : Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.grey.shade300),
         ),
-      ),
-
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 13,
-            fontFamily: 'Lexend',
+        child: DropdownButtonHideUnderline(
+          child: DropdownButton<String>(
+            value: value,
+            isExpanded: true,
+            hint: Text(hint,
+                style: TextStyle(
+                  color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                    fontSize: 13,
+                    fontFamily: 'Lexend')),
+            style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark ? Colors.white : Colors.black,
+                fontSize: 13,
+                fontFamily: 'Lexend'),
+            items: items
+                .map((i) => DropdownMenuItem(value: i, child: Text(i)))
+                .toList(),
+            onChanged: onChanged,
           ),
-
-          items: items.map((item) {
-            return DropdownMenuItem(
-              value: item,
-              child: Text(item),
-            );
-          }).toList(),
-
-          onChanged: onChanged,
         ),
-      ),
-    );
-  }
-
-  /// =========================================================
-  /// IMAGE BUTTON
-  /// =========================================================
+      );
 
   Widget _imageButton({
     required IconData icon,
     required String text,
     required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 10,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(
-            color: Colors.grey.shade300,
+  }) =>
+      GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white10
+                : Colors.white,
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 18),
+              const SizedBox(width: 8),
+              Text(text,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'Lexend',
+                      fontWeight: FontWeight.w500)),
+            ],
           ),
         ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18),
-            const SizedBox(width: 8),
-            Text(
-              text,
-              style: const TextStyle(
-                fontSize: 12,
-                fontFamily: 'Lexend',
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+      );
 }

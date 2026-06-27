@@ -67,6 +67,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                     width: 80,
                     height: 80,
                   ),
+                  const SizedBox(height: 10),
                   Text(
                     "Welcome!",
                     style: TextStyle(
@@ -87,57 +88,56 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                 fit: BoxFit.contain,
               ),
 
-              const SizedBox(height: 50),
+              Spacer(),
 
-              Expanded(
-                child: DefaultTabController(
-                  length: entries.length,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: Column(
-                      children: [
-                        /// 🔹 SWIPE CONTENT
-                        _landingInfo(),
-                        const SizedBox(height: 30),
+              DefaultTabController(
+                length: entries.length,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Column(
+                    children: [
+                      /// 🔹 SWIPE CONTENT
+                      _landingInfo(),
+                      const SizedBox(height: 30),
 
-                        /// 🔹 STATIC BUTTON
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const LoginScreen(),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              elevation: 0,
-                              backgroundColor: Colors.white,
-                              foregroundColor: Theme.of(context).primaryColor,
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 15),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
+                      /// 🔹 STATIC BUTTON
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const LoginScreen(),
                               ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            backgroundColor: Colors.white,
+                            foregroundColor: Theme.of(context).primaryColor,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            child: const Text(
-                              "Get Started",
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 16
-                              ),
+                          ),
+                          child: const Text(
+                            "Get Started",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 16
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
               ),

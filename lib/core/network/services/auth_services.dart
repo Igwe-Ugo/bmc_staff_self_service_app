@@ -164,11 +164,18 @@ class AuthServices {
 
   Future<void> logout() async {
     try {
+      // 1. If your backend needs the token to invalidate the session,
+      // send the post request BEFORE removing the header.
       await _dio.post(ApiEndpoints.logout);
     } catch (_) {
       // Always clear local storage even if the server call fails
     } finally {
-      await _storage.clearAll(); // device ID is preserved inside clearAll
+      // 2. Clear headers from BOTH global ApiClient and local service _dio instances
+      ApiClient.instance.dio.options.headers.remove('Authorization');
+      _dio.options.headers.remove('Authorization');
+
+      // 3. Wipe secure local storage completely
+      await _storage.clearAll();
     }
   }
 

@@ -1,11 +1,11 @@
 import 'package:bmc_app/features/home/widget.dart';
+import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-
 import '../../core/network/provider/widget.dart';
 import '../availability/widget.dart';
 import '../common/widget.dart';
@@ -20,28 +20,45 @@ class BMCHome extends StatefulWidget {
 }
 
 class _BMCHomeState extends State<BMCHome> {
-  int _selectedDayIndex = 1; // Monday selected by default
   bool _showDrawer = false;
   late String currentDate;
   late String currentTime;
 
-  @override
-  void initState() {
-    super.initState();
+  // 1. Separate your data fetching logic into a Future-returning method
+  Future<void> _refreshAllProviders() async {
+    // Return a combined future so the RefreshIndicator waits for all network requests to finish
+    await Future.wait([
+      // Ensure these return a Future in your providers
+      Future.microtask(() => context.read<AvailabilityProvider>().init()),
+      context.read<LeaveProvider>().refresh(),
+      context.read<RotaProvider>().loadShiftsForMonth(context, DateTime.now()),
+    ]);
+  }
+
+  // 2. Keep the infinite background clock loop entirely separate so it only starts ONCE
+  void _startClockTimer() {
     _updateDateTime();
-
-    // Initialize availability data when home loads
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<AvailabilityProvider>(context, listen: false).init();
-    });
-
-    // Updates every second
     Future.doWhile(() async {
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
         _updateDateTime();
       }
       return mounted;
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Start the clock loop once
+    _startClockTimer();
+
+    // Fetch initial network data when the home page mounts
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _refreshAllProviders();
+      }
     });
   }
 
@@ -55,11 +72,6 @@ class _BMCHomeState extends State<BMCHome> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // UI Theme Palette mapping matching your screenshots
-    final secondaryTextColor = isDark ? Colors.white70 : const Color(0xFF888888);
-
     return Consumer3<UserProvider, AvailabilityProvider, LeaveProvider>(
       builder: (context, userProvider, availabilityProvider, leaveProvider, _) {
         if (userProvider.isLoading || availabilityProvider.isLoading) {
@@ -67,9 +79,18 @@ class _BMCHomeState extends State<BMCHome> {
         }
 
         return Scaffold(
-          body: RefreshIndicator(
-            color: Theme.of(context).primaryColor,
-            onRefresh: leaveProvider.refresh,
+          body: CustomMaterialIndicator(
+            backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
+            onRefresh: _refreshAllProviders,
+            indicatorBuilder: (context, controller) {
+              return Padding(
+                padding: const EdgeInsets.all(6.0),
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                  color: Theme.of(context).primaryColor,
+                  size: 40,
+                )
+              );
+            },
             child: Stack(
               children: [
                 SingleChildScrollView(
@@ -83,9 +104,8 @@ class _BMCHomeState extends State<BMCHome> {
                         const SizedBox(height: 24),
                         LeaveSummaryCard(),
                         const SizedBox(height: 24),
-
-                        const _SectionTitle(title: "My Availability", badge: "14", isRota: false),
-                        const SizedBox(height: 14),
+                        CombinedCarouselCalendar(),
+                        const SizedBox(height: 24),
                         const WeeklyAvailabilityWidget(),
                         const SizedBox(height: 24),
 
@@ -172,95 +192,6 @@ class _BMCHomeState extends State<BMCHome> {
             const Text("I can do all things through Christ who strengthens me.", style: TextStyle(color: Colors.white70, fontSize: 11)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildLeaveRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: TextStyle(fontSize: 11)),
-          Text(value, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLeaveMenuTile(String label, Color indicatorColor) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(8)
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-              Icon(Icons.chevron_right, size: 16)
-            ],
-          ),
-          const SizedBox(height: 4),
-          Container(height: 3, width: double.infinity, decoration: BoxDecoration(color: indicatorColor, borderRadius: BorderRadius.circular(2))),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeekCalendar(AvailabilityProvider provider, Color cardColor) {
-    final List<Map<String, dynamic>> staticDays = [
-      {'day': 'S', 'date': '30', 'dots': [Colors.green]},
-      {'day': 'M', 'date': '01', 'dots': [Colors.green]},
-      {'day': 'T', 'date': '02', 'dots': [Colors.green, Colors.orange]},
-      {'day': 'W', 'date': '03', 'dots': [Colors.green, Colors.orange]},
-      {'day': 'T', 'date': '04', 'dots': [Colors.red]},
-      {'day': 'F', 'date': '05', 'dots': [Colors.red]},
-      {'day': 'S', 'date': '06', 'dots': [Colors.green]},
-    ];
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16)),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(staticDays.length, (index) {
-          final item = staticDays[index];
-          final bool isSelected = index == _selectedDayIndex;
-
-          return GestureDetector(
-            onTap: () => setState(() => _selectedDayIndex = index),
-            child: Container(
-              width: 42,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: isSelected ? const Color(0xFF6C47FF).withOpacity(0.2) : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: isSelected ? Border.all(color: const Color(0xFF6C47FF), width: 1.5) : null,
-              ),
-              child: Column(
-                children: [
-                  Text(item['day'], style: TextStyle(fontSize: 12)),
-                  const SizedBox(height: 4),
-                  Text(item['date'], style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: (item['dots'] as List<Color>).map((color) => Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 1),
-                      width: 5, height: 5,
-                      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-                    )).toList(),
-                  )
-                ],
-              ),
-            ),
-          );
-        }),
       ),
     );
   }

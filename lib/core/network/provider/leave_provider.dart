@@ -93,6 +93,16 @@ class LeaveProvider extends ChangeNotifier {
     }
   }
 
+  // Add this inside LeaveProvider in leave_provider.dart
+  void clearUserData() {
+    _myRequests = [];
+    _searchResults = [];
+    _selectedRequest = null;
+    _state = LeaveState.idle;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
   // ── 4. Get single request ─────────────────────────────────────────────────
   Future<HrLeaveRequest?> getById(String id) async {
     try {

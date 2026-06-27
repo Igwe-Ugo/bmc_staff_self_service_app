@@ -1,11 +1,8 @@
 import 'package:bmc_app/features/common/widget.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../../core/network/models/availability_model.dart';
 import '../../../core/network/provider/availability_provider.dart';
-import '../../../core/network/provider/user_provider.dart';
-import '../../../features/common/show_message.dart';
 
 class WeeklyAvailabilityWidget extends StatefulWidget {
   const WeeklyAvailabilityWidget({super.key});
@@ -15,15 +12,7 @@ class WeeklyAvailabilityWidget extends StatefulWidget {
 }
 
 class _WeeklyAvailabilityWidgetState extends State<WeeklyAvailabilityWidget> {
-  DateTime _currentWeekStart = DateTime.now();
-
-  // Get the start of the week (Monday)
-  DateTime _getWeekStart(DateTime date) {
-    final dayOfWeek = date.weekday;
-    // If weekday is Monday (1), subtract 0 days, else subtract (weekday - 1) days
-    final daysToSubtract = dayOfWeek - 1;
-    return date.subtract(Duration(days: daysToSubtract));
-  }
+  final DateTime _currentWeekStart = DateTime.now();
 
   // Get the week dates (Monday to Sunday)
   List<DateTime> _getWeekDates(DateTime weekStart) {
@@ -33,11 +22,6 @@ class _WeeklyAvailabilityWidgetState extends State<WeeklyAvailabilityWidget> {
   // Check if a date is in the current month
   bool _isInCurrentMonth(DateTime date, DateTime currentMonth) {
     return date.year == currentMonth.year && date.month == currentMonth.month;
-  }
-
-  // Format date for display
-  String _formatDate(DateTime date) {
-    return '${date.day}';
   }
 
   // Format month for header
@@ -50,22 +34,11 @@ class _WeeklyAvailabilityWidgetState extends State<WeeklyAvailabilityWidget> {
   Widget build(BuildContext context) {
     return Consumer<AvailabilityProvider>(
       builder: (context, provider, _) {
-        final user = context.read<UserProvider>().user;
-        final personnelId = user?.personnelId;
         final now = DateTime.now();
         final currentMonth = DateTime(now.year, now.month);
 
-        // Check if provider has slots for the current month
-        final monthSlots = provider.slots.where(
-                (slot) => slot.date.year == currentMonth.year &&
-                slot.date.month == currentMonth.month
-        ).toList();
-
         // Get week dates
         final weekDates = _getWeekDates(_currentWeekStart);
-
-        // Check if any date in the week is in the current month
-        final hasDatesInMonth = weekDates.any((date) => _isInCurrentMonth(date, currentMonth));
 
         // Count availability statuses for the week
         Map<HrAvailabilityStatus, int> weeklyStatusCount = {};
@@ -92,6 +65,18 @@ class _WeeklyAvailabilityWidgetState extends State<WeeklyAvailabilityWidget> {
             .map((entry) => entry.key)
             .toList();
 
+        // Filter to isolate ONLY the current logged-in user's shifts for this current month
+        final myMonthlyAvailability = provider.slots.where((event) {
+          final isCurrentMonth = event.date.month == now.month && event.date.year == now.year;
+          // Adjust this condition if you track your own shift using an explicit personal flag,
+          // otherwise, it aggregates all personal roster entries loaded in your provider state
+          return isCurrentMonth;
+        }).toList();
+
+        // Sort chronologically by day
+        myMonthlyAvailability.sort((a, b) => a.date.compareTo(b.date));
+        final totalCount = myMonthlyAvailability.length;
+
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -108,6 +93,29 @@ class _WeeklyAvailabilityWidgetState extends State<WeeklyAvailabilityWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                children: [
+                  Text('My Availability', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  const SizedBox(width: 10,),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      totalCount.toString(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'Lexend',
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
               // Header with month and view all button
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -118,45 +126,6 @@ class _WeeklyAvailabilityWidgetState extends State<WeeklyAvailabilityWidget> {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
-                  // Navigation arrows
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _currentWeekStart = _currentWeekStart.subtract(const Duration(days: 7));
-                          });
-                        },
-                        icon: const Icon(Icons.chevron_left),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        iconSize: 24,
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          setState(() {
-                            _currentWeekStart = _currentWeekStart.add(const Duration(days: 7));
-                          });
-                        },
-                        icon: const Icon(Icons.chevron_right),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        iconSize: 24,
-                      ),
-                      const SizedBox(width: 8),
-                      // View All button
-                      TextButton(
-                        onPressed: () => GoRouter.of(context).push(BMCRouter.availabilityPath),
-                        child: const Text(
-                          'View All',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),

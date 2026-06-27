@@ -7,6 +7,7 @@ import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/network/provider/widget.dart';
+import '../../core/network/services/widget.dart';
 
 class ProfileDrawer extends StatelessWidget {
   final VoidCallback onClose;
@@ -15,7 +16,7 @@ class ProfileDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+        return Material(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         child: Padding(
@@ -26,13 +27,17 @@ class ProfileDrawer extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 /// 🔹 TOP BAR
-                IconButton(
-                  onPressed: () async {
+                GestureDetector(
+                  onTap: () async {
                     onClose();
                     await Future.delayed(const Duration(milliseconds: 200));
                     navBarVisible.value = true;
                   },
-                  icon: const Icon(Iconsax.arrow_left, size: 20),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
+                    child: Icon(Iconsax.arrow_left, size: 20),
+                  ),
                 ),
 
                 const SizedBox(height: 32),
@@ -235,8 +240,9 @@ class ProfileDrawer extends StatelessWidget {
           ),
           const SizedBox(height: 14),
 
-          Consumer<UserProvider>(
-            builder: (context, userProvider, _) {
+          Consumer5<UserProvider, AuthProvider, LeaveProvider, RotaProvider, AvailabilityProvider>(
+            builder: (context, userProvider, authProvider, leaveProvider, rotaProvider, availabilityProvider, _) {
+              final AuthServices authServices = AuthServices();
               return ListTile(
                 leading: const Icon(Iconsax.logout),
                 trailing: const Icon(Iconsax.arrow_right_3, size: 15),
@@ -248,16 +254,29 @@ class ProfileDrawer extends StatelessWidget {
                     fontSize: 14,
                   ),
                 ),
-                onTap: () {
-                  // Navigate FIRST, clear AFTER — avoids null rebuild
-                  GoRouter.of(context).go(BMCRouter.loginPath);
-                  showMessage(
-                    'Logout Successful!',
-                    context,
-                    status: MessageStatus.success,
-                  );
-                  userProvider.clear();
-                },
+                  onTap: () async {
+                  // 1. Safe frame-aligned navigation redirect
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (context.mounted) {
+                        GoRouter.of(context).go(BMCRouter.loginPath);
+                        showMessage(
+                          'Logout Successful!',
+                          context,
+                          status: MessageStatus.success,
+                        );
+                      }
+                    });
+                    // 2. Wipe out data states from memory immediately
+                    userProvider.clearUser();
+                    leaveProvider.clearUserData();
+                    rotaProvider.clearUserData();
+                    availabilityProvider.clearUserData();
+
+                    // 3. Trigger the secure storage & backend token invalidation
+                    authProvider.reset();
+                    await authServices.logout(); // Calling your service clear block
+
+                  }
               );
             },
           ),

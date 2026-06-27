@@ -1,177 +1,112 @@
-import 'package:bmc_app/core/network/provider/user_provider.dart';
+// lib/features/stats/stats.dart
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
-
-import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
-import '../common/widget.dart';
+import '../../core/network/models/widget.dart';
+import '../../core/network/provider/widget.dart';
 
-class Stats extends StatelessWidget {
-  const Stats({super.key});
+class StatsScreen extends StatefulWidget {
+  const StatsScreen({super.key});
+
+  @override
+  State<StatsScreen> createState() => _StatsScreenState();
+}
+
+class _StatsScreenState extends State<StatsScreen> {
+  final DateTime _currentMonth = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    // Ensure data is loaded for the current month
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final rotaProvider = context.read<RotaProvider>();
+      rotaProvider.loadShiftsForMonth(context, _currentMonth);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<UserProvider>(
-      builder: (context, userProvider, _) {
-        return Scaffold(
-          appBar: AppBar(
-            elevation: 0,
-            leading: IconButton(
-              onPressed: () => GoRouter.of(context).pop(),
-              icon: const Icon(Iconsax.arrow_left, size: 20),
-            ),
-            title: const Text(
-              'Profile',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  fontFamily: 'Lexend'
-              ),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: context.read<AvailabilityProvider>()),
+        ChangeNotifierProvider.value(value: context.read<LeaveProvider>()),
+        ChangeNotifierProvider.value(value: context.read<RotaProvider>()),
+      ],
+      child: Scaffold(
+        appBar: AppBar(
+          elevation: 0,
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back, size: 18),
+          ),
+          title: const Text(
+              'Statistics',
+            style: TextStyle(
+              fontFamily: 'Lexend',
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
             ),
           ),
-          body: SafeArea(
-            child: Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildSectionLabel('Portfolio'),
-                        const SizedBox(height: 8),
-                        _buildPortfolioCard(context, userProvider),
-                        const SizedBox(height: 16),
-                        _buildSectionLabel('Availability'),
-                        const SizedBox(height: 8),
-                        _buildDonutCard(context,
-                          percent: 0.75,
-                          centerLabel: '75%',
-                          color: const Color(0xFF6C47FF),
-                          stats: const [
-                            _StatItem('Available', 31, Color(0xFF6C47FF)),
-                            _StatItem('Unavailable', 24, Color(0xFFFF6B6B)),
-                            _StatItem('Preferred', 20, Color(0xFFFFD93D)),
-                            _StatItem('Total', 270, Color(0xFF6C47FF)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildSectionLabel('Leave'),
-                        const SizedBox(height: 8),
-                        _buildDonutCard(context,
-                          percent: 0.55,
-                          centerLabel: '55%',
-                          color: const Color(0xFF9B87F5),
-                          stats: const [
-                            _StatItem('Compassionate', 21, Color(0xFF6C47FF)),
-                            _StatItem('Sick', 24, Color(0xFFFF6B6B)),
-                            _StatItem('Rest', 20, Color(0xFFFFD93D)),
-                            _StatItem('Total', 130, Color(0xFF6C47FF)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _buildSectionLabel('Rota'),
-                        const SizedBox(height: 8),
-                        _buildDonutCard(context,
-                          percent: 0.80,
-                          centerLabel: '80%',
-                          color: const Color(0xFF6C47FF),
-                          stats: const [
-                            _StatItem('Day', 30, Color(0xFF6C47FF)),
-                            _StatItem('Night', 24, Color(0xFFFF6B6B)),
-                            _StatItem('On Call', 20, Color(0xFFFFD93D)),
-                            _StatItem('Off', 14, Color(0xFFFF6B6B)),
-                            _StatItem('Total', 160, Color(0xFF6C47FF)),
-                          ],
-                        ),
-                        const SizedBox(height: 28),
-                        _buildButton(
-                          label: 'Update Profile',
-                          filled: true,
-                          onTap: () => GoRouter.of(context).go("${BMCRouter.homePath}/${BMCRouter.statsPath}/${BMCRouter.profilePath}"),
-                        )
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildMonthHeader(),
+              const SizedBox(height: 20),
+              _buildAvailabilityStats(context),
+              const SizedBox(height: 24),
+              _buildLeaveStats(context),
+              const SizedBox(height: 24),
+              _buildRotaStats(context),
+            ],
           ),
-        );
-      }
-    );
-  }
-
-  // ── Section label ──────────────────────────────────────────────────────────
-
-  Widget _buildSectionLabel(String label) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
 
-  // ── Portfolio card (with avatar) ───────────────────────────────────────────
-
-  Widget _buildPortfolioCard(BuildContext context, UserProvider userProvider) {
-    return _cardShell(context,
+  // ── Month Header ──────────────────────────────────────────────────────────
+  Widget _buildMonthHeader() {
+    final monthFormat = DateFormat('MMMM yyyy');
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).primaryColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Row(
         children: [
-          // Avatar with decorative ring
-          Container(
-            width: 72,
-            height: 72,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Theme.of(context).primaryColor, width: 2),
-            ),
-            child: CircleAvatar(
-              radius: 34,
-              backgroundColor: Theme.of(context).primaryColor,
-              child: UserAvatar(
-                image:    userProvider.avatar,
-                initials: userProvider.initials,
-                radius:   40,
-              )
+          Icon(
+            Iconsax.calendar,
+            color: Theme.of(context).primaryColor,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Text(
+            monthFormat.format(_currentMonth),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).primaryColor,
             ),
           ),
-          const SizedBox(width: 16),
-          // Stats grid
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  userProvider.displayName,
-                  style: TextStyle(
-                    fontFamily: 'Lexend',
-                    fontWeight: FontWeight.w400,
-                    fontSize: 10,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-                const SizedBox(height: 15),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: userProvider.user!.privileges.map((p) {
-                    return Text(
-                      p.split('~')[1],
-                      style: TextStyle(
-                        fontFamily: 'Lexend',
-                        fontWeight: FontWeight.w400,
-                        fontSize: 10,
-                        decoration: TextDecoration.underline,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
+          const Spacer(),
+          Text(
+            'Current Month',
+            style: TextStyle(
+              fontSize: 12,
+              fontFamily: 'Lexend',
+              color: Theme.of(context).primaryColor.withOpacity(0.6),
             ),
           ),
         ],
@@ -179,221 +114,483 @@ class Stats extends StatelessWidget {
     );
   }
 
-  // ── Donut card ─────────────────────────────────────────────────────────────
+  // ── AVAILABILITY STATS ───────────────────────────────────────────────────
+  Widget _buildAvailabilityStats(BuildContext context) {
+    final provider = context.watch<AvailabilityProvider>();
+    final data = provider.chartData;
 
-  Widget _buildDonutCard(BuildContext context, {
-    required double percent,
-    required String centerLabel,
-    required Color color,
-    required List<_StatItem> stats,
-  }) {
-    // Split stats into rows of 2
-    final rows = <List<_StatItem>>[];
-    for (var i = 0; i < stats.length; i += 2) {
-      rows.add(stats.sublist(i, math.min(i + 2, stats.length)));
+    // Get current month's data
+    final monthKey = DateFormat('yyyy-MM').format(_currentMonth);
+    final monthData = data.map((key, value) {
+      // Filter only current month data
+      final filtered = value.entries.where((entry) {
+        final date = DateTime(_currentMonth.year, _currentMonth.month, entry.key);
+        return date.month == _currentMonth.month && date.year == _currentMonth.year;
+      }).toList();
+      return MapEntry(key, filtered);
+    });
+
+    final stats = [
+      StatData(
+        label: 'Available',
+        shortLabel: 'Avail',
+        value: monthData[HrAvailabilityStatus.available]?.fold(0, (sum, entry) => sum! + entry.value) ?? 0,
+        color: HrAvailabilityStatus.available.color,
+        count: monthData[HrAvailabilityStatus.available]?.length ?? 0,
+      ),
+      StatData(
+        label: 'Unavailable',
+        shortLabel: 'Unavail',
+        value: monthData[HrAvailabilityStatus.unavailable]?.fold(0, (sum, entry) => sum! + entry.value) ?? 0,
+        color: HrAvailabilityStatus.unavailable.color,
+        count: monthData[HrAvailabilityStatus.unavailable]?.length ?? 0,
+      ),
+      StatData(
+        label: 'Preferred',
+        shortLabel: 'Pref',
+        value: monthData[HrAvailabilityStatus.preferred]?.fold(0, (sum, entry) => sum! + entry.value) ?? 0,
+        color: HrAvailabilityStatus.preferred.color,
+        count: monthData[HrAvailabilityStatus.preferred]?.length ?? 0,
+      ),
+      StatData(
+        label: 'Tentative',
+        shortLabel: 'Tent',
+        value: monthData[HrAvailabilityStatus.tentative]?.fold(0, (sum, entry) => sum! + entry.value) ?? 0,
+        color: HrAvailabilityStatus.tentative.color,
+        count: monthData[HrAvailabilityStatus.tentative]?.length ?? 0,
+      ),
+    ];
+
+    final total = stats.fold(0, (sum, s) => sum + s.value);
+    final maxValue = stats.fold(0, (max, s) => s.value > max ? s.value : max);
+
+    return _buildStatCard(
+      context: context,
+      title: 'Availability',
+      stats: stats,
+      total: total,
+      maxValue: maxValue,
+      icon: Icons.check_circle_outline,
+      color: Theme.of(context).primaryColor,
+    );
+  }
+
+  // ── LEAVE STATS ───────────────────────────────────────────────────────────
+  Widget _buildLeaveStats(BuildContext context) {
+    final provider = context.watch<LeaveProvider>();
+    final requests = provider.myRequests;
+
+    // Filter only current month's requests
+    final monthRequests = requests.where((r) {
+      final start = DateTime.parse(r.startDate);
+      final end = DateTime.parse(r.endDate);
+      return (start.month == _currentMonth.month && start.year == _currentMonth.year) ||
+          (end.month == _currentMonth.month && end.year == _currentMonth.year);
+    }).toList();
+
+    final Map<String, int> counts = {};
+    for (final r in monthRequests) {
+      final type = r.leaveType;
+      counts[type] = (counts[type] ?? 0) + r.totalDays;
     }
 
-    return _cardShell(context,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Donut chart
-          SizedBox(
-            width: 80,
-            height: 80,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                CustomPaint(
-                  size: const Size(80, 80),
-                  painter: _DonutPainter(
-                    percent: percent,
-                    activeColor: color,
-                    trackColor: const Color(0xFFE5E5EA),
-                  ),
-                ),
-                Text(
-                  centerLabel,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
+    final stats = counts.entries.map((e) {
+      final color = _getLeaveColor(e.key);
+      return StatData(
+        label: e.key,
+        shortLabel: e.key.substring(0, 3).toUpperCase(),
+        value: e.value,
+        color: color,
+        count: monthRequests.where((r) => r.leaveType == e.key).length,
+      );
+    }).toList();
+
+    final total = monthRequests.fold(0, (sum, r) => sum + r.totalDays);
+    final maxValue = stats.fold(0, (max, s) => s.value > max ? s.value : max);
+
+    return _buildStatCard(
+      context: context,
+      title: 'Leave',
+      stats: stats,
+      total: total,
+      maxValue: maxValue,
+      icon: Icons.event_note,
+      color: const Color(0xFFF59E0B),
+    );
+  }
+
+  Color _getLeaveColor(String type) {
+    switch (type.toUpperCase()) {
+      case 'ANNUAL': return const Color(0xFF6C47FF);
+      case 'SICK': return const Color(0xFFE74C3C);
+      case 'COMPASSIONATE': return const Color(0xFF22C55E);
+      case 'STUDY': return const Color(0xFF009688);
+      case 'MATERNITY': return const Color(0xFFEC4899);
+      case 'PATERNITY': return const Color(0xFF14B8A6);
+      case 'BEREAVEMENT': return const Color(0xFF6366F1);
+      case 'EMERGENCY': return const Color(0xFFFF5722);
+      default: return const Color(0xFF8E8E93);
+    }
+  }
+
+  // ── ROTA STATS ────────────────────────────────────────────────────────────
+  Widget _buildRotaStats(BuildContext context) {
+    final provider = context.watch<RotaProvider>();
+    final events = provider.rotaEvents;
+
+    // Filter only current month's events
+    final monthEvents = events.where((e) =>
+    e.date.month == _currentMonth.month && e.date.year == _currentMonth.year
+    ).toList();
+
+    final Map<ShiftType, int> counts = {};
+    for (final e in monthEvents) {
+      counts[e.type] = (counts[e.type] ?? 0) + 1;
+    }
+
+    // Ensure all shift types are represented
+    final allTypes = ShiftType.values;
+    final stats = allTypes.map((type) {
+      final count = counts[type] ?? 0;
+      return StatData(
+        label: type.label,
+        shortLabel: type.label.substring(0, 3).toUpperCase(),
+        value: count,
+        color: type.color,
+        count: count,
+      );
+    }).toList();
+
+    final total = monthEvents.length;
+    final maxValue = stats.fold(0, (max, s) => s.value > max ? s.value : max);
+
+    return _buildStatCard(
+      context: context,
+      title: 'Rota',
+      stats: stats,
+      total: total,
+      maxValue: maxValue,
+      icon: Icons.schedule,
+      color: const Color(0xFF22C55E),
+    );
+  }
+
+  // ── Reusable Card ─────────────────────────────────────────────────────────
+  Widget _buildStatCard({
+    required String title,
+    required List<StatData> stats,
+    required int total,
+    required int maxValue,
+    required BuildContext context,
+    required IconData icon,
+    required Color color,
+  }) {
+    // Calculate percentages for circular progress
+    final Map<String, double> percentages = {};
+    if (total > 0) {
+      for (final s in stats) {
+        percentages[s.label] = (s.value / total) * 100;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
-          const SizedBox(width: 20),
-          // Stat badges grid
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: rows.map((row) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(
-                    children: row.map((item) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: _buildBadge(item.label, item.value, item.color),
-                      );
-                    }).toList(),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with icon
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Lexend'
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Total: $total',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).primaryColor,
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // Circular Progress Indicators
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: stats.map((s) {
+              final percentage = percentages[s.label] ?? 0;
+              return _buildCircularProgress(
+                label: s.shortLabel,
+                value: s.value,
+                total: total,
+                color: s.color,
+                percentage: percentage,
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 20),
+
+          // Bar Chart
+          _buildBarChart(stats, maxValue),
+          const SizedBox(height: 16),
+
+          // Legend
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: stats.map((s) => _legendItem(s)).toList(),
           ),
         ],
       ),
     );
   }
 
-  // ── Stat badge ─────────────────────────────────────────────────────────────
-
-  Widget _buildBadge(String label, int value, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+  // ── Circular Progress ─────────────────────────────────────────────────────
+  Widget _buildCircularProgress({
+    required String label,
+    required int value,
+    required int total,
+    required Color color,
+    required double percentage,
+  }) {
+    return Column(
       children: [
+        SizedBox(
+          width: 60,
+          height: 60,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              CircularProgressIndicator(
+                value: total > 0 ? value / total : 0,
+                backgroundColor: color.withOpacity(0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+                strokeWidth: 6,
+              ),
+              Text(
+                '$value',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
         Text(
           label,
           style: const TextStyle(
-            fontSize: 11,
-            color: Color(0xFF3C3C43),
-            fontWeight: FontWeight.w400,
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: Color(0xFF8E8E93),
           ),
         ),
-        const SizedBox(width: 4),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Text(
-            '$value',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
+        Text(
+          '${percentage.toStringAsFixed(0)}%',
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: color,
           ),
         ),
       ],
     );
   }
 
-  // ── Card shell ─────────────────────────────────────────────────────────────
-
-  Widget _cardShell(context, {required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).hoverColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+  // ── Bar Chart ─────────────────────────────────────────────────────────────
+  Widget _buildBarChart(List<StatData> stats, int maxValue) {
+    final barGroups = stats.asMap().entries.map((entry) {
+      final index = entry.key;
+      final data = entry.value;
+      return BarChartGroupData(
+        x: index,
+        barRods: [
+          BarChartRodData(
+            toY: data.value.toDouble(),
+            color: data.color,
+            width: 30,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              toY: maxValue.toDouble(),
+              color: data.color.withOpacity(0.1),
+            ),
           ),
         ],
-      ),
-      child: child,
-    );
-  }
+      );
+    }).toList();
 
-  // ── Buttons ────────────────────────────────────────────────────────────────
-
-  Widget _buildButton({
-    required String label,
-    required bool filled,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        height: 52,
-        decoration: BoxDecoration(
-          color: filled ? const Color(0xFF6C47FF) : Colors.transparent,
-          borderRadius: BorderRadius.circular(50),
-          border: filled
-              ? null
-              : Border.all(color: const Color(0xFF6C47FF), width: 1.5),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: filled ? Colors.white : const Color(0xFF6C47FF),
+    return SizedBox(
+      height: 200,
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: maxValue > 0 ? maxValue * 1.2 : 10,
+          barGroups: barGroups,
+          titlesData: FlTitlesData(
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  if (index < 0 || index >= stats.length) return const SizedBox();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      stats[index].shortLabel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            leftTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                reservedSize: 40,
+                getTitlesWidget: (value, meta) {
+                  return Text(
+                    value.toInt().toString(),
+                    style: const TextStyle(fontSize: 10),
+                  );
+                },
+              ),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+          ),
+          gridData: FlGridData(
+            show: true,
+            horizontalInterval: maxValue > 0 ? (maxValue / 5).ceilToDouble() : 2,
+            drawVerticalLine: false,
+            getDrawingHorizontalLine: (value) {
+              return FlLine(
+                color: Colors.grey.withOpacity(0.2),
+                strokeWidth: 1,
+                dashArray: [5, 5],
+              );
+            },
+          ),
+          borderData: FlBorderData(
+            show: true,
+            border: Border(
+              bottom: BorderSide(
+                color: Colors.grey.withOpacity(0.3),
+                width: 1,
+              ),
+              left: BorderSide(
+                color: Colors.grey.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+          ),
+          barTouchData: BarTouchData(
+            enabled: true,
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipColor: (group) => Colors.grey[800]!,
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                return BarTooltipItem(
+                  '${stats[group.x].label}\n${rod.toY.toInt()}',
+                  const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
     );
   }
-}
 
-// ── Data class ─────────────────────────────────────────────────────────────────
-
-class _StatItem {
-  final String label;
-  final int value;
-  final Color color;
-  const _StatItem(this.label, this.value, this.color);
-}
-
-// ── Donut Painter ──────────────────────────────────────────────────────────────
-
-class _DonutPainter extends CustomPainter {
-  final double percent;
-  final Color activeColor;
-  final Color trackColor;
-
-  const _DonutPainter({
-    required this.percent,
-    required this.activeColor,
-    required this.trackColor,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final radius = (size.width / 2) - 8;
-    const strokeWidth = 10.0;
-
-    final trackPaint = Paint()
-      ..color = trackColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    final activePaint = Paint()
-      ..color = activeColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth
-      ..strokeCap = StrokeCap.round;
-
-    final rect =
-    Rect.fromCircle(center: Offset(cx, cy), radius: radius);
-
-    // Track (full circle)
-    canvas.drawArc(rect, 0, 2 * math.pi, false, trackPaint);
-
-    // Active arc
-    canvas.drawArc(
-      rect,
-      -math.pi / 2,
-      2 * math.pi * percent,
-      false,
-      activePaint,
+  // ── Legend Item ───────────────────────────────────────────────────────────
+  Widget _legendItem(StatData item) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: item.color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '${item.label} (${item.value})',
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
+}
 
-  @override
-  bool shouldRepaint(_DonutPainter old) =>
-      old.percent != percent || old.activeColor != activeColor;
+// ── Data Model ──────────────────────────────────────────────────────────────
+class StatData {
+  final String label;
+  final String shortLabel;
+  final int value;
+  final Color color;
+  final int count;
+
+  const StatData({
+    required this.label,
+    required this.shortLabel,
+    required this.value,
+    required this.color,
+    this.count = 0,
+  });
 }

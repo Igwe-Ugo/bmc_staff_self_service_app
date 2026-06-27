@@ -656,11 +656,11 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               : allRequests.where((r) => r.status == s).length;
 
           // Append count to the text label: e.g., "All (5)" or "Pending (2)"
-          final label = isAll ? 'All ($count)' : '${s!.label} ($count)';
+          final label = isAll ? 'All ($count)' : '${s.label} ($count)';
 
           final color = isAll
               ? Theme.of(context).primaryColor
-              : s!.color;
+              : s.color;
 
           return GestureDetector(
             onTap: () => leaveProvider.setStatusFilter(s),

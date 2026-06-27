@@ -119,7 +119,7 @@ class BMCRouter {
                       ),
                       GoRoute(
                         path: statsPath,
-                        builder: (context, state) => Stats(),
+                        builder: (context, state) => StatsScreen(),
                       ),
                     ]
                   ),

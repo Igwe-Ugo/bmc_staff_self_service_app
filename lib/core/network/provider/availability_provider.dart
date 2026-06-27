@@ -282,4 +282,25 @@ class AvailabilityProvider extends ChangeNotifier {
     _timer?.cancel();
     super.dispose();
   }
+
+  // ── Clear Session Data on Logout ──────────────────────────────────────────
+  void clearUserData() {
+    // 1. Cancel the active countdown timer immediately so it stops running in the background
+    _timer?.cancel();
+    _timer = null;
+
+    // 2. Clear all cached data structures
+    _slots = [];
+    _window = null;
+    _remaining = Duration.zero;
+
+    // 3. Reset state parameters
+    _currentMonth = _monthKey(DateTime.now());
+    _state = AvailabilityState.idle;
+    _errorMessage = null;
+    _submitting = false;
+
+    // 4. Notify UI listeners of the cleared state
+    notifyListeners();
+  }
 }

@@ -38,6 +38,10 @@ class ApiEndpoints {
   static const String rotaSwapRequests = '/hr/rota/swap-requests';
   static const String rotaEligibleStaff = '/hr/rota/eligible-staff';
 
+  // ── Profile ──────────────────────────────────────────────────────────────────────
+  static const String me            = '/users/me';
+  static const String updateProfile = '/users/profile';
+
   static String fill(String path, Map<String, String> params) {
     var result = path;
     params.forEach((key, value) {
