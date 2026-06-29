@@ -70,9 +70,9 @@ class ShiftEventTile extends StatelessWidget {
                 ),
                 const Divider(),
                 const SizedBox(height: 10),
-                _buildDetailRow(Iconsax.user, 'Staff Name', event.staffName),
-                _buildDetailRow(Iconsax.hospital, 'Role / Designation', event.role),
-                _buildDetailRow(Iconsax.location, 'Ward / Department', event.ward),
+                _buildDetailRow(Iconsax.user, 'Staff Name', userProvider.displayName),
+                _buildDetailRow(Iconsax.hospital, 'Role / Designation', userProvider.profession),
+                _buildDetailRow(Iconsax.location, 'Ward / Department', userProvider.defaultDept),
                 _buildDetailRow(
                   Iconsax.calendar_1,
                   'Scheduled Date',
@@ -82,13 +82,13 @@ class ShiftEventTile extends StatelessWidget {
                   Iconsax.clock,
                   'Shift Type',
                   event.type.label,
-                  badgeColor: event.type.bgColor,
+                  badgeColor: event.type.color,
                   textColor: event.type.color,
                 ),
                 _buildDetailRow(
                   Iconsax.timer_1,
                   'Shift Hours',
-                  event.endTime.isNotEmpty ? _convertTo12Hour(event.timeRange) : _convertTo12Hour(event.startTime),
+                  event.endTime.isNotEmpty ? _convertTo12Hour(event.endTime) : _convertTo12Hour(event.startTime),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -151,6 +151,7 @@ class ShiftEventTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: event.type.color),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.04),
@@ -187,7 +188,7 @@ class ShiftEventTile extends StatelessWidget {
             // Avatar Placeholder
             CircleAvatar(
               radius: 18,
-              backgroundColor: event.type.bgColor,
+              backgroundColor: event.type.color,
               child: UserAvatar(
                 image: userProvider.avatar,
                 initials: userProvider.initials,
@@ -201,7 +202,7 @@ class ShiftEventTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    event.staffName,
+                    userProvider.displayName,
                     style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
@@ -209,11 +210,11 @@ class ShiftEventTile extends StatelessWidget {
                     children: [
                       const Icon(Iconsax.hospital, size: 12),
                       const SizedBox(width: 4),
-                      Text(event.role, style: const TextStyle(fontSize: 11)),
+                      Text(userProvider.profession, style: const TextStyle(fontSize: 11)),
                       const SizedBox(width: 8),
                       const Icon(Iconsax.location, size: 12),
                       const SizedBox(width: 2),
-                      Text(event.ward, style: const TextStyle(fontSize: 11)),
+                      Text(userProvider.defaultDept, style: const TextStyle(fontSize: 11)),
                     ],
                   ),
                 ],
@@ -226,7 +227,7 @@ class ShiftEventTile extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: event.type.bgColor,
+                    color: event.type.color,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -240,7 +241,7 @@ class ShiftEventTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  event.endTime.isNotEmpty ? _convertTo12Hour(event.timeRange) : _convertTo12Hour(event.startTime),
+                  event.endTime.isNotEmpty ? _convertTo12Hour(event.endTime) : _convertTo12Hour(event.startTime),
                   style: const TextStyle(fontSize: 11),
                 ),
               ],

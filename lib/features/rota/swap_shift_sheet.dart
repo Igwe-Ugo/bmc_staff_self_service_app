@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
-import '../../core/network/models/widget.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:provider/provider.dart';
+import '../../core/network/models/widget.dart'; // RotaEvent, StaffMember, HrSwapRequestPayload
+import '../../core/network/provider/widget.dart'; // RotaProvider
 
 class SwapShiftSheet extends StatefulWidget {
   final List<RotaEvent> myShifts;
   final List<StaffMember> staffMembers;
-  final ValueChanged<Map<String, dynamic>> onSubmit;
+  final DateTime? defaultSelectedDate; // Passed from the tapped calendar date
+  final ValueChanged<HrSwapRequestPayload> onSubmit;
 
   const SwapShiftSheet({
     super.key,
     required this.myShifts,
     required this.staffMembers,
+    this.defaultSelectedDate,
     required this.onSubmit,
   });
 
@@ -19,392 +25,330 @@ class SwapShiftSheet extends StatefulWidget {
 }
 
 class _SwapShiftSheetState extends State<SwapShiftSheet> {
-  final _searchController = TextEditingController();
   final _reasonController = TextEditingController();
+  final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode();
 
   RotaEvent? _selectedMyShift;
   StaffMember? _selectedStaff;
   RotaEvent? _selectedTheirShift;
-  bool _showStaffList = false;
+
+  bool _isSearchingStaff = false;
   String _searchQuery = '';
+
+  bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-    if (widget.myShifts.isNotEmpty) {
+    _initializeDefaultShift();
+  }
+
+  @override
+  void dispose() {
+    _reasonController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _initializeDefaultShift() {
+    if (widget.defaultSelectedDate != null && widget.myShifts.isNotEmpty) {
+      final match = widget.myShifts.firstWhere(
+            (s) => _isSameDay(s.date, widget.defaultSelectedDate!),
+        orElse: () => widget.myShifts.first,
+      );
+      _selectedMyShift = match;
+    } else if (widget.myShifts.isNotEmpty) {
       _selectedMyShift = widget.myShifts.first;
     }
   }
 
-  List<StaffMember> get _filteredStaff => _searchQuery.isEmpty
-      ? widget.staffMembers
-      : widget.staffMembers
-      .where((s) =>
-  s.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-      s.employeeId.toLowerCase().contains(_searchQuery.toLowerCase()))
-      .toList();
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
-  // Requirement 3: Only extract roster entries associated specifically with the chosen partner
-  List<RotaEvent> get _theirAvailableShifts {
-    if (_selectedStaff == null) return [];
-    // If your RotaEvent schema maps partner links or references, filter here.
-    // Assuming staffName or coworker logic match or fallback to unassigned slots for demo:
-    return widget.myShifts.where((e) => e.staffName.toLowerCase() == _selectedStaff!.name.toLowerCase()).toList();
-  }
-
-  bool get _canSubmit =>
-      _selectedMyShift != null &&
-          _selectedStaff != null &&
-          _selectedTheirShift != null &&
-          _reasonController.text.trim().isNotEmpty;
-
-  void _submit() {
-    if (!_canSubmit) return;
-    widget.onSubmit({
-      'myShiftId': _selectedMyShift!.id,
-      'targetStaffId': _selectedStaff!.id,
-      'targetShiftId': _selectedTheirShift!.id,
-      'reason': _reasonController.text.trim(),
-    });
-  }
-
-  String _formatShiftText(RotaEvent? shift) {
-    if (shift == null) return '';
-    return '${DateFormat('EEE, MMM d').format(shift.date)} — ${shift.type.label} (${shift.startTime})';
+  List<StaffMember> get _filteredStaff {
+    if (_searchQuery.isEmpty) return widget.staffMembers;
+    return widget.staffMembers
+        .where((s) => s.name.toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final theme = Theme.of(context);
+    final rotaProvider = context.watch<RotaProvider>();
+
+    bool showSummary = _selectedMyShift != null && _selectedStaff != null && _selectedTheirShift != null;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
+      padding: EdgeInsets.fromLTRB(20, 24, 20, MediaQuery.of(context).viewInsets.bottom + 120),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomInset),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Handle Bar
             Center(
               child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Theme.of(context).primaryColor, borderRadius: BorderRadius.circular(2)),
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
+
             const Text(
               'Request Shift Swap',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                fontFamily: 'Lexend',
-                color: Colors.black87,
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, fontFamily: 'Lexend'),
+            ),
+            const SizedBox(height: 20),
+
+            // 1. Select Your Shift Dropdown
+            _buildFieldLabel('Your Shift to Swap'),
+            DropdownButtonFormField<RotaEvent>(
+              // safely find the exact instance matching by ID within the current list
+              value: widget.myShifts.any((s) => s.id == _selectedMyShift?.id)
+                  ? widget.myShifts.firstWhere((s) => s.id == _selectedMyShift?.id)
+                  : null,
+              dropdownColor: theme.cardColor,
+              icon: Icon(Icons.keyboard_arrow_down_rounded, color: theme.primaryColor),
+              decoration: _inputDecoration(prefixIcon: Iconsax.calendar),
+              style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.w500),
+              items: widget.myShifts.map((s) => DropdownMenuItem(
+                value: s,
+                child: Text('${s.type.label} (${DateFormat('dd MMM yyyy').format(s.date)})'),
+              )).toList(),
+              onChanged: (val) => setState(() => _selectedMyShift = val),
+            ),
+            const SizedBox(height: 16),
+
+            // 2. Searchable Colleague Selection Field
+            _buildFieldLabel('Select who to swap with'),
+            TextFormField(
+              controller: _searchController,
+              focusNode: _searchFocusNode,
+              decoration: _inputDecoration(
+                prefixIcon: Iconsax.search_normal,
+                hintText: _selectedStaff?.name ?? 'Search staff member...',
+                suffixIcon: _selectedStaff != null
+                    ? IconButton(
+                  icon: const Icon(Icons.clear, size: 18),
+                  onPressed: () => setState(() {
+                    _selectedStaff = null;
+                    _selectedTheirShift = null;
+                    _searchController.clear();
+                    _searchQuery = '';
+                  }),
+                )
+                    : null,
               ),
+              onChanged: (value) => setState(() => _searchQuery = value),
+              onTap: () => setState(() => _isSearchingStaff = true),
             ),
-            const SizedBox(height: 4),
-            Text(
-              'Swap an assigned timeline slot securely with an authorized team coworker.',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-            ),
-            const SizedBox(height: 20),
 
-            // SECTION 1: Your Selected Shift Card[cite: 14]
-            const Text(
-              'YOUR SHIFT TO SWAP',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 8),
-            _buildMyShiftDropdown(),
-            const SizedBox(height: 20),
+            // Interactive Dropdown Results overlay
+            if (_isSearchingStaff) ...[
+              Container(
+                height: 180,
+                margin: const EdgeInsets.only(top: 4),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.grey.withOpacity(0.2)),
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 4))],
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _filteredStaff.length,
+                  itemBuilder: (context, index) {
+                    final staff = _filteredStaff[index];
+                    return ListTile(
+                      dense: true,
+                      title: Text(staff.name, style: const TextStyle(fontWeight: FontWeight.w500)),
+                      subtitle: Text(staff.employeeId, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+                      onTap: () {
+                        setState(() {
+                          _selectedStaff = staff;
+                          _selectedTheirShift = null;
+                          _searchController.text = staff.name;
+                          _isSearchingStaff = false;
+                        });
+                        _searchFocusNode.unfocus();
+                        rotaProvider.loadDeptStaffShift(staff.id, DateFormat('yyyy-MM').format(_selectedMyShift?.date ?? DateTime.now()));
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
 
-            // Requirement 3: Coworker search field comes first before their shift selection
-            const Text(
-              'SWAP WITH COWORKER',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 8),
-            _buildCoworkerSearchField(),
-            const SizedBox(height: 20),
+            // 3. Select Partner Shift Dropdown
+            if (_selectedStaff != null) ...[
+              _buildFieldLabel("Select the persons shift you want to take"),
+              DropdownButtonFormField<RotaEvent>(
+                value: rotaProvider.theirAvailableShifts.any((s) => s.id == _selectedTheirShift?.id)
+                    ? rotaProvider.theirAvailableShifts.firstWhere((s) => s.id == _selectedTheirShift?.id)
+                    : null,
+                dropdownColor: theme.cardColor,
+                icon: Icon(Icons.keyboard_arrow_down_rounded, color: theme.primaryColor),
+                decoration: _inputDecoration(prefixIcon: Icons.swap_horiz_rounded),
+                style: TextStyle(color: theme.textTheme.bodyLarge?.color, fontWeight: FontWeight.w500),
+                hint: const Text('Choose target shift slot'),
+                items: rotaProvider.theirAvailableShifts.map((s) => DropdownMenuItem(
+                  value: s,
+                  child: Text('${s.type.label} (${DateFormat('dd MMM').format(s.date)} • ${s.startTime}-${s.endTime})'),
+                )).toList(),
+                onChanged: (val) => setState(() => _selectedTheirShift = val),
+              ),
+              const SizedBox(height: 16),
+            ],
 
-            // Requirement 3: Dropdown displaying only chosen partner's shift days
-            const Text(
-              'THEIR SHIFT TO RECEIVE',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 8),
-            _buildTheirShiftDropdown(),
-            const SizedBox(height: 20),
-
-            // SECTION 4: Contextual Reason text area[cite: 14]
-            const Text(
-              'REASON FOR SWAP',
-              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 0.5),
-            ),
-            const SizedBox(height: 8),
+            // 4. Input Open Reason (Optional)
+            _buildFieldLabel('Reason (Optional)'),
             TextField(
               controller: _reasonController,
               maxLines: 2,
-              onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(
-                hintText: 'Provide context for this switch request...',
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                contentPadding: const EdgeInsets.all(14),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
+              decoration: _inputDecoration(prefixIcon: Icons.notes_rounded, hintText: 'Enter reason for exchange...'),
+            ),
+            const SizedBox(height: 24),
+
+            // 5. Shift Swap Summary Section
+            if (showSummary) ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: theme.primaryColor.withOpacity(0.15)),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.blueAccent, width: 1.5),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded, color: theme.primaryColor, size: 18),
+                        const SizedBox(width: 8),
+                        Text('Swap Summary', style: TextStyle(fontWeight: FontWeight.bold, color: theme.primaryColor, fontSize: 13)),
+                      ],
+                    ),
+                    const Divider(height: 20),
+                    _buildSummaryRow('You Give:', '${_selectedMyShift!.type.label} (${DateFormat('dd MMM').format(_selectedMyShift!.date)})'),
+                    const SizedBox(height: 6),
+                    _buildSummaryRow('Partner:', _selectedStaff!.name),
+                    const SizedBox(height: 6),
+                    _buildSummaryRow('You Receive:', '${_selectedTheirShift!.type.label} (${DateFormat('dd MMM').format(_selectedTheirShift!.date)})'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+
+            // Submit Buttons Action Row
+            GestureDetector(
+              // Disable tap trigger if saving OR if there's an active calendar overlap conflict
+              onTap: showSummary
+                ? () {
+                setState(() {
+                  _saving = true;
+                });
+                    widget.onSubmit(HrSwapRequestPayload(
+                      fromAssignmentId: _selectedMyShift!.id,
+                      toAssignmentId: _selectedTheirShift!.id,
+                      toPersonnelId: _selectedStaff!.id,
+                      reason: _reasonController.text.trim().isEmpty ? null : _reasonController.text.trim(),
+                    ));
+                  }
+                    : null,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: double.infinity,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: _saving
+                      ? Colors.grey.withOpacity(0.5) // Grayed out if disabled
+                      : Color(0xFF22C55E),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                alignment: Alignment.center,
+                child: _saving
+                    ? SizedBox(
+                  width: 22, height: 22,
+                  child: LoadingAnimationWidget.staggeredDotsWave(color: Colors.white, size: 40),
+                )
+                    : Text(
+                  'Submit Request',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Requirement 4: On-sheet swap breakdown summary widget visualization
-            if (_selectedStaff != null && _selectedMyShift != null && _selectedTheirShift != null) ...[
-              _buildSwapSummaryCard(),
-              const SizedBox(height: 20),
-            ],
-
-            _buildActionButtons(),
+            const SizedBox(height: 10,),
+            GestureDetector(
+              // Disable tap trigger if saving OR if there's an active calendar overlap conflict
+              onTap: () => Navigator.pop(context),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: double.infinity,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: Color(0xFFFBE3E3),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Cancel Request',
+                  style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMyShiftDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<RotaEvent>(
-          value: _selectedMyShift,
-          isExpanded: true,
-          hint: const Text('Select one of your shifts', style: TextStyle(fontSize: 13)),
-          items: widget.myShifts.map((shift) {
-            return DropdownMenuItem<RotaEvent>(
-              value: shift,
-              child: Text(
-                _formatShiftText(shift),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-              ),
-            );
-          }).toList(),
-          onChanged: (val) => setState(() => _selectedMyShift = val),
-        ),
-      ),
+  Widget _buildFieldLabel(String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6, left: 2),
+      child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 
-  // Requirement 2: Textfield tracking interactive real-time dropdown results overlay
-  Widget _buildCoworkerSearchField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: _searchController,
-          onChanged: (val) {
-            setState(() {
-              _searchQuery = val;
-              _showStaffList = true;
-            });
-          },
-          onTap: () => setState(() => _showStaffList = true),
-          decoration: InputDecoration(
-            hintText: 'Search partner name or identifier ID...',
-            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-            prefixIcon: const Icon(Icons.search, size: 20),
-            suffixIcon: _selectedStaff != null
-                ? IconButton(
-              icon: const Icon(Icons.clear, size: 18),
-              onPressed: () {
-                setState(() {
-                  _selectedStaff = null;
-                  _selectedTheirShift = null;
-                  _searchController.clear();
-                  _searchQuery = '';
-                });
-              },
-            )
-                : null,
-            filled: true,
-            fillColor: Colors.grey.shade50,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: Colors.grey.shade200),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.blueAccent),
-            ),
-          ),
-        ),
-        if (_showStaffList && _filteredStaff.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.only(top: 4),
-            constraints: const BoxConstraints(maxHeight: 160),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2))],
-            ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: _filteredStaff.length,
-              itemBuilder: (context, idx) {
-                final staff = _filteredStaff[idx];
-                return ListTile(
-                  dense: true,
-                  title: Text(staff.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  subtitle: Text(staff.employeeId, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
-                  onTap: () {
-                    setState(() {
-                      _selectedStaff = staff;
-                      _searchController.text = staff.name;
-                      _showStaffList = false;
-                      _selectedTheirShift = null; // Flush stale allocations
-                    });
-                  },
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildTheirShiftDropdown() {
-    final available = _theirAvailableShifts;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-      decoration: BoxDecoration(
-        color: _selectedStaff == null ? Colors.grey.shade100 : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<RotaEvent>(
-          value: _selectedTheirShift,
-          isExpanded: true,
-          disabledHint: Text(
-            _selectedStaff == null ? 'Choose a coworker first' : 'No available shifts found',
-            style: const TextStyle(fontSize: 13, color: Colors.grey),
-          ),
-          hint: const Text('Select target replacement shift', style: TextStyle(fontSize: 13)),
-          items: available.map((shift) {
-            return DropdownMenuItem<RotaEvent>(
-              value: shift,
-              child: Text(
-                _formatShiftText(shift),
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-              ),
-            );
-          }).toList(),
-          onChanged: _selectedStaff == null ? null : (val) => setState(() => _selectedTheirShift = val),
-        ),
-      ),
-    );
-  }
-
-  // Requirement 4: Explicit pre-flight layout summarizing parameters
-  Widget _buildSwapSummaryCard() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7FBF7),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF27AE60).withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.swap_horiz, color: Color(0xFF27AE60), size: 18),
-              SizedBox(width: 6),
-              Text(
-                'Swap Summary',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF27AE60), letterSpacing: 0.3),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.5),
-              children: [
-                const TextSpan(text: 'You get: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                TextSpan(text: '${_formatShiftText(_selectedTheirShift)}\n'),
-                const TextSpan(text: 'You give: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                TextSpan(text: '${_formatShiftText(_selectedMyShift)}\n'),
-                const TextSpan(text: 'With: ', style: TextStyle(fontWeight: FontWeight.bold)),
-                TextSpan(text: _selectedStaff?.name ?? ''),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButtons() {
+  Widget _buildSummaryRow(String title, String value) {
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Expanded(
-          child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              side: BorderSide(color: Colors.grey.shade300),
-            ),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade700, fontSize: 14, fontWeight: FontWeight.w600)),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: ElevatedButton(
-            onPressed: _canSubmit ? _submit : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF27AE60),
-              disabledBackgroundColor: Colors.grey.shade200,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 0,
-            ),
-            child: Text(
-              'Submit Request',
-              style: TextStyle(
-                color: _canSubmit ? Colors.white : Colors.grey.shade400,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
+        Text(title, style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+        Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
       ],
     );
   }
+
+  InputDecoration _inputDecoration({required IconData prefixIcon, String? hintText, Widget? suffixIcon}) {
+    return InputDecoration(
+      hintText: hintText,
+      prefixIcon: Icon(prefixIcon, size: 18, color: Colors.grey.shade500),
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      filled: true,
+      fillColor: Theme.of(context).scaffoldBackgroundColor,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Theme.of(context).primaryColor, width: 1.5)),
+    );
+  }
+}
+
+extension on Color {
+  Color replaceWithNoOpIfNull(Color fallback) => this;
 }

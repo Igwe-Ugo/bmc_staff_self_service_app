@@ -95,7 +95,7 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
       'EMERGENCY': const Color(0xFFFF5722),
       'STUDY': const Color(0xFF009688),
       'UNPAID': const Color(0xFF8E8E93),
-      'BEREAVEMENT': const Color(0xFF474354),
+      'BEREAVEMENT': const Color(0xFF150222),
     };
     return colors[leaveType.toUpperCase()] ?? const Color(0xFF6C47FF);
   }
@@ -523,45 +523,22 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
           color: Theme.of(context).primaryColor, width: 1.5);
     }
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          width: 30, height: 30,
-          decoration: BoxDecoration(
-            color: bg,
-            border: border,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '${day.day}',
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: textColor),
-          ),
-        ),
-        const SizedBox(height: 2),
-        if (hasLeave && !isSelected)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: hits
-                .take(3)
-                .map((r) => Container(
-              width: 4,
-              height: 4,
-              margin: const EdgeInsets.symmetric(horizontal: 1),
-              decoration: BoxDecoration(
-                color: _leaveTypeColor(r.leaveType),
-                shape: BoxShape.circle,
-              ),
-            ))
-                .toList(),
-          )
-        else
-          const SizedBox(height: 4),
-      ],
+    return Container(
+      height: double.infinity,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: bg,
+        shape: BoxShape.rectangle,
+        border: border
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '${day.day}',
+        style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: textColor),
+      ),
     );
   }
 

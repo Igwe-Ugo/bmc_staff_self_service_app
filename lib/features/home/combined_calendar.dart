@@ -208,7 +208,7 @@ class _CombinedCarouselCalendarState extends State<CombinedCarouselCalendar> {
                 final dayShifts = rotaEvents.where((e) => isSameDay(e.date, date));
                 if (dayShifts.isNotEmpty) {
                   final shift = dayShifts.first;
-                  chips.add(_buildCellChip(label: shift.type.label, textCol: shift.type.color, bgCol: shift.type.bgColor));
+                  chips.add(_buildCellChip(label: shift.type.label, textCol: shift.type.color, bgCol: shift.type.color));
                 }
               } else {
                 final dayAvailabilities = availabilitySlots.where((s) => isSameDay(s.date, date));
@@ -322,7 +322,7 @@ class _CombinedCarouselCalendarState extends State<CombinedCarouselCalendar> {
                 dense: true,
                 leading: CircleAvatar(radius: 6, backgroundColor: s.type.color),
                 title: Text(s.type.label, style: TextStyle(fontWeight: FontWeight.bold, color: s.type.color)),
-                subtitle: Text('${s.ward} • ${s.timeRange.isNotEmpty ? s.timeRange : s.startTime}'),
+                subtitle: Text('${s.notes ?? 'Assigned Shift'} • ${s.endTime.isNotEmpty ? s.endTime : s.startTime}'),
               )),
             ],
             if (!isCurrentMonth && activeAvailabilities.isNotEmpty) ...[

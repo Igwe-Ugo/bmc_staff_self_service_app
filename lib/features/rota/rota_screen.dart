@@ -1,13 +1,9 @@
+import 'package:bmc_app/features/rota/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:intl/intl.dart';
-
 import '../../core/network/models/widget.dart';
 import '../../core/network/provider/widget.dart';
-import 'shift_event_tile.dart';
-import 'swap_shift_sheet.dart';
-import 'yearly_summary_card.dart';
 
 class RotaScreen extends StatefulWidget {
   const RotaScreen({super.key});
@@ -21,6 +17,9 @@ class _RotaScreenState extends State<RotaScreen> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   bool _dropdownOpen = false;
+
+  // Layer link to anchor the floating filter dropdown menu exactly below the action button
+  final LayerLink _dropdownLayerLink = LayerLink();
 
   @override
   void initState() {
@@ -75,7 +74,6 @@ class _RotaScreenState extends State<RotaScreen> {
   @override
   Widget build(BuildContext context) {
     final rotaProvider = context.watch<RotaProvider>();
-    final userProvider = context.watch<UserProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -88,35 +86,39 @@ class _RotaScreenState extends State<RotaScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 15.0),
-            child: GestureDetector(
-              onTap: () => setState(() => _dropdownOpen = !_dropdownOpen),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      _getFilterLabel(_filter),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(width: 4),
-                    Icon(
-                      _dropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                      size: 18,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ],
+            // Anchor target around the filter button
+            child: CompositedTransformTarget(
+              link: _dropdownLayerLink,
+              child: GestureDetector(
+                onTap: () => setState(() => _dropdownOpen = !_dropdownOpen),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _getFilterLabel(_filter),
+                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        _dropdownOpen ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                        size: 18,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -125,26 +127,37 @@ class _RotaScreenState extends State<RotaScreen> {
       ),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 10),
+          // Using a layout architecture that expands the calendar dynamically to fill screen space
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
+                child: YearlySummaryCard(counts: _yearlyCounts),
+              ),
+              const SizedBox(height: 12),
+
+              // Expanded forces the Calendar container box to fill out all viewport screen space remaining
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 100.0),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
                   decoration: BoxDecoration(
                     color: Theme.of(context).cardColor,
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Column(
-                    children: [
-                      YearlySummaryCard(counts: _yearlyCounts),
-                      const SizedBox(height: 3),
-                      TableCalendar(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      // Dynamically subtract calendar header offset (approx 54px) and split remaining height into 6 calendar rows
+                      final calendarGridHeight = constraints.maxHeight - 54;
+                      final dynamicRowHeight = (calendarGridHeight > 0) ? (calendarGridHeight / 6.8) : 52.0;
+
+                      return TableCalendar(
                         firstDay: DateTime.utc(2020, 1, 1),
                         lastDay: DateTime.utc(2030, 12, 31),
                         focusedDay: _focusedDay,
                         calendarFormat: CalendarFormat.month,
+                        rowHeight: dynamicRowHeight, // 👈 Fits rows to screen
+                        daysOfWeekHeight: dynamicRowHeight * 0.8,
                         headerStyle: const HeaderStyle(
                           formatButtonVisible: false,
                           titleCentered: false,
@@ -157,10 +170,13 @@ class _RotaScreenState extends State<RotaScreen> {
                             _dropdownOpen = false;
                           });
 
-                          // Requirement 1: Only trigger pop-up swap workflow if this calendar day actually contains an event
                           final hasShift = rotaProvider.rotaEvents.any((e) => isSameDay(e.date, selectedDay));
-                          if (hasShift) {
-                            _openSwapShiftWorkflow(rotaProvider);
+                          final matchedEvent = rotaProvider.rotaEvents.cast<RotaEvent?>().firstWhere(
+                                (e) => e != null && isSameDay(e.date, selectedDay),
+                            orElse: () => null,
+                          );
+                          if (hasShift && matchedEvent != null) {
+                            _showShiftDetailsSheet(context, matchedEvent);
                           }
                         },
                         onPageChanged: (focusedDay) {
@@ -171,78 +187,63 @@ class _RotaScreenState extends State<RotaScreen> {
                           markerBuilder: (context, date, events) {
                             final type = _shiftTypeForDay(date);
                             if (type == null) return const SizedBox.shrink();
-                            return Positioned(
-                              bottom: 4,
-                              child: Container(
-                                width: 6,
-                                height: 6,
-                                decoration: BoxDecoration(
-                                  color: type.color,
-                                  shape: BoxShape.circle,
-                                ),
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: type.color.withOpacity(0.2),
+                                shape: BoxShape.rectangle,
                               ),
                             );
                           },
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  "Scheduled Shifts",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'Lexend'),
-                ),
-                const SizedBox(height: 10),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _filtered.length,
-                  itemBuilder: (context, index) {
-                    final event = _filtered[index];
-                    return ShiftEventTile(
-                      event: event,
-                      cardBg: Theme.of(context).cardColor,
-                      userProvider: userProvider,
-                    );
-                  },
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
+
+          // Fixed Floating filter menu using CompositedTransformFollower to stick accurately to the appbar target
           if (_dropdownOpen)
-            Positioned(
-              right: 16,
-              top: 145,
-              child: Container(
-                width: 140,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: ['All types', 'Day', 'Night', 'Evening', 'On Call'].map((String val) {
-                    return InkWell(
-                      onTap: () => _updateFilter(val),
+            CompositedTransformFollower(
+              link: _dropdownLayerLink,
+              showWhenUnlinked: false,
+              offset: const Offset(-80, 40), // Pulls dropdown perfectly aligned directly below the appbar button
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    width: 140,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Text(
-                          val,
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.12),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
                         ),
-                      ),
-                    );
-                  }).toList(),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: ['All types', 'Day', 'Night', 'Evening', 'On Call'].map((String val) {
+                        return InkWell(
+                          onTap: () => _updateFilter(val),
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            child: Text(
+                              val,
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -252,11 +253,8 @@ class _RotaScreenState extends State<RotaScreen> {
   }
 
   void _openSwapShiftWorkflow(RotaProvider provider) {
-    final myShifts = provider.rotaEvents
-        .where((e) => !e.date.isBefore(
-      DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day),
-    ))
-        .toList();
+    final userProvider = context.read<UserProvider>();
+    provider.loadShiftsForMonth(context, _focusedDay, deptId: userProvider.defaultDept);
 
     showModalBottomSheet(
       context: context,
@@ -265,30 +263,53 @@ class _RotaScreenState extends State<RotaScreen> {
       builder: (_) => ChangeNotifierProvider.value(
         value: provider,
         child: SwapShiftSheet(
-          myShifts: myShifts,
+          myShifts: provider.rotaEvents,
           staffMembers: provider.staffMembers,
+          defaultSelectedDate: _selectedDay ?? _focusedDay,
           onSubmit: (payload) async {
-            final success = await provider.submitSwap(payload as HrSwapRequestPayload);
+            final success = await provider.submitSwap(payload);
             if (!mounted) return;
             Navigator.pop(context);
 
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(
-                  success
-                      ? 'Swap request submitted successfully!'
-                      : provider.swapError ?? 'Failed to submit swap.',
-                ),
-                backgroundColor: success ? const Color(0xFF27AE60) : const Color(0xFFE74C3C),
+                content: Text(success ? 'Swap request submitted!' : provider.swapError ?? 'Error occurring.'),
+                backgroundColor: success ? Colors.green : Colors.red,
               ),
             );
-
-            if (success) {
-              provider.loadShiftsForMonth(context, _focusedDay);
-            }
           },
         ),
       ),
+    );
+  }
+
+  void _showShiftDetailsSheet(BuildContext context, RotaEvent event) {
+    final userProvider = context.read<UserProvider>();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          padding: EdgeInsets.fromLTRB(7, 24, 7, MediaQuery.of(context).viewInsets.bottom + 100),
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ShiftEventTile(
+                event: event,
+                cardBg: Theme.of(context).cardColor,
+                userProvider: userProvider,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

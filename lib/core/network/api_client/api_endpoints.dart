@@ -28,18 +28,18 @@ class ApiEndpoints {
   static const String deleteAvailability = '/hr/availability/{slotId}'; // for deleting the availability
 
   // ── Leave Request ─────────────────────────────────────────────────────────────
-  static const String _baseLeaveRequest        = '';
   static const String leaveRequests    = '/hr/leave/requests';
   static const String leaveMyRequests  = '/hr/leave/my-requests';
   static const String leaveSearch      = '/hr/leave/search';
 
   // ── Rota ──────────────────────────────────────────────────────────────────────
   static const String rotaMyShifts = '/hr/rota/my-shifts';
-  static const String rotaSwapRequests = '/hr/rota/swap-requests';
-  static const String rotaEligibleStaff = '/hr/rota/eligible-staff';
+  static const String rotaSwapRequests = '/hr/rota/swaps';
+  static const String rotaDeptStaffShift = '/hr/rota/personnel-shifts';
+  static const String rotaDeptStaff = '/hr/personnel';
 
   // ── Profile ──────────────────────────────────────────────────────────────────────
-  static const String me            = '/users/me';
+  static const String userProfile = '';
   static const String updateProfile = '/users/profile';
 
   static String fill(String path, Map<String, String> params) {

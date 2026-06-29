@@ -11,7 +11,7 @@ class UserServices {
   // ── GET /users/me ─────────────────────────────────────────────────────────
   Future<UserModel> getUser() async {
     try {
-      final response = await _dio.get(ApiEndpoints.me);
+      final response = await _dio.get(ApiEndpoints.userProfile);
       final payload  = _unwrap(response.data);
       return UserModel.fromJson(payload as Map<String, dynamic>);
     } on DioException catch (e) {

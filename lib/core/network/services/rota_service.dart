@@ -20,52 +20,37 @@ class RotaService {
       debugPrint('📡 ROTA RESPONSE: ${response.data}');
 
       // Handle the response structure
-      final responseData = response.data;
+      final responseData = response.data['data'] ?? response.data;
+      if (responseData == null) return [];
 
-      // Check if we have data
-      if (responseData == null) {
-        return [];
-      }
+      // unwrap the present 'data' wrapper if present
+      dynamic coreData = responseData['data'] ?? responseData;
 
-      // Get the data object
-      dynamic data = responseData['data'] ?? responseData;
-
-      // If data is a Map with 'shifts' key, extract the shifts array
-      if (data is Map<String, dynamic> && data.containsKey('shifts')) {
-        final shiftsList = data['shifts'] as List<dynamic>?;
-        if (shiftsList != null) {
-          return shiftsList
-              .map((e) => HrMyShift.fromJson(e as Map<String, dynamic>))
-              .toList();
+      // handle the nested shifts map response structure safely
+      if (coreData is Map<String, dynamic> && coreData.containsKey('shifts')) {
+        final List<dynamic>? shiftsList = coreData['shifts'] as List<dynamic>?;
+        if (shiftsList != null){
+          return shiftsList.map((e) => HrMyShift.fromJson(e as Map<String, dynamic>)).toList();
         }
-        return [];
       }
 
-      // If data is already a List (fallback)
-      if (data is List) {
-        return data
-            .map((e) => HrMyShift.fromJson(e as Map<String, dynamic>))
-            .toList();
+      // fallback if data is a raw direct array list
+      if (coreData is List) {
+        return responseData.map((e) => HrMyShift.fromJson(e as Map<String, dynamic>)).toList();
       }
-
-      // If data is a single shift object
-      if (data is Map<String, dynamic> && data.containsKey('assignmentId')) {
-        return [HrMyShift.fromJson(data)];
-      }
-
-      debugPrint('⚠️ Unexpected response format: ${data.runtimeType}');
+      debugPrint('⚠️ Unexpected response format: ${responseData.runtimeType}');
       return [];
     } on DioException catch (e) {
       debugPrint('❌ ROTA MY SHIFTS ERROR: ${e.response?.data}');
       throw ApiException(
-        message: e.response?.data?['message'] ?? 'Failed to load shifts',
+        message: e.response?.data?['message'] ?? 'Failed to load your shifts.',
         statusCode: e.response?.statusCode,
       );
     }
   }
 
   // ── POST /api/hr/rota/swap-requests ───────────────────────────────────────
-  Future<HrShiftSwapResponse> submitSwapRequest(HrSwapRequestPayload payload) async {
+  Future<bool> createSwapRequest(HrSwapRequestPayload payload) async {
     try {
       final response = await _dio.post(
         ApiEndpoints.rotaSwapRequests,
@@ -73,26 +58,50 @@ class RotaService {
       );
 
       debugPrint('📡 SWAP REQUEST SUBMITTED: ${response.statusCode}');
-      final data = response.data['data'] ?? response.data;
-      return HrShiftSwapResponse.fromJson(data as Map<String, dynamic>);
+      return response.statusCode == 200 || response.statusCode == 201;
     } on DioException catch (e) {
       debugPrint('❌ SWAP REQUEST ERROR: ${e.response?.data}');
       throw ApiException(
-        message: e.response?.data?['message'] ?? 'Failed to submit swap request',
+        message: e.response?.data?['message'] ?? 'Failed to submit shift swap request',
         statusCode: e.response?.statusCode,
       );
     }
   }
 
   // ── GET /api/hr/rota/eligible-staff?shiftId=xxx ───────────────────────────
-  Future<List<StaffMember>> fetchEligibleStaff(String shiftId) async {
+  Future<List<RotaEvent>> fetchDeptStaffShift(String personnelId, String periodId) async {
     try {
       final response = await _dio.get(
-        ApiEndpoints.rotaEligibleStaff,
-        queryParameters: {'shiftId': shiftId},
+        ApiEndpoints.rotaDeptStaffShift,
+        queryParameters: {'personnelId': personnelId, 'periodId': periodId},
       );
 
-      debugPrint('📡 ELIGIBLE STAFF: ${response.statusCode}');
+      debugPrint('📡 DEPARTMENT STAFF SHIFT: ${response.statusCode}');
+      final data = response.data['data'] ?? response.data;
+
+      if (data is List) {
+        return data.map((e) => RotaEvent.fromMyShift(HrMyShift.fromJson(e as Map<String, dynamic>))).toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return [];
+      debugPrint('❌ DEPARTMENT STAFF SHIFT ERROR: ${e.response?.data}');
+      throw ApiException(
+        message: e.response?.data?['message'] ?? 'Failed to load Department staff shift',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  // WIll work on this later, this is meant to fetch the department of the staff directly.
+  Future<List<StaffMember>> fetchDeptStaff(String deptId) async {
+    try {
+      final response = await _dio.get(
+        ApiEndpoints.rotaDeptStaff,
+        queryParameters: {'deptId': deptId, 'includeDeptUsers': true, 'status': 'ACTIVE'},
+      );
+
+      debugPrint('📡 DEPARTMENT STAFF: ${response.statusCode}');
       final data = response.data['data'] ?? response.data;
 
       if (data is List) {
@@ -101,9 +110,9 @@ class RotaService {
       return [];
     } on DioException catch (e) {
       if (e.response?.statusCode == 404) return [];
-      debugPrint('❌ ELIGIBLE STAFF ERROR: ${e.response?.data}');
+      debugPrint('❌ DEPARTMENT STAFF ERROR: ${e.response?.data}');
       throw ApiException(
-        message: e.response?.data?['message'] ?? 'Failed to load eligible staff',
+        message: e.response?.data?['message'] ?? 'Failed to load Department staff',
         statusCode: e.response?.statusCode,
       );
     }

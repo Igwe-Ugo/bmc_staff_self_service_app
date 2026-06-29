@@ -39,6 +39,7 @@ class RotaSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rotaProvider = context.watch<RotaProvider>();
+    final userProvider = context.watch<UserProvider>();
     final now = DateTime.now();
 
     // Filter to isolate ONLY the current logged-in user's shifts for this current month
@@ -154,7 +155,7 @@ class RotaSummary extends StatelessWidget {
             itemBuilder: (context, index) {
               final event = displayShifts[index];
               final baseColor = event.type.color;
-              final lightBackgroundColor = event.type.bgColor; // Pre-configured color with low opacity
+              final lightBackgroundColor = event.type.color; // Pre-configured color with low opacity
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 10),
@@ -219,7 +220,7 @@ class RotaSummary extends StatelessWidget {
                               Icon(Iconsax.hospital, size: 12, color: baseColor.withOpacity(0.7)),
                               const SizedBox(width: 4),
                               Text(
-                                event.ward,
+                                userProvider.defaultDept,
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -235,7 +236,7 @@ class RotaSummary extends StatelessWidget {
                     // Right Side Timeline range hours
                     Text(
                       event.endTime.isNotEmpty
-                          ? _convertTo12Hour(event.timeRange)
+                          ? _convertTo12Hour(event.endTime)
                           : _convertTo12Hour(event.startTime),
                       style: TextStyle(
                         fontSize: 12,
