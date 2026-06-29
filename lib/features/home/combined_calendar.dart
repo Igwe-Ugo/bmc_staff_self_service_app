@@ -57,6 +57,10 @@ class _CombinedCarouselCalendarState extends State<CombinedCarouselCalendar> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Align(
+              alignment: Alignment.centerLeft,
+                child: Text("My Schedule Summary", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
+            const SizedBox(height: 10,),
             // 1. Dynamic Carousel Slider Control Header
             _buildHeaderView(),
             const SizedBox(height: 10),

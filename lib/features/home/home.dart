@@ -104,9 +104,9 @@ class _BMCHomeState extends State<BMCHome> {
                         const SizedBox(height: 24),
                         LeaveSummaryCard(),
                         const SizedBox(height: 24),
-                        CombinedCarouselCalendar(),
-                        const SizedBox(height: 24),
                         const WeeklyAvailabilityWidget(),
+                        const SizedBox(height: 24),
+                        CombinedCarouselCalendar(),
                         const SizedBox(height: 24),
 
                         const _SectionTitle(title: "Recent Messages", badge: "5", isRota: false),
