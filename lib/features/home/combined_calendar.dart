@@ -322,7 +322,7 @@ class _CombinedCarouselCalendarState extends State<CombinedCarouselCalendar> {
                 dense: true,
                 leading: CircleAvatar(radius: 6, backgroundColor: s.type.color),
                 title: Text(s.type.label, style: TextStyle(fontWeight: FontWeight.bold, color: s.type.color)),
-                subtitle: Text('${s.notes ?? 'Assigned Shift'} • ${s.endTime.isNotEmpty ? s.endTime : s.startTime}'),
+                subtitle: Text('${s.ward ?? 'Assigned Shift'} • ${s.endTime.isNotEmpty ? s.endTime : s.startTime}'),
               )),
             ],
             if (!isCurrentMonth && activeAvailabilities.isNotEmpty) ...[

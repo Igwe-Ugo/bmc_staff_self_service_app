@@ -267,7 +267,7 @@ class ProfileDrawer extends StatelessWidget {
                       }
                     });
                     // 2. Wipe out data states from memory immediately
-                    userProvider.clearUser();
+                    userProvider.clear();
                     leaveProvider.clearUserData();
                     rotaProvider.clearUserData();
                     availabilityProvider.clearUserData();

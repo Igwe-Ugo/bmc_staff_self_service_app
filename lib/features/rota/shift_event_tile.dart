@@ -71,8 +71,8 @@ class ShiftEventTile extends StatelessWidget {
                 const Divider(),
                 const SizedBox(height: 10),
                 _buildDetailRow(Iconsax.user, 'Staff Name', userProvider.displayName),
-                _buildDetailRow(Iconsax.hospital, 'Role / Designation', userProvider.profession),
-                _buildDetailRow(Iconsax.location, 'Ward / Department', userProvider.defaultDept),
+                _buildDetailRow(Iconsax.hospital, 'Role / Designation', event.role),
+                _buildDetailRow(Iconsax.location, 'Ward / Department', event.ward),
                 _buildDetailRow(
                   Iconsax.calendar_1,
                   'Scheduled Date',
@@ -82,13 +82,13 @@ class ShiftEventTile extends StatelessWidget {
                   Iconsax.clock,
                   'Shift Type',
                   event.type.label,
-                  badgeColor: event.type.color,
+                  badgeColor: event.type.color.withOpacity(0.1),
                   textColor: event.type.color,
                 ),
                 _buildDetailRow(
                   Iconsax.timer_1,
                   'Shift Hours',
-                  event.endTime.isNotEmpty ? _convertTo12Hour(event.endTime) : _convertTo12Hour(event.startTime),
+                  event.endTime.isNotEmpty ? "${_convertTo12Hour(event.startTime)} - ${_convertTo12Hour(event.endTime)}" : " ${_convertTo12Hour(event.startTime)}",
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -146,7 +146,7 @@ class ShiftEventTile extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showShiftDetailDialog(context),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
+        margin: const EdgeInsets.only(bottom: 40),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: cardBg,
@@ -210,11 +210,11 @@ class ShiftEventTile extends StatelessWidget {
                     children: [
                       const Icon(Iconsax.hospital, size: 12),
                       const SizedBox(width: 4),
-                      Text(userProvider.profession, style: const TextStyle(fontSize: 11)),
+                      Text(event.ward, style: const TextStyle(fontSize: 11)),
                       const SizedBox(width: 8),
                       const Icon(Iconsax.location, size: 12),
                       const SizedBox(width: 2),
-                      Text(userProvider.defaultDept, style: const TextStyle(fontSize: 11)),
+                      Text(event.role, style: const TextStyle(fontSize: 11)),
                     ],
                   ),
                 ],
@@ -227,7 +227,7 @@ class ShiftEventTile extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: event.type.color,
+                    color: event.type.color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -241,7 +241,7 @@ class ShiftEventTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  event.endTime.isNotEmpty ? _convertTo12Hour(event.endTime) : _convertTo12Hour(event.startTime),
+                  event.endTime.isNotEmpty ? "${_convertTo12Hour(event.startTime)} - ${_convertTo12Hour(event.endTime)}" : " ${_convertTo12Hour(event.startTime)}",
                   style: const TextStyle(fontSize: 11),
                 ),
               ],

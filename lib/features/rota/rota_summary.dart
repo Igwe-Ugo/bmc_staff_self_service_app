@@ -2,7 +2,7 @@ import 'package:bmc_app/features/common/router.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'package:go_router/go_router.dart'; // Or use Navigator if not using go_router
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 
 import '../../core/network/models/widget.dart';
@@ -45,8 +45,6 @@ class RotaSummary extends StatelessWidget {
     // Filter to isolate ONLY the current logged-in user's shifts for this current month
     final myMonthlyShifts = rotaProvider.rotaEvents.where((event) {
       final isCurrentMonth = event.date.month == now.month && event.date.year == now.year;
-      // Adjust this condition if you track your own shift using an explicit personal flag,
-      // otherwise, it aggregates all personal roster entries loaded in your provider state
       return isCurrentMonth;
     }).toList();
 
@@ -101,7 +99,7 @@ class RotaSummary extends StatelessWidget {
             ),
             if (hasMore)
               GestureDetector(
-                onTap: () => GoRouter.of(context).push(BMCRouter.rotaPath), // Adjust with your actual route path or Navigator push
+                onTap: () => GoRouter.of(context).push(BMCRouter.rotaPath),
                 child: Row(
                   children: [
                     Text(
@@ -137,7 +135,7 @@ class RotaSummary extends StatelessWidget {
             child: Column(
               children: [
                 Icon(Iconsax.calendar_1, size: 100, color: Colors.grey.shade400),
-                SizedBox(height: 20,),
+                const SizedBox(height: 20),
                 const Text(
                   'No shifts scheduled for this month.',
                   style: TextStyle(fontSize: 13, color: Colors.grey),
@@ -147,107 +145,112 @@ class RotaSummary extends StatelessWidget {
             ),
           )
         else
-        // List of Shift Cards
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: displayShifts.length,
-            itemBuilder: (context, index) {
-              final event = displayShifts[index];
-              final baseColor = event.type.color;
-              final lightBackgroundColor = event.type.color; // Pre-configured color with low opacity
-
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: lightBackgroundColor, // Matches the design background color code with opacity
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: baseColor.withOpacity(0.15),
-                    width: 1,
+        // ── FIX: Use a SingleChildScrollView with Row instead of ListView ──
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            child: Row(
+              children: displayShifts.map((event) {
+                final baseColor = event.type.color;
+                return Container(
+                  width: 250, // Fixed width for each card
+                  margin: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: baseColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: baseColor.withOpacity(0.15),
+                      width: 1,
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    // Left Side Date block
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Date block
+                      Row(
                         children: [
-                          Text(
-                            DateFormat('EEE').format(event.date),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: baseColor.withOpacity(0.8),
-                              fontWeight: FontWeight.w700,
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          ),
-                          Text(
-                            DateFormat('dd').format(event.date),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: baseColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-
-                    // Center Details Information block
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            event.type.label,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: baseColor,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Iconsax.hospital, size: 12, color: baseColor.withOpacity(0.7)),
-                              const SizedBox(width: 4),
-                              Text(
-                                userProvider.defaultDept,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black87.withOpacity(0.75),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  DateFormat('EEE').format(event.date),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: baseColor.withOpacity(0.8),
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
-                              ),
-                            ],
+                                Text(
+                                  DateFormat('dd').format(event.date),
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: baseColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          // Shift details
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  event.type.label,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: baseColor,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Icon(Iconsax.hospital, size: 12, color: baseColor.withOpacity(0.7)),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        userProvider.deptName,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  event.endTime.isNotEmpty
+                                      ? _convertTo12Hour(event.endTime)
+                                      : _convertTo12Hour(event.startTime),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: baseColor,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ),
-
-                    // Right Side Timeline range hours
-                    Text(
-                      event.endTime.isNotEmpty
-                          ? _convertTo12Hour(event.endTime)
-                          : _convertTo12Hour(event.startTime),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: baseColor,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
           ),
 
         // "View More" button placed right after the 7 shifts list if items remain

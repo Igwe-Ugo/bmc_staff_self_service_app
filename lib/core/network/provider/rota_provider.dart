@@ -1,3 +1,5 @@
+// ─── rota_provider.dart ───────────────────────────────────────────────────────
+
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 import '../models/widget.dart';
@@ -10,86 +12,160 @@ enum RotaFilter { allStatus, daily, weekly, monthly, yearly }
 class RotaProvider extends ChangeNotifier {
   final RotaService _service = RotaService();
 
-  // ── State ───────────────────────────────────────────────────────────────
-  String? _errorMessage;
-  RotaLoadState _loadState = RotaLoadState.idle;
-  List<RotaEvent> _rotaEvents = [];
+  // ── My shifts state ──────────────────────────────────────────────────────
+  RotaLoadState   _loadState    = RotaLoadState.idle;
+  String?         _errorMessage;
+  List<RotaEvent> _rotaEvents   = [];
+
+  // Cache to avoid duplicate calls for the same month
+  final Set<String> _fetchedMonths = {};
+
+  RotaLoadState   get loadState     => _loadState;
+  String?         get errorMessage  => _errorMessage;
+  List<RotaEvent> get rotaEvents    => _rotaEvents;
+
+  // ── Department staff state ───────────────────────────────────────────────
   List<StaffMember> _staffMembers = [];
+  bool              _loadingStaff = false;
+
+  List<StaffMember> get staffMembers   => _staffMembers;
+  bool              get isLoadingStaff => _loadingStaff;
+
+  // ── Selected staff member's shifts (for swap "their shift" picker) ───────
   List<RotaEvent> _theirAvailableShifts = [];
+  bool            _loadingTheirShifts   = false;
 
-  SwapSubmitState _swapState = SwapSubmitState.idle;
-  String? _swapError;
-
-  RotaLoadState get loadState => _loadState;
-  String? get errorMessage => _errorMessage;
-  List<RotaEvent> get rotaEvents => _rotaEvents;
-  List<StaffMember> get staffMembers => _staffMembers;
   List<RotaEvent> get theirAvailableShifts => _theirAvailableShifts;
+  bool            get isLoadingTheirShifts => _loadingTheirShifts;
+
+  // ── Swap submit state ────────────────────────────────────────────────────
+  SwapSubmitState _swapState = SwapSubmitState.idle;
+  HrShiftSwap?    _lastSwap;
+  String?         _swapError;
+
   SwapSubmitState get swapState => _swapState;
-  String? get swapError => _swapError;
+  HrShiftSwap?    get lastSwap  => _lastSwap;
+  String?         get swapError => _swapError;
 
-  // ── Load Shifts ──────────────────────────────────────────────────────────
+  // ── 1. Load my shifts for a month ────────────────────────────────────────
 
-  Future<void> loadShiftsForMonth(BuildContext context, DateTime monthDate, {String? deptId}) async {
-    _loadState = RotaLoadState.loading;
+  Future<void> loadShiftsForMonth(
+      BuildContext context,
+      DateTime month, {
+        String staffName = 'You',
+      }) async {
+    final monthKey = DateFormat('yyyy-MM').format(month);
+    if (_fetchedMonths.contains(monthKey)) return;
+
+    _loadState    = RotaLoadState.loading;
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final monthStr = DateFormat('yyyy-MM').format(monthDate);
-      final shifts = await _service.fetchMyShifts(month: monthStr);
-      _rotaEvents = shifts.map((s) => RotaEvent.fromMyShift(s)).toList();
-      if (deptId != null) {
-        _staffMembers = await _service.fetchDeptStaff(deptId);
+      final shifts = await _service.fetchMyShifts(month: monthKey);
+      _fetchedMonths.add(monthKey);
+
+      // Merge + dedupe across months by assignmentId
+      final existing = {for (var e in _rotaEvents) e.id: e};
+      for (final s in shifts) {
+        final event = RotaEvent.fromMyShift(s, staffName: staffName);
+        existing[event.id] = event;
       }
+      _rotaEvents = existing.values.toList()
+        ..sort((a, b) => a.date.compareTo(b.date));
+
       _loadState = RotaLoadState.loaded;
     } catch (e) {
-      _loadState = RotaLoadState.error;
       _errorMessage = e.toString();
+      _loadState    = RotaLoadState.error;
     }
+
     notifyListeners();
   }
 
-  Future<void> loadDeptStaffShift(String personnelId, String periodId) async {
-    _theirAvailableShifts = [];
+  Future<void> refreshShiftsForMonth(
+      BuildContext context,
+      DateTime month, {
+        String staffName = 'You',
+      }) async {
+    final key = DateFormat('yyyy-MM').format(month);
+    _fetchedMonths.remove(key);
+    await loadShiftsForMonth(context, month, staffName: staffName);
+  }
+
+  // ── 2. Load department staff (for swap coworker search) ─────────────────
+
+  Future<void> loadDeptStaff(String deptId) async {
+    _loadingStaff = true;
     notifyListeners();
     try {
-      _theirAvailableShifts = await _service.fetchDeptStaffShift(personnelId, periodId);
+      _staffMembers = await _service.fetchDeptStaff(deptId);
     } catch (e) {
-      _theirAvailableShifts = [];
+      debugPrint('Failed to load department staff: $e');
+      _staffMembers = [];
     }
+    _loadingStaff = false;
     notifyListeners();
   }
 
-  // ── Submit Swap ───────────────────────────────────────────────────────────
+  // ── 3. Load a chosen staff member's shifts for a rota period ────────────
+
+  Future<void> loadPersonnelShifts({
+    required String personnelId,
+    required String periodId,
+  }) async {
+    _theirAvailableShifts = [];
+    _loadingTheirShifts   = true;
+    notifyListeners();
+    try {
+      _theirAvailableShifts = await _service.fetchPersonnelShifts(
+        personnelId: personnelId,
+        periodId:    periodId,
+      );
+    } catch (e) {
+      debugPrint('Failed to load personnel shifts: $e');
+      _theirAvailableShifts = [];
+    }
+    _loadingTheirShifts = false;
+    notifyListeners();
+  }
+
+  void clearTheirShifts() {
+    _theirAvailableShifts = [];
+    notifyListeners();
+  }
+
+  // ── 4. Submit a swap request ─────────────────────────────────────────────
+  /// Goes to admin for approval. Does NOT immediately change the roster.
 
   Future<bool> submitSwap(HrSwapRequestPayload payload) async {
     _swapState = SwapSubmitState.submitting;
     _swapError = null;
+    _lastSwap  = null;
     notifyListeners();
 
     try {
-      final success = await _service.createSwapRequest(payload);
-      if (success) {
-        _swapState = SwapSubmitState.success;
-        notifyListeners();
-        return true;
-      }
+      final result = await _service.createSwapRequest(payload);
+      _lastSwap  = result;
+      _swapState = SwapSubmitState.success;
+      notifyListeners();
+      return true;
     } catch (e) {
       _swapError = e.toString();
+      _swapState = SwapSubmitState.error;
+      notifyListeners();
+      return false;
     }
-    _swapState = SwapSubmitState.error;
-    notifyListeners();
-    return false;
   }
 
   void resetSwapState() {
     _swapState = SwapSubmitState.idle;
     _swapError = null;
+    _lastSwap  = null;
     notifyListeners();
   }
 
-  // ── Filtered Events (Used by RotaScreen) ──────────────────────────────────
+  // ── Filtered events (used by RotaScreen) ─────────────────────────────────
 
   List<RotaEvent> filteredEvents({
     required RotaFilter filter,
@@ -102,28 +178,28 @@ class RotaProvider extends ChangeNotifier {
 
       case RotaFilter.daily:
         final target = selectedDay ?? DateTime.now();
-        return _rotaEvents.where((e) => _isSameDay(e.date, target)).toList();
+        return _rotaEvents.where((e) => _sameDay(e.date, target)).toList();
 
       case RotaFilter.weekly:
         final now = DateTime.now();
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        final endOfWeek = startOfWeek.add(const Duration(days: 7));
+        final endOfWeek   = startOfWeek.add(const Duration(days: 7));
         return _rotaEvents
-            .where((e) => !e.date.isBefore(startOfWeek) && e.date.isBefore(endOfWeek))
+            .where((e) =>
+        !e.date.isBefore(startOfWeek) && e.date.isBefore(endOfWeek))
             .toList();
 
       case RotaFilter.monthly:
         return _rotaEvents
             .where((e) =>
-        e.date.month == focusedDay.month && e.date.year == focusedDay.year)
+        e.date.month == focusedDay.month &&
+            e.date.year  == focusedDay.year)
             .toList();
 
       case RotaFilter.yearly:
         return _rotaEvents.where((e) => e.date.year == focusedDay.year).toList();
     }
   }
-
-  bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
 
   Map<ShiftType, int> yearlyCounts(List<RotaEvent> events) {
     final counts = <ShiftType, int>{};
@@ -133,10 +209,36 @@ class RotaProvider extends ChangeNotifier {
     return counts;
   }
 
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  // ── Reset / logout ────────────────────────────────────────────────────────
+
   void clearUserData() {
-    _rotaEvents = [];
-    _staffMembers = [];
-    _theirAvailableShifts = [];
+    _rotaEvents            = [];
+    _staffMembers          = [];
+    _theirAvailableShifts  = [];
+    _fetchedMonths.clear();
+    _loadState = RotaLoadState.idle;
+    _swapState = SwapSubmitState.idle;
     notifyListeners();
+  }
+
+  Future<bool> cancelSwapRequest(String? swapId) async {
+    if (swapId == null || swapId.isEmpty) return false;
+
+    try {
+      // Assuming your endpoint structure is DELETE /api/hr/rota/swaps/:id
+      final response = await _service.deleteSwapRequest(swapId);
+
+      // Check text map safely without forcing parsing onto full data models
+      if (response != null) {
+        return true;
+      }
+      return true;
+    } catch (e) {
+      debugPrint("❌ FAILED TO DELETE SWAP REQUEST: $e");
+      return false;
+    }
   }
 }

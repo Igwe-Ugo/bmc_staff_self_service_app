@@ -33,14 +33,17 @@ class ApiEndpoints {
   static const String leaveSearch      = '/hr/leave/search';
 
   // ── Rota ──────────────────────────────────────────────────────────────────────
-  static const String rotaMyShifts = '/hr/rota/my-shifts';
-  static const String rotaSwapRequests = '/hr/rota/swaps';
-  static const String rotaDeptStaffShift = '/hr/rota/personnel-shifts';
-  static const String rotaDeptStaff = '/hr/personnel';
+  static const String rotaMyShifts        = '/hr/rota/my-shifts';
+  static const String rotaSwaps           = '/hr/rota/swaps';
+  static const String personnel           = '/hr/personnel';
+  static const String rotaPersonnelShifts = '/hr/rota/personnel-shifts';
 
   // ── Profile ──────────────────────────────────────────────────────────────────────
-  static const String userProfile = '';
+  static const String usersRegular = '/users/regular';
   static const String updateProfile = '/users/profile';
+
+  // ── Countries/State API ──────────────────────────────────────────────────────────────────────
+  static const String countries_states = 'https://countriesnow.space/api/v0.1/countries/states';
 
   static String fill(String path, Map<String, String> params) {
     var result = path;

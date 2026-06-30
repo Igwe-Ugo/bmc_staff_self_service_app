@@ -12,7 +12,7 @@ class UserProvider extends ChangeNotifier {
   UserModel? _user;
   UserState  _state        = UserState.idle;
   String?    _errorMessage;
-  bool       _updating     = false;  // separate flag for profile update
+  bool       _updating     = false; // separate flag for profile-update spinner
 
   // ── Getters ───────────────────────────────────────────────────────────────
   UserModel? get user          => _user;
@@ -30,14 +30,23 @@ class UserProvider extends ChangeNotifier {
   String  get defaultDept  => _user?.defaultDept ?? '';
 
   // Extended profile getters
-  String get address  => _user?.address  ?? '';
-  String get city     => _user?.city     ?? '';
-  String get state_   => _user?.state    ?? '';   // 'state' clashes with State<T>
-  String get country  => _user?.country  ?? '';
-  String get telno    => _user?.telno    ?? '';
-  String get gender   => _user?.gender   ?? '';
-  String get rank     => _user?.rank     ?? '';
-  String get profession => _user?.profession ?? '';
+  String get address    => _user?.address    ?? '';
+  String get city       => _user?.city       ?? '';
+  String get stateName  => _user?.state      ?? '';   // 'state' clashes with State<T>
+  String get country    => _user?.country    ?? '';
+  String get telno      => _user?.telno      ?? '';
+  String get gender     => _user?.gender     ?? '';
+  String get rank       => _user?.rank       ?? '';
+  String get profession => _user?.clinicalRoleLabel ?? '';
+  String get deptName   => _user?.deptName   ?? '';
+  bool   get isActiveUser => _user?.isActive ?? _user?.active ?? false;
+
+  // Place these inside your state management Provider class
+  List<Country> _countriesCache = [];
+  bool _loadingLocationData = false;
+
+  List<Country> get countriesCache => _countriesCache;
+  bool get loadingLocationData => _loadingLocationData;
 
   bool hasPrivilege(String privilege) => _user?.hasPrivilege(privilege) ?? false;
 
@@ -71,11 +80,14 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ── Fetch full user profile ───────────────────────────────────────────────
-  Future<void> fetchMe() async {
+  // ── Fetch full profile — GET /api/users/regular ─────────────────────────
+  Future<void> fetchMe({String? userId, String? deptId}) async {
     _setState(UserState.loading);
     try {
-      _user = await _userServices.getUser();
+      _user = await _userServices.getUser(
+        userId: userId ?? _user?.id,
+        deptId: deptId ?? _user?.defaultDept,
+      );
       _setState(UserState.success);
     } on ApiException catch (e) {
       _errorMessage = e.message;
@@ -86,8 +98,7 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
-  // ── Update profile ────────────────────────────────────────────────────────
-  /// Calls PATCH /api/users/profile and merges the returned user into state.
+  // ── Update profile — PATCH /api/users/profile ───────────────────────────
   /// Returns `true` on success, `false` on failure.
   /// Uses a separate `_updating` flag so the rest of the UI is unaffected.
   Future<bool> updateProfile(UserProfileUpdateData data) async {
@@ -123,8 +134,25 @@ class UserProvider extends ChangeNotifier {
     }
   }
 
+  // Lazily fetch and store static geography data once per application session lifecycle
+  Future<void> loadLocationSettings(BuildContext context) async {
+    if (_countriesCache.isNotEmpty) return;
+
+    _loadingLocationData = true;
+    notifyListeners();
+
+    try {
+      _countriesCache = await _userServices.fetchCountries();
+    } catch (e) {
+      debugPrint("❌ ProfileProvider Location Loading Error: $e");
+    } finally {
+      _loadingLocationData = false;
+      notifyListeners();
+    }
+  }
+
   // ── Clear (logout) ────────────────────────────────────────────────────────
-  void clearUser() {
+  void clear() {
     _user         = null;
     _state        = UserState.idle;
     _errorMessage = null;

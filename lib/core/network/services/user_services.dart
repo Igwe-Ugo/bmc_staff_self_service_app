@@ -8,24 +8,47 @@ import '../models/user_model.dart';
 class UserServices {
   final Dio _dio = ApiClient.instance.dio;
 
-  // ── GET /users/me ─────────────────────────────────────────────────────────
-  Future<UserModel> getUser() async {
+  // ── GET /api/users/regular ────────────────────────────────────────────────
+  /// search params: userId, deptId
+  /// Used to fetch the current (or any) user's full profile record.
+  Future<UserModel> getUser({String? userId, String? deptId}) async {
     try {
-      final response = await _dio.get(ApiEndpoints.userProfile);
-      final payload  = _unwrap(response.data);
+      final params = <String, dynamic>{};
+      if (userId != null) params['userId'] = userId;
+      if (deptId != null) params['deptId'] = deptId;
+
+      final response = await _dio.get(
+        ApiEndpoints.usersRegular,
+        queryParameters: params.isNotEmpty ? params : null,
+      );
+
+      debugPrint('📡 GET /users/regular: ${response.statusCode}');
+      final payload = _unwrap(response.data);
+
+      // Some backends may return a list (e.g. matching by deptId only) —
+      // take the first match in that case.
+      if (payload is List) {
+        if (payload.isEmpty) {
+          throw ApiException(message: 'User not found.', statusCode: 404);
+        }
+        return UserModel.fromJson(payload.first as Map<String, dynamic>);
+      }
+
       return UserModel.fromJson(payload as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('❌ GET USER ERROR: ${e.response?.data}');
-      throw e.error as ApiException;
+      final msg = _extractMessage(e.response?.data) ?? 'Failed to load profile.';
+      throw ApiException(message: msg, statusCode: e.response?.statusCode);
     }
   }
 
   // ── PATCH /api/users/profile ──────────────────────────────────────────────
+  /// { id, avatar, address, city, telno, state, country, password }
   /// Updates only the fields provided. Sends only non-null values so existing
   /// data is never accidentally overwritten with blanks.
   Future<UserModel> updateProfile(UserProfileUpdateData data) async {
     final body = data.toJson();
-    if (body.isEmpty) {
+    if (body.length <= 1) { // only 'id' present — nothing to update
       throw ApiException(message: 'No changes to save.', statusCode: null);
     }
 
@@ -40,9 +63,24 @@ class UserServices {
       return UserModel.fromJson(payload as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('❌ UPDATE PROFILE ERROR: ${e.response?.data}');
-      // Extract a meaningful message from the response body
       final msg = _extractMessage(e.response?.data) ?? e.message ?? 'Update failed.';
       throw ApiException(message: msg, statusCode: e.response?.statusCode);
+    }
+  }
+
+  /// Returns list of country names sorted A-Z.
+  /// Uses countriesnow.space — returns { data: [{ country, iso2, states:[{name}] }] }
+  Future<List<Country>> fetchCountries() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.countries_states);
+      final list = (response.data['data'] as List<dynamic>);
+      return list
+          .map((c) => Country.fromJson(c as Map<String, dynamic>))
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+    } catch (e) {
+      debugPrint("❌ GeoService Error: $e");
+      rethrow;
     }
   }
 

@@ -122,7 +122,7 @@ class AuthProvider extends ChangeNotifier {
       if (e.statusCode == 401) {
         // Token expired AND refresh failed — clear and force login
         await SecureStorage.instance.clearAll();
-        userProvider.clearUser();
+        userProvider.clear();
         _state = AuthState.idle;
       }
     }
