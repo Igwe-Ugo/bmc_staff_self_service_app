@@ -67,7 +67,7 @@ class _CombinedCarouselCalendarState extends State<CombinedCarouselCalendar> {
 
             // 2. Carousel Window Containment
             SizedBox(
-              height: 350, // Expanded height allowance for calendar rows + trailing status labels
+              height: 400, // Expanded height allowance for calendar rows + trailing status labels
               child: PageView(
                 controller: _pageController,
                 onPageChanged: (index) {
@@ -198,9 +198,33 @@ class _CombinedCarouselCalendarState extends State<CombinedCarouselCalendar> {
                 return !date.isBefore(DateTime(start.year, start.month, start.day)) &&
                     !date.isAfter(DateTime(end.year, end.month, end.day));
               });
-
               if (matchedLeave) {
-                chips.add(_buildCellChip(label: 'Leave', textCol: Colors.white, bgCol: Colors.orange.shade700));
+                final matchingLeave = leaveRequests.firstWhere(
+                      (leave) {
+                    if (leave.status != HrLeaveRequestStatus.approved) return false;
+                    final start = DateTime.tryParse(leave.startDate) ?? DateTime.now();
+                    final end = DateTime.tryParse(leave.endDate) ?? DateTime.now();
+                    return !date.isBefore(DateTime(start.year, start.month, start.day)) &&
+                        !date.isAfter(DateTime(end.year, end.month, end.day));
+                  },
+                  orElse: () => leaveRequests.firstWhere(
+                        (l) => l.status == HrLeaveRequestStatus.approved,
+                    orElse: () => HrLeaveRequest(
+                      id: '',
+                      personnelId: '',
+                      leaveType: '',
+                      startDate: '',
+                      endDate: '',
+                      totalDays: 0,
+                      status: HrLeaveRequestStatus.approved,
+                      createdBy: '',
+                      createdAt: '',
+                    ),
+                  ),
+                );
+
+                final leaveColor = matchingLeave.status.color;
+                chips.add(_buildCellChip(label: 'Leave', textCol: Colors.white, bgCol: leaveColor));
               }
 
               // 2. Rota or Availability Check
@@ -208,7 +232,7 @@ class _CombinedCarouselCalendarState extends State<CombinedCarouselCalendar> {
                 final dayShifts = rotaEvents.where((e) => isSameDay(e.date, date));
                 if (dayShifts.isNotEmpty) {
                   final shift = dayShifts.first;
-                  chips.add(_buildCellChip(label: shift.type.label, textCol: shift.type.color, bgCol: shift.type.color));
+                  chips.add(_buildCellChip(label: shift.type.label, textCol: shift.type.color, bgCol: shift.type.color.withOpacity(0.1)));
                 }
               } else {
                 final dayAvailabilities = availabilitySlots.where((s) => isSameDay(s.date, date));
@@ -308,7 +332,7 @@ class _CombinedCarouselCalendarState extends State<CombinedCarouselCalendar> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (activeLeaves.isNotEmpty) ...[
-              const Text('Leaves', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.orange)),
+              Text('Leaves', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: activeLeaves.first.status.color)),
               ...activeLeaves.map((l) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Text('• ${l.leaveType.toUpperCase()} Leave (Approved)', style: const TextStyle(fontSize: 13)),
@@ -322,7 +346,7 @@ class _CombinedCarouselCalendarState extends State<CombinedCarouselCalendar> {
                 dense: true,
                 leading: CircleAvatar(radius: 6, backgroundColor: s.type.color),
                 title: Text(s.type.label, style: TextStyle(fontWeight: FontWeight.bold, color: s.type.color)),
-                subtitle: Text('${s.ward ?? 'Assigned Shift'} • ${s.endTime.isNotEmpty ? s.endTime : s.startTime}'),
+                subtitle: Text('${s.ward} • ${s.endTime.isNotEmpty ? s.endTime : s.startTime}'),
               )),
             ],
             if (!isCurrentMonth && activeAvailabilities.isNotEmpty) ...[

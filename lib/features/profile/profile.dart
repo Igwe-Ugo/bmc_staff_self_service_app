@@ -213,6 +213,7 @@ class _ProfileState extends State<Profile> {
 
     // ── Guard: id must be present ─────────────────────────────────────────
     debugPrint('💾 Saving profile. userId = "$userId"');
+    debugPrint('💾 user object: ${userProvider.user?.toJson()}');
     if (userId.isEmpty) {
       showMessage(
         'Unable to identify your account. Please log out and log in again.',
@@ -470,7 +471,7 @@ class _ProfileState extends State<Profile> {
                   const SizedBox(height: 8),
                   _customField(
                     controller: _phoneCtrl,
-                    hint: 'e.g. +234 800 000 0000',
+                    hint: user?.telno ?? 'e.g. +234 800 000 0000',
                     keyboardType: TextInputType.phone,
                   ),
 
@@ -480,7 +481,7 @@ class _ProfileState extends State<Profile> {
                   const SizedBox(height: 8),
                   _customField(
                     controller: _addressCtrl,
-                    hint: 'Street address',
+                    hint: user?.address ?? 'Street address',
                   ),
 
                   const SizedBox(height: 18),
@@ -518,7 +519,7 @@ class _ProfileState extends State<Profile> {
                   const SizedBox(height: 8),
                   _customField(
                     controller: _cityCtrl,
-                    hint: 'City / Town',
+                    hint: user?.city ?? 'City / Town',
                   ),
 
                   const SizedBox(height: 24),

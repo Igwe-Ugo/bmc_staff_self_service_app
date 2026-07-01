@@ -44,7 +44,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
   bool _isCurrentMonthOpen(AvailabilityProvider provider, DateTime targetDay) {
     if (!provider.hasWindow) return false;
     final windowMonthKey = provider.windowMonthKey; // Use the new getter
-    final targetMonthKey = "${targetDay.year}-${targetDay.month.toString().padLeft(2, '0')}";
+    final targetMonthKey = "${targetDay.year}-${targetDay.month.toString().padLeft(2, '0')}-${targetDay.day.toString()}";
     return windowMonthKey == targetMonthKey;
   }
 
@@ -483,6 +483,7 @@ class _AvailabilityScreenState extends State<AvailabilityScreen> {
       context: context,
       builder: (ctx) {
         return AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
           title: Row(

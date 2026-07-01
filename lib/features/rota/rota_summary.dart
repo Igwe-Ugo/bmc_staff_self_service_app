@@ -99,7 +99,7 @@ class RotaSummary extends StatelessWidget {
             ),
             if (hasMore)
               GestureDetector(
-                onTap: () => GoRouter.of(context).push(BMCRouter.rotaPath),
+                onTap: () => GoRouter.of(context).pushReplacement(BMCRouter.rotaPath),
                 child: Row(
                   children: [
                     Text(
@@ -153,9 +153,10 @@ class RotaSummary extends StatelessWidget {
               children: displayShifts.map((event) {
                 final baseColor = event.type.color;
                 return Container(
-                  width: 250, // Fixed width for each card
+                  width: 160, // Fixed width for each card
+                  height: 170,
                   margin: const EdgeInsets.only(right: 10),
-                  padding: const EdgeInsets.all(14),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 0),
                   decoration: BoxDecoration(
                     color: baseColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(14),
@@ -174,7 +175,7 @@ class RotaSummary extends StatelessWidget {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.7),
+                              color: Theme.of(context).scaffoldBackgroundColor,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Column(
@@ -203,6 +204,7 @@ class RotaSummary extends StatelessWidget {
                           // Shift details
                           Expanded(
                             child: Column(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
@@ -220,10 +222,11 @@ class RotaSummary extends StatelessWidget {
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
-                                        userProvider.deptName,
+                                        event.ward,
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w500,
+                                          color: baseColor.withOpacity(0.7),
                                         ),
                                         overflow: TextOverflow.ellipsis,
                                       ),
@@ -232,9 +235,7 @@ class RotaSummary extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  event.endTime.isNotEmpty
-                                      ? _convertTo12Hour(event.endTime)
-                                      : _convertTo12Hour(event.startTime),
+                                  "${_convertTo12Hour(event.endTime)} - ${_convertTo12Hour(event.startTime)}",
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
@@ -252,19 +253,21 @@ class RotaSummary extends StatelessWidget {
               }).toList(),
             ),
           ),
+        const SizedBox(height: 12),
 
         // "View More" button placed right after the 7 shifts list if items remain
         if (hasMore) ...[
           const SizedBox(height: 4),
           SizedBox(
             width: double.infinity,
+            height: 40,
             child: TextButton(
-              onPressed: () => context.push('/rota'),
+              onPressed: () => context.pushReplacement(BMCRouter.rotaPath),
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: Colors.grey.shade200),
+                  side: BorderSide(color: Theme.of(context).primaryColor),
                 ),
                 backgroundColor: Theme.of(context).cardColor,
               ),
