@@ -492,15 +492,23 @@ class _RotaScreenState extends State<RotaScreen> {
                         child: ElevatedButton.icon(
                           onPressed: () async {
                             Navigator.pop(context);
-                            final success = await rotaProvider.cancelSwapRequest(event.swapId);
+
+                            final result = await rotaProvider.cancelSwapRequest(event.swapId);
 
                             if (context.mounted) {
-                              showMessage(
-                                success ? "Swap request successfully deleted" : "Failed to delete swap request",
-                                context,
-                                status: success ? MessageStatus.success : MessageStatus.error,
-                              );
-                              if (success) {
+                              switch (result) {
+                                case CancelSwapResult.success:
+                                  showMessage("Swap request successfully deleted", context, status: MessageStatus.success);
+                                  break;
+                                case CancelSwapResult.alreadyResolved:
+                                  showMessage("This request was already handled — refreshing your rota.", context, status: MessageStatus.info);
+                                  break;
+                                case CancelSwapResult.failed:
+                                  showMessage("Failed to delete swap request", context, status: MessageStatus.error);
+                                  break;
+                              }
+
+                              if (result != CancelSwapResult.failed) {
                                 final userProvider = context.read<UserProvider>();
                                 await rotaProvider.refreshRotaData(
                                   context,

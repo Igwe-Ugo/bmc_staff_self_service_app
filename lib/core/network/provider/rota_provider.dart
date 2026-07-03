@@ -9,6 +9,7 @@ import '../services/widget.dart';
 enum RotaLoadState { idle, loading, loaded, error }
 enum SwapSubmitState { idle, submitting, success, error }
 enum RotaFilter { allStatus, daily, weekly, monthly, yearly }
+enum CancelSwapResult { success, alreadyResolved, failed }
 
 class RotaProvider extends ChangeNotifier {
   final RotaService _service = RotaService();
@@ -281,13 +282,16 @@ class RotaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> cancelSwapRequest(String? swapId) async {
-    if (swapId == null || swapId.isEmpty) return false;
+  Future<CancelSwapResult> cancelSwapRequest(String? swapId) async {
+    if (swapId == null || swapId.isEmpty) return CancelSwapResult.failed;
     try {
-      return await _service.deleteSwapRequest(swapId);
+      final ok = await _service.deleteSwapRequest(swapId);
+      return ok ? CancelSwapResult.success : CancelSwapResult.failed;
+    } on SwapAlreadyResolvedException {
+      return CancelSwapResult.alreadyResolved;
     } catch (e) {
       debugPrint("❌ FAILED TO DELETE SWAP REQUEST: $e");
-      return false;
+      return CancelSwapResult.failed;
     }
   }
 }

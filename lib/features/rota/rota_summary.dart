@@ -39,7 +39,6 @@ class RotaSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rotaProvider = context.watch<RotaProvider>();
-    final userProvider = context.watch<UserProvider>();
     final now = DateTime.now();
 
     // Filter to isolate ONLY the current logged-in user's shifts for this current month
@@ -210,7 +209,7 @@ class RotaSummary extends StatelessWidget {
                                 Text(
                                   event.type.label,
                                   style: TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 17,
                                     fontWeight: FontWeight.bold,
                                     color: baseColor,
                                   ),

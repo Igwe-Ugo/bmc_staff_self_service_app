@@ -6,6 +6,7 @@ import 'package:bmc_app/features/common/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 
 class Profile extends StatefulWidget {
@@ -334,11 +335,14 @@ class _ProfileState extends State<Profile> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                               ),
                               child: p.isUpdating
-                                  ? const SizedBox(
+                                  ? SizedBox(
                                 width: 22,
                                 height: 22,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
-                              )
+                                child: LoadingAnimationWidget.staggeredDotsWave(
+                                  color: Colors.white,
+                                  size: 20,
+                                  ),
+                                )
                                   : const Text(
                                 'Save Changes',
                                 style: TextStyle(

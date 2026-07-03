@@ -134,6 +134,11 @@ class RotaService {
       debugPrint('📡 SWAP REQUEST DELETED: ${response.statusCode}');
       return response.statusCode == 200 || response.statusCode == 204;
     } on DioException catch (e) {
+      if (e.response?.statusCode == 404) {
+        // Already approved/rejected/removed server-side since we last fetched it
+        debugPrint('⚠️ Swap request already gone server-side: $swapId');
+        throw SwapAlreadyResolvedException();
+      }
       debugPrint('❌ SWAP DELETE ERROR: ${e.response?.data}');
       throw ApiException(
         message: _extractMessage(e.response?.data) ??
@@ -245,3 +250,5 @@ class RotaService {
     return data.toString();
   }
 }
+
+class SwapAlreadyResolvedException implements Exception {}
