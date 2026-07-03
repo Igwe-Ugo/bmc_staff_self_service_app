@@ -219,17 +219,12 @@ class _SwapShiftSheetState extends State<SwapShiftSheet> {
                     ],
                   ),
                   child: _filteredStaff.isEmpty
-                      ? Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Iconsax.user_minus),
-                          const SizedBox(height: 7),
-                          Text(
-                          'No staff found',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey),
-                                              ),
-                        ],
+                      ? Center(
+                        child: Text(
+                        'No staff found',
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey),
+                                            ),
                       )
                       : ListView.builder(
                     shrinkWrap: true,
@@ -262,7 +257,7 @@ class _SwapShiftSheetState extends State<SwapShiftSheet> {
                           if (_selectedMyShift != null) {
                             rotaProvider.loadPersonnelShifts(
                               personnelId: staff.id,
-                              periodId:    _selectedMyShift!.periodId,
+                              periodId:    _selectedMyShift!.swapId,
                             );
                           }
                         },

@@ -50,6 +50,9 @@ class ShiftEventTile extends StatelessWidget {
     showDialog(
       context: context,
       builder: (BuildContext ctx) {
+        final isPending = event.swapStatus == HrSwapStatus.pending;
+        final isCancelled = event.swapStatus == HrSwapStatus.cancelled ||
+            event.swapStatus == HrSwapStatus.rejected;
         return Dialog(
           backgroundColor: Theme.of(context).cardColor,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -104,6 +107,72 @@ class ShiftEventTile extends StatelessWidget {
                     child: const Text('Dismiss', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
                   ),
                 ),
+                // Swap Status Alert Badge inside the Dialog
+                if (isPending)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF0F3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFFB3C1)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, color: Color(0xFFDA1E28), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Pending Swap Approval",
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFFDA1E28),
+                                  fontSize: 13,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "You requested to trade this shift. Awaiting response.",
+                                style: TextStyle(
+                                  color: Colors.grey.shade700,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                if (isCancelled)
+                  Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.cancel_outlined, color: Colors.grey.shade600, size: 20),
+                        const SizedBox(width: 10),
+                        Text(
+                          "This swap request was cancelled/rejected",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),

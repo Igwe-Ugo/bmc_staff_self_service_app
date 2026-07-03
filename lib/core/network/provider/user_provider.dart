@@ -41,13 +41,6 @@ class UserProvider extends ChangeNotifier {
   String get deptName   => _user?.deptName   ?? '';
   bool   get isActiveUser => _user?.isActive ?? _user?.active ?? false;
 
-  // Place these inside your state management Provider class
-  List<Country> _countriesCache = [];
-  bool _loadingLocationData = false;
-
-  List<Country> get countriesCache => _countriesCache;
-  bool get loadingLocationData => _loadingLocationData;
-
   bool hasPrivilege(String privilege) => _user?.hasPrivilege(privilege) ?? false;
 
   // ── Set from Login ────────────────────────────────────────────────────────
@@ -131,23 +124,6 @@ class UserProvider extends ChangeNotifier {
       _updating     = false;
       notifyListeners();
       return false;
-    }
-  }
-
-  // Lazily fetch and store static geography data once per application session lifecycle
-  Future<void> loadLocationSettings(BuildContext context) async {
-    if (_countriesCache.isNotEmpty) return;
-
-    _loadingLocationData = true;
-    notifyListeners();
-
-    try {
-      _countriesCache = await _userServices.fetchCountries();
-    } catch (e) {
-      debugPrint("❌ ProfileProvider Location Loading Error: $e");
-    } finally {
-      _loadingLocationData = false;
-      notifyListeners();
     }
   }
 

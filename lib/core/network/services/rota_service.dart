@@ -49,13 +49,66 @@ class RotaService {
     }
   }
 
+  // ── GET /api/hr/rota/swaps ──────────────────────────────────────────────────
+  // ── GET /api/hr/rota/swaps ──────────────────────────────────────────────────
+  Future<List<HrMyShift>> fetchSwapRequests({
+    String? periodId,
+    String? personnelId,
+    String? status,
+  }) async {
+    try {
+      final Map<String, dynamic> queryParams = {};
+      if (periodId != null && periodId.isNotEmpty) queryParams['periodId'] = periodId;
+      if (personnelId != null && personnelId.isNotEmpty) queryParams['personnelId'] = personnelId;
+      if (status != null && status.isNotEmpty) queryParams['status'] = status;
+
+      final response = await _dio.get(
+        ApiEndpoints.displayRotaSwaps,
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+      );
+
+      final dynamic responseData = response.data;
+      final List<dynamic> rawList = (responseData is Map && responseData.containsKey('data'))
+          ? responseData['data']
+          : [];
+
+      // Map the real JSON properties safely onto the HrMyShift schema shape
+      return rawList.map((e) {
+        final jsonMap = e as Map<String, dynamic>;
+        return HrMyShift(
+          assignmentId:     (jsonMap['id'] ?? '').toString(),
+          shiftId:          (jsonMap['fromAssignmentId'] ?? '').toString(), // Use the swap ID here
+          date:             DateTime.parse((jsonMap['fromShiftDate'] as String? ?? DateTime.now().toIso8601String())),
+          shiftType:        ShiftTypeExt.fromString(jsonMap['fromShiftType'] as String? ?? 'DAY'),
+          startTime:        jsonMap['fromStartTime'] as String? ?? '',
+          endTime:          jsonMap['fromEndTime'] as String? ?? '',
+          requiredRole:     jsonMap['requiredRole']      as String? ?? '',
+          assignmentStatus: HrAssignmentStatus.assigned,
+          periodId:         (jsonMap['periodId'] ?? '').toString(),
+          periodStatus:     HrRotaPeriodStatus.published,
+          deptId:           (jsonMap['deptId'] ?? '').toString(),
+          deptName:         jsonMap['deptName'] as String?,
+          rotaType:         jsonMap['rotaType']      as String? ?? '',
+          swapId:           (jsonMap['id'] ?? '').toString(),
+          swapStatus:       HrSwapStatusExt.fromString(jsonMap['status'] as String? ?? 'PENDING'),
+        );
+      }).toList();
+    } on DioException catch (e) {
+      debugPrint('❌ FETCH SWAPS EXCEPTION: ${e.response?.data}');
+      throw ApiException(
+        message: 'Failed to fetch swap records.',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
   // ── 2. POST /api/hr/rota/swaps ────────────────────────────────────────────
   /// { fromAssignmentId, toAssignmentId, toPersonnelId, reason }
   /// Goes to admin for approval — returns the created (pending) swap record.
   Future<HrShiftSwap> createSwapRequest(HrSwapRequestPayload payload) async {
     try {
       final response = await _dio.post(
-        ApiEndpoints.rotaSwaps,
+        ApiEndpoints.requestRotaSwaps,
         data: payload.toJson(),
       );
 
@@ -72,17 +125,14 @@ class RotaService {
     }
   }
 
-  // ── 2. DELETE /api/hr/rota/swaps ────────────────────────────────────────────
-  Future<HrShiftSwap> deleteSwapRequest(String swapId) async {
+  // ── DELETE /api/hr/rota/swaps/:id ────────────────────────────────────────
+  Future<bool> deleteSwapRequest(String swapId) async {
     try {
       final response = await _dio.delete(
-        ApiEndpoints.rotaSwaps,
-        data: swapId,
+        '${ApiEndpoints.requestRotaSwaps}/$swapId',
       );
-
       debugPrint('📡 SWAP REQUEST DELETED: ${response.statusCode}');
-      final data = _unwrap(response.data);
-      return HrShiftSwap.fromJson(data as Map<String, dynamic>);
+      return response.statusCode == 200 || response.statusCode == 204;
     } on DioException catch (e) {
       debugPrint('❌ SWAP DELETE ERROR: ${e.response?.data}');
       throw ApiException(

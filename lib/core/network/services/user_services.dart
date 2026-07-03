@@ -68,22 +68,6 @@ class UserServices {
     }
   }
 
-  /// Returns list of country names sorted A-Z.
-  /// Uses countriesnow.space — returns { data: [{ country, iso2, states:[{name}] }] }
-  Future<List<Country>> fetchCountries() async {
-    try {
-      final response = await _dio.get(ApiEndpoints.countries_states);
-      final list = (response.data['data'] as List<dynamic>);
-      return list
-          .map((c) => Country.fromJson(c as Map<String, dynamic>))
-          .toList()
-        ..sort((a, b) => a.name.compareTo(b.name));
-    } catch (e) {
-      debugPrint("❌ GeoService Error: $e");
-      rethrow;
-    }
-  }
-
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   dynamic _unwrap(dynamic data) {

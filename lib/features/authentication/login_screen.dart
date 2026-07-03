@@ -5,6 +5,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 import '../../core/network/api_client/widget.dart';
 import '../../core/network/provider/widget.dart';
+import '../../core/network/services/widget.dart';
 import '../common/widget.dart'; // adjust path
 
 class LoginScreen extends StatefulWidget {
@@ -204,6 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final authProvider = context.read<AuthProvider>();
     final userProvider = context.read<UserProvider>();
+    ProfileService.preload();
     final success = await authProvider.login(username, password, userProvider);
 
     if (success) {

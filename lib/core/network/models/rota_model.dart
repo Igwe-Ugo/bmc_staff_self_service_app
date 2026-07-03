@@ -250,8 +250,8 @@ class RotaEvent {
   final String             role;
   final String             ward;          // deptName fallback
   final String             staffName;
-  final HrAssignmentStatus status;
-  final String             periodId;
+  final HrSwapStatus? swapStatus;
+  final String             swapId;
 
   const RotaEvent({
     required this.id,
@@ -263,8 +263,8 @@ class RotaEvent {
     required this.role,
     required this.ward,
     required this.staffName,
-    required this.status,
-    required this.periodId,
+    required this.swapStatus,
+    required this.swapId,
   });
 
   String get timeRange => '$startTime - $endTime';
@@ -280,8 +280,8 @@ class RotaEvent {
       role:      s.requiredRole,
       ward:      s.deptName ?? '',
       staffName: staffName,
-      status:    s.assignmentStatus,
-      periodId:  s.periodId,
+      swapStatus:    s.swapStatus,
+      swapId:  s.periodId,
     );
   }
 }

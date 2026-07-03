@@ -34,16 +34,15 @@ class ApiEndpoints {
 
   // ── Rota ──────────────────────────────────────────────────────────────────────
   static const String rotaMyShifts        = '/hr/rota/my-shifts';
-  static const String rotaSwaps           = '/hr/rota/swaps';
+  static const String requestRotaSwaps    = '/hr/rota/swaps';
+  static const String displayRotaSwaps = '/hr/rota/swaps';
   static const String personnel           = '/hr/personnel';
+  static const String deleteSwapRequest = '/hr/swaps';
   static const String rotaPersonnelShifts = '/hr/rota/personnel-shifts';
 
   // ── Profile ──────────────────────────────────────────────────────────────────────
   static const String usersRegular = '/users/regular';
   static const String updateProfile = '/users/profile';
-
-  // ── Countries/State API ──────────────────────────────────────────────────────────────────────
-  static const String countries_states = 'https://countriesnow.space/api/v0.1/countries/states';
 
   static String fill(String path, Map<String, String> params) {
     var result = path;

@@ -3,6 +3,7 @@
 import 'package:bmc_app/features/common/show_message.dart';
 import 'package:bmc_app/features/rota/widget.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../core/network/models/widget.dart';
@@ -25,6 +26,7 @@ class _RotaScreenState extends State<RotaScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userProvider = context.read<UserProvider>();
+      final rotaProvider = context.read<RotaProvider>();
       context.read<RotaProvider>().loadShiftsForMonth(
         context,
         _focusedDay,
@@ -32,6 +34,7 @@ class _RotaScreenState extends State<RotaScreen> {
             ? userProvider.displayName
             : 'You',
       );
+      rotaProvider.loadSwapRequests(personnelId: userProvider.user?.personnelId);
     });
   }
 
@@ -74,176 +77,246 @@ class _RotaScreenState extends State<RotaScreen> {
         backgroundColor: Colors.transparent,
         actions: [
           // ── Swap shift quick-access button ───────────────────────────────────
-          IconButton(
-            icon: const Icon(Icons.swap_horiz_rounded),
-            tooltip: 'Request shift swap',
-            onPressed: rotaProvider.rotaEvents.isEmpty
+          GestureDetector(
+            onTap: rotaProvider.allCalendarEvents.isEmpty
                 ? null
                 : () => _openSwapShiftWorkflow(rotaProvider),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(right: 16),
+              height: 40,
+              decoration: BoxDecoration(
+                color: Theme.of(context).primaryColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    'Request shift swap',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      fontFamily: 'Lexend',
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Icon(
+                    Icons.swap_horiz_rounded,
+                    color: Colors.white,
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
-                child: YearlySummaryCard(counts: _yearlyCounts),
-              ),
-              const SizedBox(height: 12),
+      body: RefreshIndicator(
+        onRefresh: () {
+          final userProvider = context.read<UserProvider>();
+          return rotaProvider.refreshRotaData(
+            context,
+            _focusedDay,
+            staffName: userProvider.displayName.isNotEmpty ? userProvider.displayName : 'You',
+            personnelId: userProvider.user?.personnelId,
+          );
+        },
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
+              child: YearlySummaryCard(counts: _yearlyCounts),
+            ),
+            const SizedBox(height: 12),
 
-              // Expanded forces the calendar container to fill remaining space
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 100.0),
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 12, horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final calendarGridHeight = constraints.maxHeight * 0.88;
-                      final dynamicRowHeight = (calendarGridHeight > 0)
-                          ? (calendarGridHeight / 6.8)
-                          : 52.0;
+            // Expanded forces the calendar container to fill remaining space
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 100.0),
+                padding: const EdgeInsets.symmetric(
+                    vertical: 12, horizontal: 10),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final calendarGridHeight = constraints.maxHeight * 0.88;
+                    final dynamicRowHeight = (calendarGridHeight > 0)
+                        ? (calendarGridHeight / 6.8)
+                        : 52.0;
 
-                      return TableCalendar(
-                        firstDay: DateTime.utc(2020, 1, 1),
-                        lastDay:  DateTime.utc(2030, 12, 31),
-                        focusedDay: _focusedDay,
-                        calendarFormat: CalendarFormat.month,
-                        rowHeight: dynamicRowHeight,
-                        daysOfWeekHeight: dynamicRowHeight * 0.8,
-                        headerStyle: const HeaderStyle(
-                          formatButtonVisible: false,
-                          titleCentered: false,
-                        ),
-                        selectedDayPredicate: (day) =>
-                            isSameDay(_selectedDay, day),
-                        onDaySelected: (selectedDay, focusedDay) {
-                          setState(() {
-                            _selectedDay  = selectedDay;
-                            _focusedDay   = focusedDay;
-                          });
+                    return TableCalendar(
+                      firstDay: DateTime.utc(2020, 1, 1),
+                      lastDay:  DateTime.utc(2030, 12, 31),
+                      focusedDay: _focusedDay,
+                      calendarFormat: CalendarFormat.month,
+                      rowHeight: dynamicRowHeight,
+                      daysOfWeekHeight: dynamicRowHeight * 0.8,
+                      headerStyle: const HeaderStyle(
+                        formatButtonVisible: false,
+                        titleCentered: false,
+                      ),
+                      selectedDayPredicate: (day) =>
+                          isSameDay(_selectedDay, day),
+                      onDaySelected: (selectedDay, focusedDay) {
+                        setState(() {
+                          _selectedDay  = selectedDay;
+                          _focusedDay   = focusedDay;
+                        });
 
-                          final hasShift = rotaProvider.rotaEvents
-                              .any((e) => isSameDay(e.date, selectedDay));
-                          final matchedEvent = rotaProvider.rotaEvents
-                              .cast<RotaEvent?>()
-                              .firstWhere(
-                                (e) =>
-                            e != null && isSameDay(e.date, selectedDay),
-                            orElse: () => null,
-                          );
-                          if (hasShift && matchedEvent != null) {
-                            _showShiftDetailsSheet(context, matchedEvent);
-                          }
-                        },
-                        onPageChanged: (focusedDay) {
-                          _focusedDay = focusedDay;
-                          final userProvider = context.read<UserProvider>();
-                          rotaProvider.loadShiftsForMonth(
-                            context,
-                            focusedDay,
-                            staffName: userProvider.displayName.isNotEmpty
-                                ? userProvider.displayName
-                                : 'You',
-                          );
-                        },
+                        final hasShift = rotaProvider.allCalendarEvents
+                            .any((e) => isSameDay(e.date, selectedDay));
+                        final matchedEvent = rotaProvider.allCalendarEvents
+                            .cast<RotaEvent?>()
+                            .firstWhere(
+                              (e) =>
+                          e != null && isSameDay(e.date, selectedDay),
+                          orElse: () => null,
+                        );
+                        if (hasShift && matchedEvent != null) {
+                          _showShiftDetailsSheet(context, matchedEvent);
+                        }
+                      },
+                      onPageChanged: (focusedDay) {
+                        _focusedDay = focusedDay;
+                        final userProvider = context.read<UserProvider>();
+                        rotaProvider.loadShiftsForMonth(
+                          context,
+                          focusedDay,
+                          staffName: userProvider.displayName.isNotEmpty
+                              ? userProvider.displayName
+                              : 'You',
+                        );
+                      },
+                        // ─── Update inside TableCalendar -> calendarBuilders in rota_screen.dart ───
                         calendarBuilders: CalendarBuilders(
-                          prioritizedBuilder: (context, date, _focusedDay){
-                            final match = rotaProvider.rotaEvents.cast<RotaEvent?>().firstWhere(
-                                    (e) => e != null && isSameDay(e.date, date),
-                              orElse: () => null
+                          prioritizedBuilder: (context, date, _focusedDay) {
+                            // 1. Find if there's a swap event for this date (from allCalendarEvents)
+                            final matchingSwap = rotaProvider.allCalendarEvents.cast<RotaEvent?>().firstWhere(
+                                  (e) => e != null && isSameDay(e.date, date),
+                              orElse: () => null,
                             );
-                            if (match != null) {
-                              bool isPendingSwap = match.status == HrSwapStatus.pending;
-                              bool isApprovedSwap = match.status == HrSwapStatus.approved;
-                              bool isRejectedSwap = match.status == HrSwapStatus.rejected;
-                              final isCancelledSwap = match.status == HrSwapStatus.cancelled;
-                              bool isSelected = isSameDay(_selectedDay, date);
-                              bool isToday = isSameDay(DateTime.now(), date);
 
-                              Color? cellBgColor = match.type.color.withOpacity(0.12);
-                              BoxBorder? cellBorder;
-                              Color textColor = match.type.color;
+                            // 2. Find if there's a primary shift for this date
+                            final primaryShift = rotaProvider.rotaEvents.cast<RotaEvent?>().firstWhere(
+                                  (e) => e != null && isSameDay(e.date, date),
+                              orElse: () => null,
+                            );
 
-                              if (isPendingSwap){
-                                cellBgColor = Colors.orange.withOpacity(0.15);
-                                cellBorder = Border.all(color: Colors.orange, width: 1.5);
-                                textColor = Colors.orange.shade800;
-                              } else if (isApprovedSwap){
-                                cellBorder = Border.all(color: Colors.green, width: 1.2);
-                              } else if (isRejectedSwap) {
-                                cellBorder = Border.all(color: Colors.red, width: 1.2);
-                              } else if (isCancelledSwap) {
-                                cellBgColor = Colors.grey.shade200;
-                                textColor = Colors.grey.shade500;
-                              } else if (isSelected) {
-                                cellBgColor = Theme.of(context).primaryColor.withOpacity(0.2);
-                                cellBorder = Border.all(color: Theme.of(context).primaryColor, width: 1.5);
-                              }
-                              return Container(
-                                margin: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: cellBgColor,
-                                  border: cellBorder,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                alignment: Alignment.center,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
+                            // If there's no event at all, return the default cell
+                            if (matchingSwap == null && primaryShift == null) {
+                              return null; // Use default cell
+                            }
+
+                            // Swap record takes priority for display if one exists on this date
+                            final isSwapEvent = matchingSwap?.swapStatus != null;
+                            final displayEvent = isSwapEvent ? matchingSwap : primaryShift;
+                            final event = displayEvent!;
+
+                            final swapStatus = event.swapStatus;
+                            bool isPendingSwap   = swapStatus == HrSwapStatus.pending;
+                            bool isApprovedSwap  = swapStatus == HrSwapStatus.approved;
+                            bool isRejectedSwap  = swapStatus == HrSwapStatus.rejected;
+                            bool isCancelledSwap = swapStatus == HrSwapStatus.cancelled;
+                            bool isSelected = isSameDay(_selectedDay, date);
+                            bool isToday = isSameDay(DateTime.now(), date);
+
+                            // Default colors using the event's type
+                            Color cellBgColor = event.type.color.withOpacity(0.12);
+                            Color textColor = event.type.color;
+                            BoxBorder? cellBorder;
+                            String? statusLabel;
+                            Color? statusLabelColor;
+
+                            // Override based on swap status
+                            if (isPendingSwap) {
+                              cellBgColor = const Color(0xFFFFF3E0); // Light orange background
+                              cellBorder = Border.all(color: const Color(0xFFF39C12), width: 2);
+                              textColor = const Color(0xFFE67E22);
+                              statusLabel = 'PENDING';
+                              statusLabelColor = const Color(0xFFF39C12);
+                            } else if (isApprovedSwap) {
+                              cellBgColor = const Color(0xFFE8F5E9); // Light green background
+                              cellBorder = Border.all(color: const Color(0xFF27AE60), width: 1.5);
+                              textColor = const Color(0xFF27AE60);
+                              statusLabel = 'SWAPPED';
+                              statusLabelColor = const Color(0xFF27AE60);
+                            } else if (isRejectedSwap) {
+                              cellBgColor = const Color(0xFFFFEBEE); // Light red background
+                              cellBorder = Border.all(color: const Color(0xFFE74C3C), width: 1.5);
+                              textColor = const Color(0xFFC0392B);
+                              statusLabel = 'REJECTED';
+                              statusLabelColor = const Color(0xFFE74C3C);
+                            } else if (isCancelledSwap) {
+                              cellBgColor = Colors.grey.shade200;
+                              textColor = Colors.grey.shade500;
+                              statusLabel = 'CANCELLED';
+                              statusLabelColor = Colors.grey.shade500;
+                            } else if (isSelected) {
+                              cellBgColor = Theme.of(context).primaryColor.withOpacity(0.2);
+                              cellBorder = Border.all(color: Theme.of(context).primaryColor, width: 1.5);
+                            }
+
+                            // Build the cell
+                            return Container(
+                              margin: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: cellBgColor,
+                                border: cellBorder,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Day number
+                                  Text(
+                                    '${date.day}',
+                                    style: TextStyle(
+                                      fontWeight: (isToday || isSelected) ? FontWeight.bold : FontWeight.normal,
+                                      color: textColor,
+                                      decoration: isCancelledSwap ? TextDecoration.lineThrough : null,
+                                    ),
+                                  ),
+                                  // Status label for swaps
+                                  if (statusLabel != null)
                                     Text(
-                                      '${date.day}',
+                                      statusLabel,
                                       style: TextStyle(
-                                        fontWeight: (isPendingSwap || isToday || isSelected) ? FontWeight.bold : FontWeight.normal,
-                                        color: textColor,
-                                        decoration: isCancelledSwap ? TextDecoration.lineThrough : null
+                                        fontSize: 7,
+                                        fontWeight: FontWeight.bold,
+                                        color: statusLabelColor,
                                       ),
                                     ),
-                                    if (isPendingSwap)
-                                      const Text(
-                                        'PENDING',
-                                        style: TextStyle(
-                                          fontSize: 7,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.orange,
-                                        ),
-                                      )
-                                  ],
-                                ),
-                              );
-                            }
-                            return null;
+                                  // Small dot indicator for regular shifts (non-swap)
+                                  if (!isSwapEvent && primaryShift != null)
+                                    Container(
+                                      width: 4,
+                                      height: 4,
+                                      margin: const EdgeInsets.only(top: 2),
+                                      decoration: BoxDecoration(
+                                        color: primaryShift.type.color,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            );
                           },
+
+                          // We're handling everything in prioritizedBuilder, so return empty
                           markerBuilder: (context, date, events) {
-                            final type = _shiftTypeForDay(date);
-                            final match = rotaProvider.rotaEvents.cast<RotaEvent?>().firstWhere(
-                                (e) => e != null && isSameDay(e.date, date),
-                              orElse: () => null
-                            );
-                            if (type == null || match == null || match.status == HrSwapStatus.pending) return const SizedBox.shrink();
-                            // if approved, match.type will naturally be the updated swapped ShiftType value from the backend
-                            return Container(
-                              decoration: BoxDecoration(
-                                color: match.type.color.withOpacity(0.2),
-                                shape: BoxShape.rectangle,
-                              )
-                            );
+                            return const SizedBox.shrink();
                           },
-                        ),
-                      );
-                    },
-                  ),
+                        )
+                    );
+                  },
                 ),
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -272,16 +345,19 @@ class _RotaScreenState extends State<RotaScreen> {
             final success = await provider.submitSwap(payload);
             if (!mounted) return;
             Navigator.pop(context);
+            if (mounted && success) {
+              await provider.refreshRotaData(
+                context,
+                _focusedDay,
+                staffName: userProvider.displayName.isNotEmpty
+                    ? userProvider.displayName
+                    : 'You',
+                personnelId: userProvider.user?.personnelId,
+              );
+            }
             showMessage(success
                 ? 'Swap request submitted — awaiting admin approval.'
                 : provider.swapError ?? 'Failed to submit swap request.', context, status: MessageStatus.info);
-            if (success){
-              if (!mounted) return;
-              context.read<RotaProvider>().loadShiftsForMonth(
-                context,
-                _focusedDay,
-              );
-            }
             provider.resetSwapState();
           },
         ),
@@ -298,12 +374,12 @@ class _RotaScreenState extends State<RotaScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        final isPending = event.status == HrSwapStatus.pending;
-        final isCancelled = event.status == HrSwapStatus.cancelled ||
-            event.status == HrSwapStatus.rejected;
+        final isPending = event.swapStatus == HrSwapStatus.pending;
+        final isCancelled = event.swapStatus == HrSwapStatus.cancelled ||
+            event.swapStatus == HrSwapStatus.rejected;
 
         return Container(
-          padding: EdgeInsets.fromLTRB(12, 24, 12, MediaQuery.of(context).viewInsets.bottom + 30),
+          padding: EdgeInsets.fromLTRB(12, 24, 12, MediaQuery.of(context).viewInsets.bottom + 100),
           decoration: BoxDecoration(
             color: Theme.of(context).cardColor,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
@@ -334,11 +410,12 @@ class _RotaScreenState extends State<RotaScreen> {
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF0F3),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFFB3C1)),
+                    border: Border.all(color: const Color(0xFFF38403)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline_rounded, color: Color(0xFFDA1E28), size: 20),
+                      const Icon(Icons.info_outline_rounded, color: Color(
+                          0xFFDA241E), size: 20),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
@@ -348,7 +425,7 @@ class _RotaScreenState extends State<RotaScreen> {
                               "Pending Swap Approval",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFDA1E28),
+                                color: Color(0xFFDA241E),
                                 fontSize: 13,
                               ),
                             ),
@@ -401,7 +478,7 @@ class _RotaScreenState extends State<RotaScreen> {
                 userProvider: userProvider,
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 5),
 
               // Action Buttons Structure Base
               Padding(
@@ -414,10 +491,8 @@ class _RotaScreenState extends State<RotaScreen> {
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           onPressed: () async {
-                            Navigator.pop(context); // Dismiss bottom sheet dialog
-
-                            // Triggers request cancel method via swap identifier
-                            final success = await rotaProvider.cancelSwapRequest(event.id);
+                            Navigator.pop(context);
+                            final success = await rotaProvider.cancelSwapRequest(event.swapId);
 
                             if (context.mounted) {
                               showMessage(
@@ -427,15 +502,16 @@ class _RotaScreenState extends State<RotaScreen> {
                               );
                               if (success) {
                                 final userProvider = context.read<UserProvider>();
-                                rotaProvider.loadShiftsForMonth(
+                                await rotaProvider.refreshRotaData(
                                   context,
                                   _focusedDay,
                                   staffName: userProvider.displayName.isNotEmpty ? userProvider.displayName : 'You',
+                                  personnelId: userProvider.user?.personnelId,
                                 );
                               }
                             }
                           },
-                          icon: const Icon(Icons.delete_outline_rounded, size: 18, color: Colors.white),
+                          icon: const Icon(Iconsax.trash, size: 18, color: Colors.white),
                           label: const Text(
                             'Delete Swap Request',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
@@ -445,7 +521,7 @@ class _RotaScreenState extends State<RotaScreen> {
                             foregroundColor: Colors.white,
                             elevation: 0,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 25),
                           ),
                         ),
                       ),
@@ -464,7 +540,7 @@ class _RotaScreenState extends State<RotaScreen> {
                             foregroundColor: Theme.of(context).primaryColor,
                             side: BorderSide(color: Theme.of(context).primaryColor),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 25),
                           ),
                         ),
                       ),

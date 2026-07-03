@@ -2,6 +2,7 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
+import '../../errors/api_exceptions.dart';
 import '../models/widget.dart';
 import '../services/widget.dart';
 
@@ -47,6 +48,24 @@ class RotaProvider extends ChangeNotifier {
   HrShiftSwap?    get lastSwap  => _lastSwap;
   String?         get swapError => _swapError;
 
+  // ── Swap requests lookup state ─────────────────────────────────────────────
+  List<RotaEvent> _swapEvents = [];
+  bool _isLoadingSwaps = false;
+  bool get isLoadingSwaps => _isLoadingSwaps;
+
+  // ── Full refresh — call after any action that can change what's on screen ──
+  Future<void> refreshRotaData(
+      BuildContext context,
+      DateTime month, {
+        String staffName = 'You',
+        String? personnelId,
+      }) async {
+    await Future.wait([
+      refreshShiftsForMonth(context, month, staffName: staffName), // clears cache, refetches
+      loadSwapRequests(personnelId: personnelId),
+    ]);
+  }
+
   // ── 1. Load my shifts for a month ────────────────────────────────────────
 
   Future<void> loadShiftsForMonth(
@@ -80,6 +99,44 @@ class RotaProvider extends ChangeNotifier {
       _loadState    = RotaLoadState.error;
     }
 
+    notifyListeners();
+  }
+
+  // We expose a unified list combining normal shifts and swap records
+  List<RotaEvent> get allCalendarEvents {
+    // Merge standard month shifts with the tracked swap event states
+    final combined = List<RotaEvent>.from(_rotaEvents); // Assuming your normal shifts list is _rotaEvents
+
+    for (var swap in _swapEvents) {
+      // Avoid duplicate assignments if it exists in both lists
+      combined.removeWhere((element) => element.id == swap.id);
+      combined.add(swap);
+    }
+    return combined;
+  }
+
+  Future<void> loadSwapRequests({String? periodId, String? personnelId, String? status}) async {
+    _isLoadingSwaps = true;
+    _swapError = null;
+    notifyListeners();
+
+    try {
+      final shiftsData = await _service.fetchSwapRequests(
+        periodId: periodId,
+        personnelId: personnelId,
+        status: status,
+      );
+
+      // Maps using your working factory constructor seamlessly!
+      _swapEvents = shiftsData
+          .map((shift) => RotaEvent.fromMyShift(shift))
+          .toList();
+
+      _isLoadingSwaps = false;
+    } catch (e) {
+      _swapError = e.toString();
+      _isLoadingSwaps = false;
+    }
     notifyListeners();
   }
 
@@ -226,16 +283,8 @@ class RotaProvider extends ChangeNotifier {
 
   Future<bool> cancelSwapRequest(String? swapId) async {
     if (swapId == null || swapId.isEmpty) return false;
-
     try {
-      // Assuming your endpoint structure is DELETE /api/hr/rota/swaps/:id
-      final response = await _service.deleteSwapRequest(swapId);
-
-      // Check text map safely without forcing parsing onto full data models
-      if (response != null) {
-        return true;
-      }
-      return true;
+      return await _service.deleteSwapRequest(swapId);
     } catch (e) {
       debugPrint("❌ FAILED TO DELETE SWAP REQUEST: $e");
       return false;

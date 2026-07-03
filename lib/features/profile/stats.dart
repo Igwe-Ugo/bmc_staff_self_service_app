@@ -180,32 +180,48 @@ class _StatsScreenState extends State<StatsScreen> {
     final provider = context.watch<LeaveProvider>();
     final requests = provider.myRequests;
 
-    // Filter only current month's requests
+    // Filter only current month's requests safely
     final monthRequests = requests.where((r) {
-      final start = DateTime.parse(r.startDate);
-      final end = DateTime.parse(r.endDate);
-      return (start.month == _currentMonth.month && start.year == _currentMonth.year) ||
-          (end.month == _currentMonth.month && end.year == _currentMonth.year);
+      if (r.startDate == null || r.endDate == null) return false;
+      try {
+        final start = DateTime.parse(r.startDate!);
+        final end = DateTime.parse(r.endDate!);
+        return (start.month == _currentMonth.month && start.year == _currentMonth.year) ||
+            (end.month == _currentMonth.month && end.year == _currentMonth.year);
+      } catch (_) {
+        return false; // Guard against unparseable date strings
+      }
     }).toList();
 
     final Map<String, int> counts = {};
     for (final r in monthRequests) {
-      final type = r.leaveType;
-      counts[type] = (counts[type] ?? 0) + r.totalDays;
+      // If you wanted Status instead of Type, change this to r.status.label or r.status.value
+      final type = r.status.label ?? 'Unknown';
+
+      // Fallback calculation if r.totalDays isn't a declared integer property on HrLeaveRequest
+      final days = r.totalDays ?? 0;
+      counts[type] = (counts[type] ?? 0) + days;
     }
 
     final stats = counts.entries.map((e) {
       final color = _getLeaveColor(e.key);
+
+      // SAFE SUBSTRING: Guard strings shorter than 3 characters
+      final displayLabel = e.key;
+      final shortLabel = displayLabel.length >= 3
+          ? displayLabel.substring(0, 3).toUpperCase()
+          : displayLabel.toUpperCase();
+
       return StatData(
-        label: e.key,
-        shortLabel: e.key.substring(0, 3).toUpperCase(),
+        label: displayLabel,
+        shortLabel: shortLabel,
         value: e.value,
         color: color,
         count: monthRequests.where((r) => r.leaveType == e.key).length,
       );
     }).toList();
 
-    final total = monthRequests.fold(0, (sum, r) => sum + r.totalDays);
+    final total = monthRequests.fold(0, (sum, r) => sum + (r.totalDays ?? 0));
     final maxValue = stats.fold(0, (max, s) => s.value > max ? s.value : max);
 
     return _buildStatCard(
