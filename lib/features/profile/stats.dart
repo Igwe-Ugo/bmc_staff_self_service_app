@@ -180,48 +180,33 @@ class _StatsScreenState extends State<StatsScreen> {
     final provider = context.watch<LeaveProvider>();
     final requests = provider.myRequests;
 
-    // Filter only current month's requests safely
+    // Requests that touch the current month at all (started or ended in it)
     final monthRequests = requests.where((r) {
-      if (r.startDate == null || r.endDate == null) return false;
       try {
-        final start = DateTime.parse(r.startDate!);
-        final end = DateTime.parse(r.endDate!);
+        final start = DateTime.parse(r.startDate);
+        final end = DateTime.parse(r.endDate);
         return (start.month == _currentMonth.month && start.year == _currentMonth.year) ||
             (end.month == _currentMonth.month && end.year == _currentMonth.year);
       } catch (_) {
-        return false; // Guard against unparseable date strings
+        return false; // guard against unparseable date strings
       }
     }).toList();
 
-    final Map<String, int> counts = {};
-    for (final r in monthRequests) {
-      // If you wanted Status instead of Type, change this to r.status.label or r.status.value
-      final type = r.status.label ?? 'Unknown';
-
-      // Fallback calculation if r.totalDays isn't a declared integer property on HrLeaveRequest
-      final days = r.totalDays ?? 0;
-      counts[type] = (counts[type] ?? 0) + days;
-    }
-
-    final stats = counts.entries.map((e) {
-      final color = _getLeaveColor(e.key);
-
-      // SAFE SUBSTRING: Guard strings shorter than 3 characters
-      final displayLabel = e.key;
-      final shortLabel = displayLabel.length >= 3
-          ? displayLabel.substring(0, 3).toUpperCase()
-          : displayLabel.toUpperCase();
-
+    // Always show all four statuses, even at zero — matches the Rota stat card pattern
+    final stats = HrLeaveRequestStatus.values.map((status) {
+      final matching = monthRequests.where((r) => r.status == status).toList();
+      final totalDays = matching.fold(0, (sum, r) => sum + r.totalDays);
+      final label = status.label;
       return StatData(
-        label: displayLabel,
-        shortLabel: shortLabel,
-        value: e.value,
-        color: color,
-        count: monthRequests.where((r) => r.leaveType == e.key).length,
+        label: label,
+        shortLabel: label.length >= 3 ? label.substring(0, 3).toUpperCase() : label.toUpperCase(),
+        value: totalDays,
+        color: status.color,
+        count: matching.length,
       );
     }).toList();
 
-    final total = monthRequests.fold(0, (sum, r) => sum + (r.totalDays ?? 0));
+    final total = stats.fold(0, (sum, s) => sum + s.value);
     final maxValue = stats.fold(0, (max, s) => s.value > max ? s.value : max);
 
     return _buildStatCard(
@@ -233,20 +218,6 @@ class _StatsScreenState extends State<StatsScreen> {
       icon: Icons.event_note,
       color: const Color(0xFFF59E0B),
     );
-  }
-
-  Color _getLeaveColor(String type) {
-    switch (type.toUpperCase()) {
-      case 'ANNUAL': return const Color(0xFF6C47FF);
-      case 'SICK': return const Color(0xFFE74C3C);
-      case 'COMPASSIONATE': return const Color(0xFF22C55E);
-      case 'STUDY': return const Color(0xFF009688);
-      case 'MATERNITY': return const Color(0xFFEC4899);
-      case 'PATERNITY': return const Color(0xFF14B8A6);
-      case 'BEREAVEMENT': return const Color(0xFF6366F1);
-      case 'EMERGENCY': return const Color(0xFFFF5722);
-      default: return const Color(0xFF8E8E93);
-    }
   }
 
   // ── ROTA STATS ────────────────────────────────────────────────────────────

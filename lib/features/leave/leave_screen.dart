@@ -314,6 +314,68 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
     );
   }
 
+  // ── Leave stay progress (approved leave only) ────────────────────────────
+  Widget _leaveProgressBar(HrLeaveRequest r) {
+    final start = r.startDateTime;
+    final end = r.endDateTime;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    double progress;
+    String statusLabel;
+
+    if (today.isBefore(start)) {
+      progress = 0.0;
+      final daysUntil = start.difference(today).inDays;
+      statusLabel = 'Starts in $daysUntil day${daysUntil == 1 ? '' : 's'}';
+    } else if (today.isAfter(end)) {
+      progress = 1.0;
+      statusLabel = 'Completed';
+    } else {
+      final daysElapsed = today.difference(start).inDays + 1; // inclusive
+      progress = (daysElapsed / r.totalDays).clamp(0.0, 1.0);
+      statusLabel = 'Day $daysElapsed of ${r.totalDays}';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: SizedBox(
+            height: 6,
+            child: Stack(
+              children: [
+                // Static track split into thirds: green → yellow → red
+                const Row(
+                  children: [
+                    Expanded(child: ColoredBox(color: Color(0xFF27AE60))),
+                    Expanded(child: ColoredBox(color: Color(0xFFF39C12))),
+                    Expanded(child: ColoredBox(color: Color(0xFFE74C3C))),
+                  ],
+                ),
+                // Dim the portion of the stay not yet reached
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: FractionallySizedBox(
+                    widthFactor: 1 - progress,
+                    child: Container(color: Colors.black.withOpacity(0.28)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          statusLabel,
+          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF8E8E93)),
+        ),
+      ],
+    );
+  }
+
   // ── Type dropdown overlay ─────────────────────────────────────────────────
 
   Widget _buildDropdownOverlay(LeaveProvider provider) {
@@ -729,7 +791,9 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               color: Color(0xFF8E8E93)),
         ),
         const SizedBox(height: 12),
-        ...requests.map((r) => _requestTile(r,
+        ...requests.map((r) => _requestTile(
+          key: ValueKey(r.id),
+            r,
             onTap: () => _showRequestDetail(r))),
       ],
     );
@@ -737,11 +801,13 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
 
   Widget _requestTile(
       HrLeaveRequest r, {
+        Key? key,
         bool compact = false,
         VoidCallback? onTap,
       }) {
     final color = _leaveTypeColor(r.leaveType);
     return GestureDetector(
+      key: key,
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -781,6 +847,38 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(_formatType(r.leaveType),
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${_fmtDate(r.startDate)} → ${_fmtDate(r.endDate)}  ·  ${r.totalDays} day${r.totalDays == 1 ? '' : 's'}',
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF8E8E93)),
+                        ),
+                        r.status == HrLeaveRequestStatus.approved
+                         ? _leaveProgressBar(r)
+                          : const SizedBox.shrink(),   // ← new
+                        if (!compact && r.reason != null &&
+                            r.reason!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(r.reason!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFFAEAEB2))),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 7,),
                   Text(_formatType(r.leaveType),
                       style: const TextStyle(
                           fontSize: 13,
@@ -1024,6 +1122,8 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
 
   // ── Request sheet ─────────────────────────────────────────────────────────
 
+  // ── Request sheet ─────────────────────────────────────────────────────────
+
   void _openRequestSheet(
       BuildContext context,
       LeaveProvider provider,
@@ -1036,15 +1136,19 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
       builder: (ctx) => LeaveFormSheet(
         personnelId: personnelId,
         onSave: (data) async {
-          Navigator.pop(ctx);
           final success = await provider.createRequest(data);
+
+          if (success && ctx.mounted) Navigator.pop(ctx);
+
           final msg = success
               ? 'Leave request submitted!'
               : provider.errorMessage ?? 'Submission failed.';
-          if (!mounted) return;
+          if (!mounted) return success;
           showMessage(msg, context,
               status: success ? MessageStatus.success : MessageStatus.error,
               title: success ? 'Done' : 'Error');
+
+          return success;
         },
       ),
     );
@@ -1060,7 +1164,6 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
         personnelId: r.personnelId,
         existing: r,
         onSave: (data) async {
-          Navigator.pop(ctx);
           final updateData = HrLeaveUpdateFormData(
             leaveType: data.leaveType,
             startDate: data.startDate,
@@ -1069,13 +1172,18 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
             reason: data.reason,
           );
           final success = await provider.updateRequest(r.id, updateData);
+
+          if (success && ctx.mounted) Navigator.pop(ctx);
+
           final msg = success
               ? 'Leave request updated!'
               : provider.errorMessage ?? 'Update failed.';
-          if (!mounted) return;
+          if (!mounted) return success;
           showMessage(msg, context,
               status: success ? MessageStatus.success : MessageStatus.error,
               title: success ? 'Done' : 'Error');
+
+          return success;
         },
       ),
     );

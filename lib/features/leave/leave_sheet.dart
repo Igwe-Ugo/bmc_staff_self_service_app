@@ -8,7 +8,7 @@ import '../common/widget.dart';
 class LeaveFormSheet extends StatefulWidget {
   final String personnelId;
   final HrLeaveRequest? existing; // null → create mode
-  final void Function(HrLeaveRequestFormData) onSave;
+  final Future<bool> Function(HrLeaveRequestFormData) onSave;
 
   const LeaveFormSheet({super.key,
     required this.personnelId,
@@ -39,6 +39,7 @@ class _LeaveFormSheetState extends State<LeaveFormSheet> {
       _reasonCtrl.text = r.reason ?? '';
       _fromDate = DateTime.parse(r.startDate);
       _toDate = DateTime.parse(r.endDate);
+      WidgetsBinding.instance.addPostFrameCallback((_) => _checkOverlapOnSelection());
     }
   }
 
@@ -48,34 +49,33 @@ class _LeaveFormSheetState extends State<LeaveFormSheet> {
     super.dispose();
   }
 
-  // 💡 Rewritten to be reactive and updated when selection states shift
-  void _checkOverlapOnSelection() {
-    if (_fromDate == null || _toDate == null) {
-      setState(() => _localOverlapError = false);
-      return;
-    }
+  bool _hasOverlap() {
+    if (_fromDate == null || _toDate == null) return false;
 
     final provider = context.read<LeaveProvider>();
-    final existingRequests = provider.myRequests;
-    bool conflictFound = false;
 
-    for (final request in existingRequests) {
+    // Only PENDING and APPROVED requests actually occupy calendar days.
+    final blockingRequests = provider.myRequests.where((r) =>
+    r.status == HrLeaveRequestStatus.pending ||
+        r.status == HrLeaveRequestStatus.approved);
+
+    for (final request in blockingRequests) {
       if (_isEdit && request.id == widget.existing!.id) continue;
 
       final existingStart = DateTime.parse(request.startDate);
-      final existingEnd = DateTime.parse(request.endDate);
+      final existingEnd   = DateTime.parse(request.endDate);
 
-      // Overlap formula calculation
       final isOverlapping = !_fromDate!.isAfter(existingEnd) && !_toDate!.isBefore(existingStart);
-
-      if (isOverlapping) {
-        conflictFound = true;
-        break;
-      }
+      if (isOverlapping) return true;
     }
+    return false;
+  }
 
+  void _checkOverlapOnSelection(){
+    final overlap = _hasOverlap();
+    if (!mounted) return;
     setState(() {
-      _localOverlapError = conflictFound;
+      _localOverlapError = overlap;
     });
   }
 
@@ -158,7 +158,13 @@ class _LeaveFormSheetState extends State<LeaveFormSheet> {
       totalDays: _totalDays,
       reason: _reasonCtrl.text.trim().isEmpty ? null : _reasonCtrl.text.trim(),
     );
-    widget.onSave(data);
+    final success = await widget.onSave(data);
+    if (!mounted) return;
+    if (!success){
+      setState(() {
+        _saving = false;
+      });
+    }
   }
 
   String _isoDate(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}'
