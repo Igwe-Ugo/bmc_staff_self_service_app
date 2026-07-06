@@ -1,5 +1,6 @@
 import 'package:bmc_app/features/leave/widget.dart';
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../../../core/network/models/leave_model.dart';
@@ -118,8 +119,6 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
                   child: Column(
                     children: [
                       _buildAppBar(leaveProvider),
-                      if (leaveProvider.isLoading)
-                        LinearProgressIndicator(color: Theme.of(context).primaryColor),
                       Expanded(
                         child: RefreshIndicator(
                           color: Theme.of(context).primaryColor,
@@ -734,7 +733,10 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
 
   Widget _buildRequestList(LeaveProvider leaveProvider, String personnelId) {
     if (leaveProvider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(child: LoadingAnimationWidget.staggeredDotsWave(
+        color: Theme.of(context).primaryColor,
+        size: 70,
+      ));
     }
 
     if (leaveProvider.state == LeaveState.error) {

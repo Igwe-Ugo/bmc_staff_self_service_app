@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -19,12 +20,52 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _rememberMe = false;
+  final _secureStorage = const FlutterSecureStorage();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCredentials();
+  }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadSavedCredentials() async {
+    try {
+      final savedUser = await _secureStorage.read(key: 'remembered_username');
+      final savedPass = await _secureStorage.read(key: 'remembered_password');
+      final rememberMeStatus = await _secureStorage.read(key: 'remembered_me_status');
+
+      if (rememberMeStatus == "true" && savedUser != null && savedPass != null){
+        setState(() {
+          _rememberMe = true;
+          _usernameController.text = savedUser;
+          _passwordController.text = savedPass;
+        });
+      }
+    } catch (e) {
+      print('Error loading saved credentials: $e');
+      showMessage("Error loading saved credentials.", context, status: MessageStatus.error, title: "Error");
+    }
+  }
+
+  // save or clear storage action
+  Future<void> _handleCredentialPersistence() async {
+    if (_rememberMe){
+      await _secureStorage.write(key: 'remembered_username', value: _usernameController.text);
+      await _secureStorage.write(key: 'remembered_password', value: _passwordController.text);
+      await _secureStorage.write(key: 'remembered_me_status', value: "true");
+    } else {
+      await _secureStorage.delete(key: 'remembered_username');
+      await _secureStorage.delete(key: 'remembered_password');
+      await _secureStorage.delete(key: 'remembered_me_status');
+    }
   }
 
   @override
@@ -137,9 +178,52 @@ class _LoginScreenState extends State<LoginScreen> {
                   prefixIcon: Icons.lock,
                   isPassword: true,
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 20),
 
-                /// 隼 FORGOT PASSWORD
+            // ─── Remember Me & Forgot Password Row ───────────────────────
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: _rememberMe,
+                          activeColor: Theme.of(context).primaryColor,
+                          onChanged: (bool? newValue) {
+                            setState(() {
+                              _rememberMe = newValue ?? false;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _rememberMe = !_rememberMe;
+                          });
+                        },
+                        child: Text(
+                          "Remember me",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontFamily: 'Lexend',
+                            color: Theme.of(context).brightness == Brightness.light ? Colors.black87 : Colors.grey.shade400,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 7),
+
+
+
+                ///FORGOT PASSWORD
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -158,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 70), // 👈 2. Replaced Spacer() with a fixed height Box
 
-                /// 隼 LOGIN BUTTON
+                ///LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   height: 60,
@@ -180,7 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         color: Colors.white,
                         fontFamily: 'Lexend',
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -218,6 +302,8 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await authProvider.login(username, password, userProvider);
 
     if (success) {
+      // sawe or clear credentials asynchronously before route redirection
+      await _handleCredentialPersistence();
       ApiClient.instance.setUserProvider(userProvider);
       showMessage(
         'Welcome back! Redirecting you now.',

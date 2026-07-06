@@ -75,7 +75,10 @@ class _BMCHomeState extends State<BMCHome> {
     return Consumer3<UserProvider, AvailabilityProvider, LeaveProvider>(
       builder: (context, userProvider, availabilityProvider, leaveProvider, _) {
         if (userProvider.isLoading || availabilityProvider.isLoading) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return Scaffold(body: Center(child: LoadingAnimationWidget.staggeredDotsWave(
+            color: Theme.of(context).primaryColor,
+            size: 70,
+          )));
         }
 
         return Scaffold(
