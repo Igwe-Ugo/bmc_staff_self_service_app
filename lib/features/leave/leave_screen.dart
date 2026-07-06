@@ -825,6 +825,7 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
           ],
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
               width: 40, height: 40,
@@ -834,12 +835,8 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               ),
               alignment: Alignment.center,
               child: Text(
-                _formatType(r.leaveType).characters.first
-                    .toUpperCase(),
-                style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16),
+                _formatType(r.leaveType).characters.first.toUpperCase(),
+                style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 16),
               ),
             ),
             const SizedBox(width: 12),
@@ -847,75 +844,35 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_formatType(r.leaveType),
-                            style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${_fmtDate(r.startDate)} → ${_fmtDate(r.endDate)}  ·  ${r.totalDays} day${r.totalDays == 1 ? '' : 's'}',
-                          style: const TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF8E8E93)),
-                        ),
-                        r.status == HrLeaveRequestStatus.approved
-                         ? _leaveProgressBar(r)
-                          : const SizedBox.shrink(),   // ← new
-                        if (!compact && r.reason != null &&
-                            r.reason!.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(r.reason!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFFAEAEB2))),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 7,),
                   Text(_formatType(r.leaveType),
-                      style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700)),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
                   Text(
                     '${_fmtDate(r.startDate)} → ${_fmtDate(r.endDate)}  ·  ${r.totalDays} day${r.totalDays == 1 ? '' : 's'}',
-                    style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFF8E8E93)),
+                    style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
                   ),
-                  if (!compact && r.reason != null &&
-                      r.reason!.isNotEmpty) ...[
+                  r.status == HrLeaveRequestStatus.approved
+                      ? _leaveProgressBar(r)
+                      : const SizedBox.shrink(),
+                  if (!compact && r.reason != null && r.reason!.isNotEmpty) ...[
                     const SizedBox(height: 2),
                     Text(r.reason!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFFAEAEB2))),
+                        style: const TextStyle(fontSize: 11, color: Color(0xFFAEAEB2))),
                   ],
                 ],
               ),
             ),
             const SizedBox(width: 8),
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: r.status.bgColor,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(r.status.label,
-                  style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: r.status.color)),
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: r.status.color)),
             ),
           ],
         ),

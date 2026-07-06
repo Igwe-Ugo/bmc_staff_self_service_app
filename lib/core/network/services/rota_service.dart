@@ -129,7 +129,7 @@ class RotaService {
   Future<bool> deleteSwapRequest(String swapId) async {
     try {
       final response = await _dio.delete(
-        '${ApiEndpoints.requestRotaSwaps}/$swapId',
+        '${ApiEndpoints.deleteSwapRequest}/$swapId',
       );
       debugPrint('📡 SWAP REQUEST DELETED: ${response.statusCode}');
       return response.statusCode == 200 || response.statusCode == 204;

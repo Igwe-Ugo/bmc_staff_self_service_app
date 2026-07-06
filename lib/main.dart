@@ -1,4 +1,3 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -61,6 +60,17 @@ class _BMCStaffSelfServiceState extends State<BMCStaffSelfService>{
               title: 'BMC Staff Self-Service',
               routerConfig: BMCRouter.router,
               theme: Styles.themeData(themeChangeProvider.darkTheme, context),
+              builder: (context, child){
+                final mediaQuery = MediaQuery.of(context);
+                return MediaQuery(
+                  data: mediaQuery.copyWith(
+                    textScaler: TextScaler.linear(
+                      mediaQuery.textScaler.scale(1.0).clamp(1.0, 1.1),
+                    )
+                  ),
+                  child: child!,
+                );
+              },
             );
           }
       ),

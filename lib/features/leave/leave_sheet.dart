@@ -173,7 +173,6 @@ class _LeaveFormSheetState extends State<LeaveFormSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final leaveProvider = context.watch<LeaveProvider>(); // 💡 watch instead of read to handle background updates
 
     return Container(
       padding: EdgeInsets.fromLTRB(20, 20, 20, 150 + bottomInset),
@@ -324,7 +323,7 @@ class _LeaveFormSheetState extends State<LeaveFormSheet> {
                 child: _saving
                     ? SizedBox(
                   width: 22, height: 22,
-                  child: LoadingAnimationWidget.staggeredDotsWave(color: Colors.white, size: 40),
+                  child: LoadingAnimationWidget.staggeredDotsWave(color: Colors.white, size: 20),
                 )
                     : Text(
                   _isEdit ? 'Update Request' : 'Submit Request',

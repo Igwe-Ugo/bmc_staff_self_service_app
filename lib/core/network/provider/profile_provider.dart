@@ -115,6 +115,7 @@ class ProfileProvider extends ChangeNotifier {
 
   void updateState(String? v) {
     state = v ?? '';
+    hasChanges = true;
     markDirty();
   }
 

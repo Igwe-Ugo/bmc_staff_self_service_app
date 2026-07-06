@@ -32,13 +32,15 @@ class _LoginScreenState extends State<LoginScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
+      body: SafeArea( // Added SafeArea to protect top and bottom notches
+        child: SingleChildScrollView( // 👈 1. Wrap with SingleChildScrollView
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, // Optional: dismisses keyboard on drag
           child: Padding(
-            padding: const EdgeInsets.only(top: 50.0, left: 30, right: 30, bottom: 50),
+            padding: const EdgeInsets.only(top: 30.0, left: 30, right: 30, bottom: 40),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                /// 🔹 BACK BUTTON
+                /// 隼 BACK BUTTON
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -64,8 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 120),
-                /// 🔹 LOGO
+                const SizedBox(height: 80), // Reduced from 120 to optimize viewport space on small screens
+
+                /// 隼 LOGO
                 Image.asset(
                   'assets/images/bmc_image.png',
                   width: 50,
@@ -74,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 23),
 
-                /// 🔹 TITLE
+                /// 隼 TITLE
                 const Text(
                   "LOGIN PORTAL",
                   style: TextStyle(
@@ -94,7 +97,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 25),
-                /// 🔹 USERNAME
+
+                /// 隼 USERNAME
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -113,7 +117,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   prefixIcon: Icons.person,
                 ),
                 const SizedBox(height: 24),
-                /// 🔹 PASSWORD
+
+                /// 隼 PASSWORD
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -133,7 +138,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   isPassword: true,
                 ),
                 const SizedBox(height: 10),
-                /// 🔹 FORGOT PASSWORD
+
+                /// 隼 FORGOT PASSWORD
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -142,15 +148,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       "Forget Password?",
                       style: TextStyle(
                           fontSize: 16,
-                        fontFamily: 'Lexend',
-                        fontWeight: FontWeight.w400,
-                        color: Colors.blue
+                          fontFamily: 'Lexend',
+                          fontWeight: FontWeight.w400,
+                          color: Colors.blue
                       ),
                     ),
                   ),
                 ),
-                const Spacer(),
-                /// 🔹 LOGIN BUTTON
+
+                const SizedBox(height: 70), // 👈 2. Replaced Spacer() with a fixed height Box
+
+                /// 隼 LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   height: 60,
@@ -165,15 +173,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: _isLoading == true
                         ? LoadingAnimationWidget.staggeredDotsWave(
-                          color: Colors.white,
-                          size: 40,
-                        ): const Text(
+                      color: Colors.white,
+                      size: 40,
+                    ): const Text(
                       "Login",
                       style: TextStyle(
                         color: Colors.white,
-                          fontFamily: 'Lexend',
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                        fontFamily: 'Lexend',
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
@@ -186,6 +194,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // _login function logic remains identical below...
   Future<void> _login() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
@@ -209,7 +218,6 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await authProvider.login(username, password, userProvider);
 
     if (success) {
-      // After successful login and setUserFromLogin()
       ApiClient.instance.setUserProvider(userProvider);
       showMessage(
         'Welcome back! Redirecting you now.',

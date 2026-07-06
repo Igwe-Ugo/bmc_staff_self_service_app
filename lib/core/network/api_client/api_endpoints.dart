@@ -37,7 +37,7 @@ class ApiEndpoints {
   static const String requestRotaSwaps    = '/hr/rota/swaps';
   static const String displayRotaSwaps = '/hr/rota/swaps';
   static const String personnel           = '/hr/personnel';
-  static const String deleteSwapRequest = '/hr/swaps';
+  static const String deleteSwapRequest = '/hr/rota/swaps';
   static const String rotaPersonnelShifts = '/hr/rota/personnel-shifts';
 
   // ── Profile ──────────────────────────────────────────────────────────────────────

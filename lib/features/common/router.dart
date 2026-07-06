@@ -4,7 +4,6 @@ import '../authentication/widget.dart';
 import '../availability/widget.dart';
 import '../home/widget.dart';
 import '../leave/widget.dart';
-import '../models/widget.dart';
 import '../on_boarding/widget.dart';
 import '../profile/widget.dart';
 import '../rota/widget.dart';
@@ -92,19 +91,6 @@ class BMCRouter {
                       path: homePath,
                       builder: (context, state) => BMCHome(),
                     routes: [
-                      GoRoute(
-                          path: messagePath,
-                          builder: (context, state) => MessagesListScreen(),
-                          routes: [
-                            GoRoute(
-                                path: chatPath,
-                                builder: (context, state){
-                                  final user = state.extra as ChatUser;
-                                  return ChatScreen(user: user,);
-                                }
-                            )
-                          ]
-                      ),
                       GoRoute(
                           path: aboutAppPath,
                           builder: (context, state) => AboutApp()

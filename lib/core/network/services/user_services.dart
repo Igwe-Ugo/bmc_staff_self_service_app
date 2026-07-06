@@ -53,6 +53,7 @@ class UserServices {
     }
 
     try {
+      debugPrint('📤 PROFILE UPDATE PAYLOAD: ${data.toJson()}');
       debugPrint('📡 PATCH /users/profile body keys: ${body.keys.toList()}');
       final response = await _dio.patch(
         ApiEndpoints.updateProfile,

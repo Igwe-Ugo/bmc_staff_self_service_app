@@ -185,10 +185,11 @@ class _StatsScreenState extends State<StatsScreen> {
       try {
         final start = DateTime.parse(r.startDate);
         final end = DateTime.parse(r.endDate);
-        return (start.month == _currentMonth.month && start.year == _currentMonth.year) ||
-            (end.month == _currentMonth.month && end.year == _currentMonth.year);
+        final monthStart = DateTime(_currentMonth.year, _currentMonth.month, 1);
+        final monthEnd = DateTime(_currentMonth.year, _currentMonth.month + 1, 0); // last day of month
+        return !start.isAfter(monthEnd) && !end.isBefore(monthStart);
       } catch (_) {
-        return false; // guard against unparseable date strings
+        return false;
       }
     }).toList();
 

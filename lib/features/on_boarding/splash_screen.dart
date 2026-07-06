@@ -64,6 +64,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 height: 80,
               ),
             ),
+            const SizedBox(height: 10,),
 
             /// 🔹 TEXT (fades + slides in)
             Align(
