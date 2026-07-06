@@ -22,10 +22,12 @@ class RotaService {
 
       final payload = _unwrap(response.data);
       if (payload == null) return [];
+      print(payload);
 
       // Shape A: { shifts: [...] }
       if (payload is Map<String, dynamic> && payload.containsKey('shifts')) {
         final list = payload['shifts'] as List<dynamic>? ?? [];
+        print(list);
         return list
             .map((e) => HrMyShift.fromJson(e as Map<String, dynamic>))
             .toList();

@@ -281,7 +281,7 @@ class RotaEvent {
       ward:      s.deptName ?? '',
       staffName: staffName,
       swapStatus:    s.swapStatus,
-      swapId:  s.periodId,
+      swapId:  s.swapId ?? '',
     );
   }
 }
