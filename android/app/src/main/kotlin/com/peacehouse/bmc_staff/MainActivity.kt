@@ -1,4 +1,4 @@
-package com.example.bmc_app
+package com.peacehouse.bmc_staff
 
 import io.flutter.embedding.android.FlutterActivity
 
