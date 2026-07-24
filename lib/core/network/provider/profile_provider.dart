@@ -2,8 +2,6 @@
 
 import 'dart:convert';
 import 'dart:io';
-
-import 'package:bmc_app/core/network/models/user_model.dart';
 import 'package:bmc_app/core/network/provider/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';

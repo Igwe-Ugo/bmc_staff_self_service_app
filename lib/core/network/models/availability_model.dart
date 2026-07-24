@@ -136,10 +136,10 @@ class HrAvailabilitySlot {
 
   factory HrAvailabilitySlot.fromJson(Map<String, dynamic> json) {
     // Helper to safely parse strings
-    String? _safeString(dynamic value) => value?.toString();
+    String? safeString(dynamic value) => value?.toString();
 
     // Helper to safely parse DateTime
-    DateTime? _safeDateTime(dynamic value) {
+    DateTime? safeDateTime(dynamic value) {
       if (value == null) return null;
       try {
         return DateTime.parse(value.toString());
@@ -149,25 +149,25 @@ class HrAvailabilitySlot {
     }
 
     return HrAvailabilitySlot(
-      id: _safeString(json['id']) ?? '',
-      personnelId: _safeString(json['personnelId']) ?? '',
-      date: _safeDateTime(json['date']) ?? DateTime.now(),
+      id: safeString(json['id']) ?? '',
+      personnelId: safeString(json['personnelId']) ?? '',
+      date: safeDateTime(json['date']) ?? DateTime.now(),
       timeSlot: json['timeSlot'] != null
           ? HrTimeSlotExt.fromString(json['timeSlot'].toString())
           : HrTimeSlot.fullDay,
-      startTime: _safeString(json['startTime']),
-      endTime: _safeString(json['endTime']),
+      startTime: safeString(json['startTime']),
+      endTime: safeString(json['endTime']),
       availability: json['availability'] != null
           ? HrAvailabilityStatusExt.fromString(json['availability'].toString())
           : HrAvailabilityStatus.available,
-      deptId: _safeString(json['deptId']),
-      notes: _safeString(json['notes']),
-      submittedAt: _safeDateTime(json['submittedAt']) ?? DateTime.now(),
-      lockedAt: _safeDateTime(json['lockedAt']),
-      createdBy: _safeString(json['createdBy']) ?? '',
-      createdAt: _safeDateTime(json['createdAt']) ?? DateTime.now(),
-      updatedBy: _safeString(json['updatedBy']),
-      updatedAt: _safeDateTime(json['updatedAt']),
+      deptId: safeString(json['deptId']),
+      notes: safeString(json['notes']),
+      submittedAt: safeDateTime(json['submittedAt']) ?? DateTime.now(),
+      lockedAt: safeDateTime(json['lockedAt']),
+      createdBy: safeString(json['createdBy']) ?? '',
+      createdAt: safeDateTime(json['createdAt']) ?? DateTime.now(),
+      updatedBy: safeString(json['updatedBy']),
+      updatedAt: safeDateTime(json['updatedAt']),
     );
   }
 

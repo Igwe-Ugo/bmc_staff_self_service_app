@@ -226,9 +226,7 @@ class _LeaveSummaryCardState extends State<LeaveSummaryCard> {
               item.highestProgress = progress;
             }
             // Store the first approved request for countdown display
-            if (item.approvedRequest == null) {
-              item.approvedRequest = request;
-            }
+            item.approvedRequest ??= request;
           }
 
           if (request.status == HrLeaveRequestStatus.pending) {

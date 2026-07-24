@@ -138,8 +138,9 @@ class AuthServices {
         if (data.containsKey('message')) return data['message'].toString();
         if (data.containsKey('error'))   return data['error'].toString();
         if (data.containsKey('detail'))  return data['detail'].toString();
-        if (data.containsKey('error_description'))
+        if (data.containsKey('error_description')) {
           return data['error_description'].toString();
+        }
         if (data.containsKey('errors')) {
           final errors = data['errors'];
           if (errors is Map) {

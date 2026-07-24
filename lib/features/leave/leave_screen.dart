@@ -381,7 +381,7 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
     final types = ['All', ...provider.myRequests
         .map((r) => r.leaveType)
         .toSet()
-        .toList()];
+        ];
 
     return Positioned(
       top: 52,

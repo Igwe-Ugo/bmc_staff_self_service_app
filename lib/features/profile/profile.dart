@@ -1,5 +1,4 @@
 // ─── profile.dart ─────────────────────────────────────────────────────────────
-
 import 'package:bmc_app/core/network/provider/widget.dart';
 import 'package:bmc_app/features/common/show_message.dart';
 import 'package:bmc_app/features/common/user_avatar.dart';

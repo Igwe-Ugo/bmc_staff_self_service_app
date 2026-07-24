@@ -141,10 +141,10 @@ class HrLeaveRequest {
 
   factory HrLeaveRequest.fromJson(Map<String, dynamic> json) {
     // Helper to safely get string values
-    String? _safeString(dynamic value) => value?.toString();
+    String? safeString(dynamic value) => value?.toString();
 
     // Helper to safely get int values
-    int _safeInt(dynamic value) {
+    int safeInt(dynamic value) {
       if (value == null) return 0;
       if (value is int) return value;
       if (value is String) return int.tryParse(value) ?? 0;
@@ -152,28 +152,28 @@ class HrLeaveRequest {
     }
 
     return HrLeaveRequest(
-      id: _safeString(json['id']) ?? '',
-      personnelId: _safeString(json['personnelId']) ?? '',
-      leaveType: _safeString(json['leaveType']) ?? '',
-      startDate: (_safeString(json['startDate']) ?? '').split('T').first,
-      endDate: (_safeString(json['endDate']) ?? '').split('T').first,
-      totalDays: _safeInt(json['totalDays']),
-      reason: _safeString(json['reason']),
+      id: safeString(json['id']) ?? '',
+      personnelId: safeString(json['personnelId']) ?? '',
+      leaveType: safeString(json['leaveType']) ?? '',
+      startDate: (safeString(json['startDate']) ?? '').split('T').first,
+      endDate: (safeString(json['endDate']) ?? '').split('T').first,
+      totalDays: safeInt(json['totalDays']),
+      reason: safeString(json['reason']),
       status: json['status'] != null
           ? HrLeaveRequestStatusExt.fromString(json['status'].toString())
           : HrLeaveRequestStatus.pending,
-      approvedBy: _safeString(json['approvedBy']),
-      approvedAt: _safeString(json['approvedAt']),
-      decisionNotes: _safeString(json['decisionNotes']),
-      createdBy: _safeString(json['createdBy']) ?? '',
-      createdAt: _safeString(json['createdAt']) ?? DateTime.now().toIso8601String(),
-      updatedBy: _safeString(json['updatedBy']),
-      updatedAt: _safeString(json['updatedAt']),
-      personnelName: _safeString(json['personnelName']),
-      staffNumber: _safeString(json['staffNumber']),
-      personnelCategory: _safeString(json['personnelCategory']),
-      approvedByName: _safeString(json['approvedByName']),
-      deptName: _safeString(json['deptName']),
+      approvedBy: safeString(json['approvedBy']),
+      approvedAt: safeString(json['approvedAt']),
+      decisionNotes: safeString(json['decisionNotes']),
+      createdBy: safeString(json['createdBy']) ?? '',
+      createdAt: safeString(json['createdAt']) ?? DateTime.now().toIso8601String(),
+      updatedBy: safeString(json['updatedBy']),
+      updatedAt: safeString(json['updatedAt']),
+      personnelName: safeString(json['personnelName']),
+      staffNumber: safeString(json['staffNumber']),
+      personnelCategory: safeString(json['personnelCategory']),
+      approvedByName: safeString(json['approvedByName']),
+      deptName: safeString(json['deptName']),
     );
   }
 
@@ -291,17 +291,17 @@ class HrLeaveBalance {
   int get available => entitlement + carriedOver - used - pending;
 
   factory HrLeaveBalance.fromJson(Map<String, dynamic> json) {
-    int _i(dynamic v) =>
+    int i(dynamic v) =>
         v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
     return HrLeaveBalance(
       id:          json['id']          as String,
       personnelId: json['personnelId'] as String,
-      year:        _i(json['year']),
+      year:        i(json['year']),
       leaveType:   json['leaveType']   as String,
-      entitlement: _i(json['entitlement']),
-      carriedOver: _i(json['carriedOver']),
-      used:        _i(json['used']),
-      pending:     _i(json['pending']),
+      entitlement: i(json['entitlement']),
+      carriedOver: i(json['carriedOver']),
+      used:        i(json['used']),
+      pending:     i(json['pending']),
       createdBy:   json['createdBy']   as String,
       createdAt:   json['createdAt']   as String,
     );

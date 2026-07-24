@@ -2,16 +2,13 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import '../interceptors/interceptors.dart';
 import 'api_endpoints.dart';
-import '../provider/user_provider.dart';   // ← Add this import
+import '../provider/user_provider.dart'; // ← Add this import
 
 class ApiClient {
   ApiClient._();
   static final ApiClient instance = ApiClient._();
 
   late final Dio dio = _buildDio();
-
-  // We'll set this after providers are initialized
-  UserProvider? _userProvider;
 
   Dio _buildDio() {
     final d = Dio(

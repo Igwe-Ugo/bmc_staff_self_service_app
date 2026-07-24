@@ -2,7 +2,6 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
-import '../../errors/api_exceptions.dart';
 import '../models/widget.dart';
 import '../services/widget.dart';
 
