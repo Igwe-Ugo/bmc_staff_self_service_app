@@ -1,5 +1,7 @@
 // ─── rota_screen.dart ─────────────────────────────────────────────────────────
 
+// ignore_for_file: prefer_final_fields, no_leading_underscores_for_local_identifiers
+
 import 'package:bmc_app/features/common/show_message.dart';
 import 'package:bmc_app/features/rota/widget.dart';
 import 'package:flutter/material.dart';

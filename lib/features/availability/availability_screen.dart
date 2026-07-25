@@ -1,13 +1,15 @@
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+
 import 'package:bmc_app/features/availability/widget.dart';
 import 'package:custom_refresh_indicator/custom_refresh_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
-import '../../../core/network/models/availability_model.dart';
-import '../../../core/network/provider/availability_provider.dart';
-import '../../../core/network/provider/user_provider.dart';
-import '../../../features/common/show_message.dart';
+
+import '../../core/network/models/widget.dart';
+import '../../core/network/provider/widget.dart';
+import '../common/widget.dart';
 
 class AvailabilityScreen extends StatefulWidget {
   const AvailabilityScreen({super.key});
