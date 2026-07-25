@@ -12,30 +12,33 @@ void main() async {
   runApp(const BMCStaffSelfService());
 }
 
-class BMCStaffSelfService extends StatefulWidget{
+class BMCStaffSelfService extends StatefulWidget {
   const BMCStaffSelfService({super.key});
   // ignore: library_private_types_in_public_api
-  static _BMCStaffSelfServiceState of(BuildContext context) => context.findAncestorStateOfType<_BMCStaffSelfServiceState>()!;
+  static _BMCStaffSelfServiceState of(BuildContext context) =>
+      context.findAncestorStateOfType<_BMCStaffSelfServiceState>()!;
 
   @override
   State<BMCStaffSelfService> createState() => _BMCStaffSelfServiceState();
 }
 
-class _BMCStaffSelfServiceState extends State<BMCStaffSelfService>{
+class _BMCStaffSelfServiceState extends State<BMCStaffSelfService> {
   DarkThemeProvider themeChangeProvider = DarkThemeProvider();
 
   @override
-  void initState(){
+  void initState() {
     super.initState();
     getCurrentAppTheme();
   }
 
-  void getCurrentAppTheme() async{
-    themeChangeProvider.darkTheme = await themeChangeProvider.bmcStaffPreferences.getTheme();
+  void getCurrentAppTheme() async {
+    themeChangeProvider.darkTheme = await themeChangeProvider
+        .bmcStaffPreferences
+        .getTheme();
   }
 
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -43,7 +46,7 @@ class _BMCStaffSelfServiceState extends State<BMCStaffSelfService>{
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(
-          create: (_){
+          create: (_) {
             return themeChangeProvider;
           },
         ),
@@ -54,25 +57,25 @@ class _BMCStaffSelfServiceState extends State<BMCStaffSelfService>{
         ChangeNotifierProvider(create: (_) => RotaProvider()),
       ],
       child: Consumer<DarkThemeProvider>(
-          builder: (context, themeData, child){
-            return MaterialApp.router(
-              debugShowCheckedModeBanner: false,
-              title: 'BMC Staff Self-Service',
-              routerConfig: BMCRouter.router,
-              theme: Styles.themeData(themeChangeProvider.darkTheme, context),
-              builder: (context, child){
-                final mediaQuery = MediaQuery.of(context);
-                return MediaQuery(
-                  data: mediaQuery.copyWith(
-                    textScaler: TextScaler.linear(
-                      mediaQuery.textScaler.scale(1.0).clamp(1.0, 1.1),
-                    )
+        builder: (context, themeData, child) {
+          return MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            title: 'BMC Staff Self-Service',
+            routerConfig: BMCRouter.router,
+            theme: Styles.themeData(themeChangeProvider.darkTheme, context),
+            builder: (context, child) {
+              final mediaQuery = MediaQuery.of(context);
+              return MediaQuery(
+                data: mediaQuery.copyWith(
+                  textScaler: TextScaler.linear(
+                    mediaQuery.textScaler.scale(1.0).clamp(1.0, 1.1),
                   ),
-                  child: child!,
-                );
-              },
-            );
-          }
+                ),
+                child: child!,
+              );
+            },
+          );
+        },
       ),
     );
   }

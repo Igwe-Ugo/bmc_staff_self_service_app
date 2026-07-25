@@ -31,50 +31,51 @@ class _CustomTextInputState extends State<CustomTextInput> {
       maxLines: 1,
       style: TextStyle(
         fontFamily: 'Lexend',
-        fontSize: 14,
-        color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.white,
+        fontSize: 12,
+        color: Theme.of(context).brightness == Brightness.light
+            ? Colors.black
+            : Colors.white,
       ),
       decoration: InputDecoration(
         hintText: widget.hint,
         hintStyle: TextStyle(
           color: Colors.grey.shade400,
           fontFamily: 'Lexend',
-          fontSize: 14,
+          fontSize: 12,
         ),
 
         /// 🔹 PREFIX ICON
         prefixIcon: Icon(
           widget.prefixIcon,
-          size: 20,
+          size: 15,
           color: Colors.grey.shade500,
         ),
 
         /// 🔹 PASSWORD TOGGLE ICON
         suffixIcon: widget.isPassword
             ? IconButton(
-          onPressed: () {
-            setState(() {
-              _obscure = !_obscure;
-            });
-          },
-          icon: Icon(
-            _obscure ? Icons.visibility_off : Icons.visibility,
-            size: 18,
-          ),
-        )
+                onPressed: () {
+                  setState(() {
+                    _obscure = !_obscure;
+                  });
+                },
+                icon: Icon(
+                  _obscure ? Icons.visibility_off : Icons.visibility,
+                  size: 15,
+                ),
+              )
             : null,
 
         /// 🔹 SPACING
-        contentPadding:
-        const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 15,
+          horizontal: 20,
+        ),
 
         /// 🔹 DEFAULT BORDER
         enabledBorder: OutlineInputBorder(
           borderRadius: borderRadius,
-          borderSide: BorderSide(
-            color: Colors.grey.shade300,
-            width: 1,
-          ),
+          borderSide: BorderSide(color: Colors.grey.shade300, width: 1),
         ),
 
         /// 🔹 FOCUSED BORDER
@@ -82,25 +83,20 @@ class _CustomTextInputState extends State<CustomTextInput> {
           borderRadius: borderRadius,
           borderSide: BorderSide(
             color: Theme.of(context).primaryColor,
-            width: 1.5,
+            width: 1.0,
           ),
         ),
 
         /// 🔹 ERROR BORDER (future-proof)
         errorBorder: OutlineInputBorder(
           borderRadius: borderRadius,
-          borderSide: const BorderSide(
-            color: Colors.red,
-          ),
+          borderSide: const BorderSide(color: Colors.red),
         ),
 
         /// 🔹 FOCUSED ERROR BORDER
         focusedErrorBorder: OutlineInputBorder(
           borderRadius: borderRadius,
-          borderSide: const BorderSide(
-            color: Colors.red,
-            width: 1.5,
-          ),
+          borderSide: const BorderSide(color: Colors.red, width: 1.5),
         ),
       ),
     );

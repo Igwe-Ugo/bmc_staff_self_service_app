@@ -40,9 +40,13 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       final savedUser = await _secureStorage.read(key: 'remembered_username');
       final savedPass = await _secureStorage.read(key: 'remembered_password');
-      final rememberMeStatus = await _secureStorage.read(key: 'remembered_me_status');
+      final rememberMeStatus = await _secureStorage.read(
+        key: 'remembered_me_status',
+      );
 
-      if (rememberMeStatus == "true" && savedUser != null && savedPass != null){
+      if (rememberMeStatus == "true" &&
+          savedUser != null &&
+          savedPass != null) {
         setState(() {
           _rememberMe = true;
           _usernameController.text = savedUser;
@@ -51,15 +55,26 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       print('Error loading saved credentials: $e');
-      showMessage("Error loading saved credentials.", context, status: MessageStatus.error, title: "Error");
+      showMessage(
+        "Error loading saved credentials.",
+        context,
+        status: MessageStatus.error,
+        title: "Error",
+      );
     }
   }
 
   // save or clear storage action
   Future<void> _handleCredentialPersistence() async {
-    if (_rememberMe){
-      await _secureStorage.write(key: 'remembered_username', value: _usernameController.text);
-      await _secureStorage.write(key: 'remembered_password', value: _passwordController.text);
+    if (_rememberMe) {
+      await _secureStorage.write(
+        key: 'remembered_username',
+        value: _usernameController.text,
+      );
+      await _secureStorage.write(
+        key: 'remembered_password',
+        value: _passwordController.text,
+      );
       await _secureStorage.write(key: 'remembered_me_status', value: "true");
     } else {
       await _secureStorage.delete(key: 'remembered_username');
@@ -73,11 +88,19 @@ class _LoginScreenState extends State<LoginScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: SafeArea( // Added SafeArea to protect top and bottom notches
-        child: SingleChildScrollView( // 👈 1. Wrap with SingleChildScrollView
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag, // Optional: dismisses keyboard on drag
+      body: SafeArea(
+        // Added SafeArea to protect top and bottom notches
+        child: SingleChildScrollView(
+          // 👈 1. Wrap with SingleChildScrollView
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior
+              .onDrag, // Optional: dismisses keyboard on drag
           child: Padding(
-            padding: const EdgeInsets.only(top: 30.0, left: 30, right: 30, bottom: 40),
+            padding: const EdgeInsets.only(
+              top: 30.0,
+              left: 30,
+              right: 30,
+              bottom: 40,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -86,30 +109,44 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     GestureDetector(
-                      onTap: () => GoRouter.of(context).push(BMCRouter.landingPagePath),
+                      onTap: () =>
+                          GoRouter.of(context).push(BMCRouter.landingPagePath),
                       child: CircleAvatar(
-                        radius: 22,
-                        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
-                        child: Icon(Iconsax.arrow_left, size: 20),
+                        radius: 18,
+                        backgroundColor:
+                            Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black12.withOpacity(0.3)
+                            : Theme.of(context).hoverColor,
+                        child: Icon(Iconsax.arrow_left, size: 18),
                       ),
                     ),
                     GestureDetector(
-                      onTap: (){
-                        final themeProvider = Provider.of<DarkThemeProvider>(context, listen: false);
+                      onTap: () {
+                        final themeProvider = Provider.of<DarkThemeProvider>(
+                          context,
+                          listen: false,
+                        );
                         themeProvider.darkTheme = !themeProvider.darkTheme;
                       },
                       child: CircleAvatar(
-                        radius: 22,
-                        backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
-                        child: Icon(isDark ? Iconsax.sun_1 : Iconsax.moon, size: 25),
+                        radius: 18,
+                        backgroundColor:
+                            Theme.of(context).brightness == Brightness.dark
+                            ? Colors.black12.withOpacity(0.3)
+                            : Theme.of(context).hoverColor,
+                        child: Icon(
+                          isDark ? Iconsax.sun_1 : Iconsax.moon,
+                          size: 18,
+                        ),
                       ),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 80), // Reduced from 120 to optimize viewport space on small screens
-
-                /// 隼 LOGO
+                const SizedBox(
+                  height: 80,
+                ), // Reduced from 120 to optimize viewport space on small screens
+                /// LOGO
                 Image.asset(
                   'assets/images/bmc_image.png',
                   width: 50,
@@ -134,7 +171,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w300,
                     fontFamily: 'Lexend',
-                    color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.grey,
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? Colors.black
+                        : Colors.grey,
                   ),
                 ),
                 const SizedBox(height: 25),
@@ -145,10 +184,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text(
                     "Username",
                     style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.grey,
-                        fontFamily: 'Lexend',
-                        fontWeight: FontWeight.w400,
-                        fontSize: 16),
+                      color: Theme.of(context).brightness == Brightness.light
+                          ? Colors.black
+                          : Colors.grey,
+                      fontFamily: 'Lexend',
+                      fontWeight: FontWeight.w400,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -165,10 +207,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text(
                     "Password",
                     style: TextStyle(
-                        color: Theme.of(context).brightness == Brightness.light ? Colors.black : Colors.grey,
-                        fontFamily: 'Lexend',
-                        fontWeight: FontWeight.w400,
-                        fontSize: 16),
+                      color: Theme.of(context).brightness == Brightness.light
+                          ? Colors.black
+                          : Colors.grey,
+                      fontFamily: 'Lexend',
+                      fontWeight: FontWeight.w400,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -180,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 20),
 
-            // ─── Remember Me & Forgot Password Row ───────────────────────
+                // ─── Remember Me & Forgot Password Row ───────────────────────
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Row(
@@ -212,7 +257,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontFamily: 'Lexend',
-                            color: Theme.of(context).brightness == Brightness.light ? Colors.black87 : Colors.grey.shade400,
+                            color:
+                                Theme.of(context).brightness == Brightness.light
+                                ? Colors.black87
+                                : Colors.grey.shade400,
                           ),
                         ),
                       ),
@@ -220,8 +268,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 7),
-
-
 
                 ///FORGOT PASSWORD
                 Align(
@@ -231,21 +277,22 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text(
                       "Forget Password?",
                       style: TextStyle(
-                          fontSize: 16,
-                          fontFamily: 'Lexend',
-                          fontWeight: FontWeight.w400,
-                          color: Colors.blue
+                        fontSize: 14,
+                        fontFamily: 'Lexend',
+                        fontWeight: FontWeight.w400,
+                        color: Colors.blue,
                       ),
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 70), // 👈 2. Replaced Spacer() with a fixed height Box
-
+                const SizedBox(
+                  height: 70,
+                ), // 👈 2. Replaced Spacer() with a fixed height Box
                 ///LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
-                  height: 60,
+                  height: 45,
                   child: ElevatedButton(
                     onPressed: _isLoading == true ? null : _login,
                     style: ElevatedButton.styleFrom(
@@ -257,17 +304,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: _isLoading == true
                         ? LoadingAnimationWidget.staggeredDotsWave(
-                      color: Colors.white,
-                      size: 40,
-                    ): const Text(
-                      "Login",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Lexend',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                            color: Colors.white,
+                            size: 35,
+                          )
+                        : const Text(
+                            "Login",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'Lexend',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],

@@ -13,7 +13,9 @@ class Landing extends StatefulWidget {
 class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _currentPage = 0;
-  late final List<MapEntry<String, String>> entries = staffServiceFeatures.entries.toList();
+  late final List<MapEntry<String, String>> entries = staffServiceFeatures
+      .entries
+      .toList();
 
   @override
   void initState() {
@@ -33,13 +35,13 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
 
   final Map<String, String> staffServiceFeatures = {
     "Set Your Availability":
-    "Mark the days you’re available or unavailable in seconds. Stay in control of your schedule before the submission window closes.",
+        "Mark the days you’re available or unavailable in seconds. Stay in control of your schedule before the submission window closes.",
     "View Your Shifts Instantly":
-    "Check your weekly schedule at a glance. See shift times, locations, and request swaps when needed.",
+        "Check your weekly schedule at a glance. See shift times, locations, and request swaps when needed.",
     "Request Leave with Clarity":
-    "Submit leave requests with required details. Track approvals and avoid scheduling conflicts.",
+        "Submit leave requests with required details. Track approvals and avoid scheduling conflicts.",
     "Your Profile & Documents":
-    "Access your personal details, upload documents, and keep everything verified and up to date in one place.",
+        "Access your personal details, upload documents, and keep everything verified and up to date in one place.",
   };
 
   @override
@@ -64,8 +66,8 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                 children: [
                   Image.asset(
                     'assets/images/bmc_image.png',
-                    width: 80,
-                    height: 80,
+                    width: 60,
+                    height: 60,
                   ),
                   const SizedBox(height: 10),
                   Text(
@@ -94,7 +96,9 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                 length: entries.length,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 20),
+                    horizontal: 20,
+                    vertical: 20,
+                  ),
                   decoration: BoxDecoration(
                     color: Theme.of(context).primaryColor,
                     borderRadius: BorderRadius.circular(18),
@@ -108,7 +112,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                       /// 🔹 STATIC BUTTON
                       SizedBox(
                         width: double.infinity,
-                        height: 50,
+                        height: 32,
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.push(
@@ -122,8 +126,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                             elevation: 0,
                             backgroundColor: Colors.white,
                             foregroundColor: Theme.of(context).primaryColor,
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 15),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -132,7 +135,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                             "Get Started",
                             style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              fontSize: 16
+                              fontSize: 13,
                             ),
                           ),
                         ),
@@ -184,7 +187,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                       entry.key,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 17,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                         fontFamily: "Montserrat",
@@ -195,7 +198,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                       entry.value,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontFamily: 'Lexend',
                         color: Colors.white,
                         fontWeight: FontWeight.w300,
@@ -219,9 +222,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                 width: _currentPage == index ? 16 : 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: _currentPage == index
-                      ? Colors.white
-                      : Colors.white54,
+                  color: _currentPage == index ? Colors.white : Colors.white54,
                   borderRadius: BorderRadius.circular(10),
                 ),
               );

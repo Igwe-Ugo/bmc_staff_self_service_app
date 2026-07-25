@@ -1,11 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum MessageStatus {
-  info,
-  success,
-  warning,
-  error,
-}
+enum MessageStatus { info, success, warning, error }
 
 /// Shows a status toast that slides in from the top.
 /// [message] – body text.
@@ -13,11 +8,11 @@ enum MessageStatus {
 /// [status] – info (blue), success (green), warning (orange), error (red).
 /// [title] – optional bold title above the message.
 void showMessage(
-    String message,
-    BuildContext context, {
-      MessageStatus status = MessageStatus.info,
-      String? title,
-    }) {
+  String message,
+  BuildContext context, {
+  MessageStatus status = MessageStatus.info,
+  String? title,
+}) {
   final overlay = Overlay.of(context);
   final colorScheme = _statusColors(status);
   late OverlayEntry entry;
@@ -111,10 +106,7 @@ class _ToastFromTopState extends State<_ToastFromTop>
     _slide = Tween<Offset>(
       begin: const Offset(0, -1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
     Future.delayed(const Duration(seconds: 4), () {
       if (mounted) _dismiss();
@@ -193,7 +185,7 @@ class _ToastFromTopState extends State<_ToastFromTop>
                                       Text(
                                         widget.title!,
                                         style: TextStyle(
-                                          fontSize: 16,
+                                          fontSize: 14,
                                           fontWeight: FontWeight.w600,
                                           fontFamily: 'Inter',
                                           color: titleColor,
@@ -205,11 +197,12 @@ class _ToastFromTopState extends State<_ToastFromTop>
                                     Text(
                                       widget.message,
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w400,
                                         fontFamily: 'Inter',
-                                        color: widget.title != null &&
-                                            widget.title!.isNotEmpty
+                                        color:
+                                            widget.title != null &&
+                                                widget.title!.isNotEmpty
                                             ? subtitleColor
                                             : titleColor,
                                       ),
@@ -221,7 +214,7 @@ class _ToastFromTopState extends State<_ToastFromTop>
                                 onPressed: _dismiss,
                                 icon: Icon(
                                   Icons.close,
-                                  size: 20,
+                                  size: 18,
                                   color: textColor,
                                 ),
                                 style: IconButton.styleFrom(
@@ -262,15 +255,16 @@ class _ToastFromTopState extends State<_ToastFromTop>
 
   Widget _statusIcon() {
     final color = widget.colorScheme.iconFg;
+    final double iconSize = 20;
     switch (widget.status) {
       case MessageStatus.success:
-        return Icon(Icons.check, size: 22, color: color);
+        return Icon(Icons.check, size: iconSize, color: color);
       case MessageStatus.warning:
-        return Icon(Icons.warning_amber_rounded, size: 22, color: color);
+        return Icon(Icons.warning_amber_rounded, size: iconSize, color: color);
       case MessageStatus.error:
-        return Icon(Icons.error_outline, size: 22, color: color);
+        return Icon(Icons.error_outline, size: iconSize, color: color);
       case MessageStatus.info:
-        return Icon(Icons.info_outline, size: 22, color: color);
+        return Icon(Icons.info_outline, size: iconSize, color: color);
     }
   }
 }

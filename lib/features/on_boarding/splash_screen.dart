@@ -56,26 +56,23 @@ class _SplashScreenState extends State<SplashScreen> {
             AnimatedAlign(
               duration: const Duration(milliseconds: 800),
               curve: Curves.easeInOut,
-              alignment:
-              _moveImage ? Alignment(0, -0.15) : Alignment.center,
+              alignment: _moveImage ? Alignment(0, -0.15) : Alignment.center,
               child: Image.asset(
                 'assets/images/bmc_image.png',
-                width: 80,
-                height: 80,
+                width: 70,
+                height: 70,
               ),
             ),
-            const SizedBox(height: 10,),
+            const SizedBox(height: 20),
 
             /// 🔹 TEXT (fades + slides in)
             Align(
               alignment: Alignment(0, 0),
               child: AnimatedOpacity(
                 opacity: _showText ? 1.0 : 0.0,
-                duration: const Duration(milliseconds: 800),
+                duration: const Duration(milliseconds: 950),
                 child: AnimatedSlide(
-                  offset: _showText
-                      ? const Offset(0, 0)
-                      : const Offset(0, 0.5),
+                  offset: _showText ? const Offset(0, 0) : const Offset(0, 0.5),
                   duration: const Duration(milliseconds: 800),
                   curve: Curves.easeOut,
                   child: Text(
