@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
+
+import 'widget.dart';
 
 /// Notification icon with badge showing unread count. Tapping navigates to notifications.
 class NotificationBadgeIcon extends StatelessWidget {
@@ -8,13 +11,19 @@ class NotificationBadgeIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () {},
+      onTap: () {
+        GoRouter.of(
+          context,
+        ).push("${BMCRouter.homePath}/${BMCRouter.notificationsPath}");
+      },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
-            borderRadius: BorderRadius.circular(20)
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.black12.withOpacity(0.3)
+              : Theme.of(context).hoverColor,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Stack(
           alignment: AlignmentDirectional.bottomEnd,
@@ -22,10 +31,8 @@ class NotificationBadgeIcon extends StatelessWidget {
           children: [
             Icon(
               Iconsax.notification,
-              size: 24,
-              color: Theme
-                  .of(context)
-                  .brightness == Brightness.dark
+              size: 20,
+              color: Theme.of(context).brightness == Brightness.dark
                   ? Colors.white
                   : Colors.black,
             ),

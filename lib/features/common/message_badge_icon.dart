@@ -11,14 +11,18 @@ class MessageBadgeIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () {
-        GoRouter.of(context).go("${BMCRouter.homePath}/${BMCRouter.messagePath}");
+        GoRouter.of(
+          context,
+        ).go("${BMCRouter.homePath}/${BMCRouter.messagePath}");
       },
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
-            borderRadius: BorderRadius.circular(20)
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.black12.withOpacity(0.3)
+              : Theme.of(context).hoverColor,
+          borderRadius: BorderRadius.circular(20),
         ),
         child: Stack(
           alignment: AlignmentDirectional.bottomEnd,
@@ -26,10 +30,8 @@ class MessageBadgeIcon extends StatelessWidget {
           children: [
             Icon(
               Iconsax.message,
-              size: 24,
-              color: Theme
-                  .of(context)
-                  .brightness == Brightness.dark
+              size: 20,
+              color: Theme.of(context).brightness == Brightness.dark
                   ? Colors.white
                   : Colors.black,
             ),

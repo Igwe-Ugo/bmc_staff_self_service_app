@@ -68,7 +68,7 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
         borderRadius: BorderRadius.circular(50),
         shadowColor: Colors.black.withOpacity(0.5),
         child: Container(
-          height: 80,
+          height: 70,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(50),
               border: Border.all(

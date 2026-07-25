@@ -75,15 +75,21 @@ class _BMCHomeState extends State<BMCHome> {
     return Consumer3<UserProvider, AvailabilityProvider, LeaveProvider>(
       builder: (context, userProvider, availabilityProvider, leaveProvider, _) {
         if (userProvider.isLoading || availabilityProvider.isLoading) {
-          return Scaffold(body: Center(child: LoadingAnimationWidget.staggeredDotsWave(
-            color: Theme.of(context).primaryColor,
-            size: 70,
-          )));
+          return Scaffold(
+            body: Center(
+              child: LoadingAnimationWidget.staggeredDotsWave(
+                color: Theme.of(context).primaryColor,
+                size: 70,
+              ),
+            ),
+          );
         }
 
         return Scaffold(
           body: CustomMaterialIndicator(
-            backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
+            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                ? Colors.black12.withOpacity(0.3)
+                : Theme.of(context).hoverColor,
             onRefresh: _refreshAllProviders,
             indicatorBuilder: (context, controller) {
               return Padding(
@@ -91,7 +97,7 @@ class _BMCHomeState extends State<BMCHome> {
                 child: LoadingAnimationWidget.staggeredDotsWave(
                   color: Theme.of(context).primaryColor,
                   size: 40,
-                )
+                ),
               );
             },
             child: Stack(
@@ -112,19 +118,42 @@ class _BMCHomeState extends State<BMCHome> {
                         CombinedCarouselCalendar(),
                         const SizedBox(height: 24),
 
-                        const _SectionTitle(title: "Recent Messages", badge: "5", isRota: false),
+                        const _SectionTitle(
+                          title: "Recent Messages",
+                          badge: "5",
+                          isRota: false,
+                        ),
                         const SizedBox(height: 14),
-                        _buildMessagesList(userProvider, Theme.of(context).cardColor),
+                        _buildMessagesList(
+                          userProvider,
+                          Theme.of(context).cardColor,
+                        ),
                         const SizedBox(height: 24),
 
-                        const _SectionTitle(title: "Recent Notifications", badge: "10", isRota: false),
+                        const _SectionTitle(
+                          title: "Recent Notifications",
+                          badge: "10",
+                          isRota: false,
+                        ),
                         const SizedBox(height: 14),
-                        _buildNotificationList(userProvider, Theme.of(context).cardColor),
+                        _buildNotificationList(
+                          userProvider,
+                          Theme.of(context).cardColor,
+                        ),
                       ],
                     ),
                   ),
                 ),
-                _topNavBar(context, userProvider: userProvider, onProfileTap: () {setState(() {_showDrawer = true; navBarVisible.value = false;});},),
+                _topNavBar(
+                  context,
+                  userProvider: userProvider,
+                  onProfileTap: () {
+                    setState(() {
+                      _showDrawer = true;
+                      navBarVisible.value = false;
+                    });
+                  },
+                ),
                 AnimatedPositioned(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
@@ -156,7 +185,9 @@ class _BMCHomeState extends State<BMCHome> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         image: const DecorationImage(
-          image: AssetImage("assets/images/beautiful-strawberry-garden-sunrise.png"),
+          image: AssetImage(
+            "assets/images/beautiful-strawberry-garden-sunrise.png",
+          ),
           fit: BoxFit.cover,
         ),
       ),
@@ -178,21 +209,46 @@ class _BMCHomeState extends State<BMCHome> {
               children: [
                 Text(
                   "${_getGreeting()}, ",
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
                   userProvider.displayName,
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w300),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w300,
+                  ),
                 ),
                 const Spacer(),
-                SvgPicture.asset('assets/icons/weather.svg', width: 20, height: 20)
+                SvgPicture.asset(
+                  'assets/icons/weather.svg',
+                  width: 20,
+                  height: 20,
+                ),
               ],
             ),
             const SizedBox(height: 6),
-            const Text("Gleanings for the day", style: TextStyle(color: Colors.white70, fontSize: 11)),
+            const Text(
+              "Gleanings for the day",
+              style: TextStyle(color: Colors.white70, fontSize: 11),
+            ),
             const Divider(color: Colors.white30, height: 12),
-            const Text("Philippians 4:13", style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-            const Text("I can do all things through Christ who strengthens me.", style: TextStyle(color: Colors.white70, fontSize: 11)),
+            const Text(
+              "Philippians 4:13",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Text(
+              "I can do all things through Christ who strengthens me.",
+              style: TextStyle(color: Colors.white70, fontSize: 11),
+            ),
           ],
         ),
       ),
@@ -201,10 +257,34 @@ class _BMCHomeState extends State<BMCHome> {
 
   Widget _buildMessagesList(UserProvider userProvider, Color cardColor) {
     final List<Map<String, dynamic>> msgs = [
-      {'title': 'I won’t come to work tomorrow ma', 'subtitle': 'Today', 'badge': 'Ugoo', 'color': Colors.green, 'time': '12:50pm'},
-      {'title': 'Please don’t involve me', 'subtitle': 'Today', 'badge': 'Richard', 'color': Colors.red, 'time': '12:50pm'},
-      {'title': 'Help buy food while coming tomorrow', 'subtitle': 'Yesterday', 'badge': 'Uzo', 'color': Colors.blue, 'time': '12:50pm'},
-      {'title': 'Send me that money nah', 'subtitle': 'Yesterday', 'badge': 'Igwe', 'color': Colors.amber, 'time': '12:50pm'},
+      {
+        'title': 'I won’t come to work tomorrow ma',
+        'subtitle': 'Today',
+        'badge': 'Ugoo',
+        'color': Colors.green,
+        'time': '12:50pm',
+      },
+      {
+        'title': 'Please don’t involve me',
+        'subtitle': 'Today',
+        'badge': 'Richard',
+        'color': Colors.red,
+        'time': '12:50pm',
+      },
+      {
+        'title': 'Help buy food while coming tomorrow',
+        'subtitle': 'Yesterday',
+        'badge': 'Uzo',
+        'color': Colors.blue,
+        'time': '12:50pm',
+      },
+      {
+        'title': 'Send me that money nah',
+        'subtitle': 'Yesterday',
+        'badge': 'Igwe',
+        'color': Colors.amber,
+        'time': '12:50pm',
+      },
     ];
 
     return ListView.separated(
@@ -218,10 +298,34 @@ class _BMCHomeState extends State<BMCHome> {
 
   Widget _buildNotificationList(UserProvider userProvider, Color cardColor) {
     final List<Map<String, dynamic>> notes = [
-      {'title': 'Availability window open closes 30/05/2026 at 23:59', 'subtitle': '2 Days left', 'badge': 'Admin', 'color': const Color(0xFF6C47FF), 'time': '12:50pm'},
-      {'title': 'Ugoo wants is giving you his shift', 'subtitle': 'Swap Request', 'badge': 'Ugoo', 'color': Colors.green, 'time': '12:50pm'},
-      {'title': 'Leave Request', 'subtitle': 'Approved', 'badge': 'Admin', 'color': const Color(0xFF6C47FF), 'time': '12:50pm'},
-      {'title': 'Swap shift with Ugochukwu Igwe', 'subtitle': 'Accepted', 'badge': 'Igwe', 'color': Colors.amber, 'time': '12:50pm'},
+      {
+        'title': 'Availability window open closes 30/05/2026 at 23:59',
+        'subtitle': '2 Days left',
+        'badge': 'Admin',
+        'color': const Color(0xFF6C47FF),
+        'time': '12:50pm',
+      },
+      {
+        'title': 'Ugoo wants is giving you his shift',
+        'subtitle': 'Swap Request',
+        'badge': 'Ugoo',
+        'color': Colors.green,
+        'time': '12:50pm',
+      },
+      {
+        'title': 'Leave Request',
+        'subtitle': 'Approved',
+        'badge': 'Admin',
+        'color': const Color(0xFF6C47FF),
+        'time': '12:50pm',
+      },
+      {
+        'title': 'Swap shift with Ugochukwu Igwe',
+        'subtitle': 'Accepted',
+        'badge': 'Igwe',
+        'color': Colors.amber,
+        'time': '12:50pm',
+      },
     ];
 
     return ListView.separated(
@@ -253,7 +357,12 @@ class _BMCHomeState extends State<BMCHome> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item['title'], maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                Text(
+                  item['title'],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
                 const SizedBox(height: 2),
                 Text(item['subtitle'], style: TextStyle(fontSize: 11)),
               ],
@@ -265,19 +374,33 @@ class _BMCHomeState extends State<BMCHome> {
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: (item['color'] as Color).withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
-                child: Text(item['badge'], style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: item['color'])),
+                decoration: BoxDecoration(
+                  color: (item['color'] as Color).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  item['badge'],
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: item['color'],
+                  ),
+                ),
               ),
               const SizedBox(height: 4),
               Text(item['time'], style: TextStyle(fontSize: 10)),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _topNavBar(BuildContext context, {required UserProvider userProvider, required VoidCallback onProfileTap}) {
+  Widget _topNavBar(
+    BuildContext context, {
+    required UserProvider userProvider,
+    required VoidCallback onProfileTap,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       color: isDark ? const Color(0xFF1E1E2F) : Colors.white,
@@ -290,7 +413,11 @@ class _BMCHomeState extends State<BMCHome> {
             child: CircleAvatar(
               radius: 18,
               backgroundColor: Theme.of(context).primaryColor,
-              child: UserAvatar(image: userProvider.avatar, initials: userProvider.initials, radius: 16),
+              child: UserAvatar(
+                image: userProvider.avatar,
+                initials: userProvider.initials,
+                radius: 16,
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -298,26 +425,47 @@ class _BMCHomeState extends State<BMCHome> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(currentTime, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-              Text(currentDate, style: const TextStyle(fontSize: 10, color: Colors.grey)),
+              Text(
+                currentTime,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                currentDate,
+                style: const TextStyle(fontSize: 10, color: Colors.grey),
+              ),
             ],
           ),
           const SizedBox(width: 6),
-          Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
+          Container(
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+            ),
+          ),
           const Spacer(),
           GestureDetector(
-            onTap: (){
-              final themeProvider = Provider.of<DarkThemeProvider>(context, listen: false);
+            onTap: () {
+              final themeProvider = Provider.of<DarkThemeProvider>(
+                context,
+                listen: false,
+              );
               themeProvider.darkTheme = !themeProvider.darkTheme;
             },
             child: CircleAvatar(
-              radius: 22,
-              backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
-              child: Icon(isDark ? Iconsax.sun_1 : Iconsax.moon, size: 25),
+              radius: 18,
+              backgroundColor: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.black12.withOpacity(0.3)
+                  : Theme.of(context).hoverColor,
+              child: Icon(isDark ? Iconsax.sun_1 : Iconsax.moon, size: 20),
             ),
           ),
-          //const SizedBox(width: 12),
-          //MessageBadgeIcon(),
+          const SizedBox(width: 12),
+          MessageBadgeIcon(),
           const SizedBox(width: 12),
           NotificationBadgeIcon(),
         ],
@@ -338,28 +486,66 @@ class _SectionTitle extends StatelessWidget {
   final String badge;
   final bool isRota;
 
-  const _SectionTitle({required this.title, required this.badge, required this.isRota});
+  const _SectionTitle({
+    required this.title,
+    required this.badge,
+    required this.isRota,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).brightness == Brightness.dark ? Colors.white : const Color(0xFF1A1A2E);
+    final textColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white
+        : const Color(0xFF1A1A2E);
     return Row(
       children: [
-        Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: textColor)),
+        Text(
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+            color: textColor,
+          ),
+        ),
         if (isRota) ...[
           const SizedBox(width: 4),
-          Text("| This Month", style: TextStyle(fontWeight: FontWeight.w300, fontSize: 12, color: textColor.withOpacity(0.7))),
+          Text(
+            "| This Month",
+            style: TextStyle(
+              fontWeight: FontWeight.w300,
+              fontSize: 12,
+              color: textColor.withOpacity(0.7),
+            ),
+          ),
         ],
         const SizedBox(width: 6),
         CircleAvatar(
           radius: 9,
           backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
-          child: Text(badge, style: TextStyle(fontSize: 10, color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold)),
+          child: Text(
+            badge,
+            style: TextStyle(
+              fontSize: 10,
+              color: Theme.of(context).primaryColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ),
         const Spacer(),
-        Text("View All", style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.6), decoration: TextDecoration.underline)),
+        Text(
+          "View All",
+          style: TextStyle(
+            fontSize: 12,
+            color: textColor.withOpacity(0.6),
+            decoration: TextDecoration.underline,
+          ),
+        ),
         const SizedBox(width: 2),
-        Icon(Iconsax.arrow_right_3, size: 12, color: textColor.withOpacity(0.6)),
+        Icon(
+          Iconsax.arrow_right_3,
+          size: 12,
+          color: textColor.withOpacity(0.6),
+        ),
       ],
     );
   }

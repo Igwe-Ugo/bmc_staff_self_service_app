@@ -51,11 +51,14 @@ class ShiftEventTile extends StatelessWidget {
       context: context,
       builder: (BuildContext ctx) {
         final isPending = event.swapStatus == HrSwapStatus.pending;
-        final isCancelled = event.swapStatus == HrSwapStatus.cancelled ||
+        final isCancelled =
+            event.swapStatus == HrSwapStatus.cancelled ||
             event.swapStatus == HrSwapStatus.rejected;
         return Dialog(
           backgroundColor: Theme.of(context).cardColor,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
@@ -73,9 +76,21 @@ class ShiftEventTile extends StatelessWidget {
                 ),
                 const Divider(),
                 const SizedBox(height: 10),
-                _buildDetailRow(Iconsax.user, 'Staff Name', userProvider.displayName),
-                _buildDetailRow(Iconsax.hospital, 'Role / Designation', event.role),
-                _buildDetailRow(Iconsax.location, 'Ward / Department', event.ward),
+                _buildDetailRow(
+                  Iconsax.user,
+                  'Staff Name',
+                  userProvider.displayName,
+                ),
+                _buildDetailRow(
+                  Iconsax.hospital,
+                  'Role / Designation',
+                  event.role,
+                ),
+                _buildDetailRow(
+                  Iconsax.location,
+                  'Ward / Department',
+                  event.ward,
+                ),
                 _buildDetailRow(
                   Iconsax.calendar_1,
                   'Scheduled Date',
@@ -91,7 +106,9 @@ class ShiftEventTile extends StatelessWidget {
                 _buildDetailRow(
                   Iconsax.timer_1,
                   'Shift Hours',
-                  event.endTime.isNotEmpty ? "${_convertTo12Hour(event.startTime)} - ${_convertTo12Hour(event.endTime)}" : " ${_convertTo12Hour(event.startTime)}",
+                  event.endTime.isNotEmpty
+                      ? "${_convertTo12Hour(event.startTime)} - ${_convertTo12Hour(event.endTime)}"
+                      : " ${_convertTo12Hour(event.startTime)}",
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
@@ -100,18 +117,29 @@ class ShiftEventTile extends StatelessWidget {
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Dismiss', style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white)),
+                    child: const Text(
+                      'Dismiss',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
                 // Swap Status Alert Badge inside the Dialog
                 if (isPending)
                   Container(
                     width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: const Color(0xFFFFF0F3),
@@ -120,7 +148,11 @@ class ShiftEventTile extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.info_outline_rounded, color: Color(0xFFDA1E28), size: 20),
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          color: Color(0xFFDA1E28),
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Expanded(
                           child: Column(
@@ -152,7 +184,10 @@ class ShiftEventTile extends StatelessWidget {
                 if (isCancelled)
                   Container(
                     width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 10,
+                    ),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
@@ -160,7 +195,11 @@ class ShiftEventTile extends StatelessWidget {
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.cancel_outlined, color: Colors.grey.shade600, size: 20),
+                        Icon(
+                          Icons.cancel_outlined,
+                          color: Colors.grey.shade600,
+                          size: 20,
+                        ),
                         const SizedBox(width: 10),
                         Text(
                           "This swap request was cancelled/rejected",
@@ -181,7 +220,13 @@ class ShiftEventTile extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, {Color? badgeColor, Color? textColor}) {
+  Widget _buildDetailRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? badgeColor,
+    Color? textColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
@@ -193,15 +238,41 @@ class ShiftEventTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w500)),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 badgeColor != null
                     ? Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: badgeColor, borderRadius: BorderRadius.circular(8)),
-                  child: Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor)),
-                )
-                    : Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          value,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                      )
+                    : Text(
+                        value,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ],
             ),
           ),
@@ -215,8 +286,8 @@ class ShiftEventTile extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showShiftDetailDialog(context),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 40),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 5),
+        padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(14),
@@ -233,7 +304,7 @@ class ShiftEventTile extends StatelessWidget {
           children: [
             // Left Date Indicator Badge Block
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
               decoration: BoxDecoration(
                 color: Theme.of(context).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(10),
@@ -243,28 +314,35 @@ class ShiftEventTile extends StatelessWidget {
                 children: [
                   Text(
                     DateFormat('EEE').format(event.date),
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey.shade500,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   Text(
                     DateFormat('dd').format(event.date),
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
 
             // Avatar Placeholder
             CircleAvatar(
-              radius: 18,
+              radius: 16,
               backgroundColor: event.type.color,
               child: UserAvatar(
                 image: userProvider.avatar,
                 initials: userProvider.initials,
-                radius: 16,
+                radius: 14,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 8),
 
             Expanded(
               child: Column(
@@ -272,18 +350,21 @@ class ShiftEventTile extends StatelessWidget {
                 children: [
                   Text(
                     userProvider.displayName,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Iconsax.hospital, size: 12),
+                      const Icon(Iconsax.hospital, size: 10),
                       const SizedBox(width: 4),
-                      Text(event.ward, style: const TextStyle(fontSize: 11)),
+                      Text(event.ward, style: const TextStyle(fontSize: 10)),
                       const SizedBox(width: 8),
-                      const Icon(Iconsax.location, size: 12),
+                      const Icon(Iconsax.location, size: 10),
                       const SizedBox(width: 2),
-                      Text(event.role, style: const TextStyle(fontSize: 11)),
+                      Text(event.role, style: const TextStyle(fontSize: 10)),
                     ],
                   ),
                 ],
@@ -294,7 +375,10 @@ class ShiftEventTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: event.type.color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -310,8 +394,10 @@ class ShiftEventTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  event.endTime.isNotEmpty ? "${_convertTo12Hour(event.startTime)} - ${_convertTo12Hour(event.endTime)}" : " ${_convertTo12Hour(event.startTime)}",
-                  style: const TextStyle(fontSize: 11),
+                  event.endTime.isNotEmpty
+                      ? "${_convertTo12Hour(event.startTime)} - ${_convertTo12Hour(event.endTime)}"
+                      : " ${_convertTo12Hour(event.startTime)}",
+                  style: const TextStyle(fontSize: 10),
                 ),
               ],
             ),

@@ -1,7 +1,10 @@
+import 'package:bmc_app/core/network/models/widget.dart';
+import 'package:bmc_app/features/notification/notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../authentication/widget.dart';
 import '../availability/widget.dart';
+import '../chatting/widget.dart';
 import '../home/widget.dart';
 import '../leave/widget.dart';
 import '../on_boarding/widget.dart';
@@ -43,18 +46,16 @@ class BMCRouter {
   // home pages
   static const String homePath = '/home';
   static const String chatPath = 'chat';
+  static const String messagePath = 'message';
+  static const String notificationsPath = 'notifications';
   static const String aboutAppPath = 'about';
-
-  // profile page
   static const String profilePath = 'profile';
   static const String statsPath = 'stats';
   static const String documentsPath = 'documents';
 
-  static const String messagePath = 'message';
-  
   // availability
   static const String availabilityPath = '/availability';
-  
+
   // rota
   static const String rotaPath = '/rota';
 
@@ -76,64 +77,93 @@ class BMCRouter {
         builder: (context, state) => const LoginScreen(),
       ),
       StatefulShellRoute.indexedStack(
-          parentNavigatorKey: parentNavigatorKey,
-          builder: (context, state, navigationShell) {
-            return BMCAppNavBar(
-              navigationShell: navigationShell,
-              navStyle: NavStyle.floating,
-            );
-          },
-          branches: <StatefulShellBranch>[
-            StatefulShellBranch(
-                navigatorKey: homeTabNavigationKey,
-                routes: <RouteBase>[
+        parentNavigatorKey: parentNavigatorKey,
+        builder: (context, state, navigationShell) {
+          return BMCAppNavBar(
+            navigationShell: navigationShell,
+            navStyle: NavStyle.floating,
+          );
+        },
+        branches: <StatefulShellBranch>[
+          StatefulShellBranch(
+            navigatorKey: homeTabNavigationKey,
+            routes: <RouteBase>[
+              GoRoute(
+                path: homePath,
+                builder: (context, state) => BMCHome(),
+                routes: [
                   GoRoute(
-                      path: homePath,
-                      builder: (context, state) => BMCHome(),
+                    path: aboutAppPath,
+                    builder: (context, state) => AboutApp(),
+                  ),
+                  GoRoute(
+                    path: profilePath,
+                    builder: (context, state) => Profile(),
+                  ),
+                  GoRoute(
+                    path: documentsPath,
+                    builder: (context, state) => Documents(),
+                  ),
+                  GoRoute(
+                    path: notificationsPath,
+                    builder: (context, state) => Notifications(),
+                  ),
+                  GoRoute(
+                    path: messagePath,
+                    builder: (context, state) => MessagesListScreen(),
                     routes: [
                       GoRoute(
-                          path: aboutAppPath,
-                          builder: (context, state) => AboutApp()
+                        path: chatPath,
+                        builder: (context, state) {
+                          final users = state.extra as ChatUser?;
+                          if (users != null) {
+                            return ChatScreen(user: users);
+                          } else {
+                            return const Center(
+                              child: Text("Users not available!"),
+                            );
+                          }
+                        },
                       ),
-                      GoRoute(
-                          path: profilePath,
-                          builder: (context, state) => Profile()
-                      ),
-                      GoRoute(
-                          path: documentsPath,
-                          builder: (context, state) => Documents()
-                      ),
-                      GoRoute(
-                        path: statsPath,
-                        builder: (context, state) => StatsScreen(),
-                      ),
-                    ]
+                    ],
                   ),
-                ]),
-            StatefulShellBranch(
-                navigatorKey: availabilityTabNavigationKey,
-                routes: <RouteBase>[
                   GoRoute(
-                      path: availabilityPath,
-                      builder: (context, state) => AvailabilityScreen()),
-                ]),
-            StatefulShellBranch(
-                navigatorKey: rotaTabNavigationKey,
-                routes: <RouteBase>[
-                  GoRoute(
-                    path: rotaPath,
-                    builder: (context, state) => RotaScreen(),
+                    path: statsPath,
+                    builder: (context, state) => StatsScreen(),
                   ),
-                ]),
-            StatefulShellBranch(
-                navigatorKey: leaveTabNavigationKey,
-                routes: <RouteBase>[
-                  GoRoute(
-                    path: leavePath,
-                    builder: (context, state) => LeaveScreen(),
-                  ),
-                ]),
-          ])
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: availabilityTabNavigationKey,
+            routes: <RouteBase>[
+              GoRoute(
+                path: availabilityPath,
+                builder: (context, state) => AvailabilityScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: rotaTabNavigationKey,
+            routes: <RouteBase>[
+              GoRoute(
+                path: rotaPath,
+                builder: (context, state) => RotaScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            navigatorKey: leaveTabNavigationKey,
+            routes: <RouteBase>[
+              GoRoute(
+                path: leavePath,
+                builder: (context, state) => LeaveScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
     ];
 
     router = GoRouter(

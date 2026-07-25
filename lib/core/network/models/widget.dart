@@ -4,3 +4,4 @@ export 'leave_model.dart';
 export 'rota_model.dart';
 export 'availability_model.dart';
 export 'country_model.dart';
+export 'chat_model.dart';

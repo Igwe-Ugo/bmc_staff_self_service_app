@@ -6,47 +6,50 @@ import '../models/widget.dart';
 import '../services/widget.dart';
 
 enum RotaLoadState { idle, loading, loaded, error }
+
 enum SwapSubmitState { idle, submitting, success, error }
+
 enum RotaFilter { allStatus, daily, weekly, monthly, yearly }
+
 enum CancelSwapResult { success, alreadyResolved, failed }
 
 class RotaProvider extends ChangeNotifier {
   final RotaService _service = RotaService();
 
   // ── My shifts state ──────────────────────────────────────────────────────
-  RotaLoadState   _loadState    = RotaLoadState.idle;
-  String?         _errorMessage;
-  List<RotaEvent> _rotaEvents   = [];
+  RotaLoadState _loadState = RotaLoadState.idle;
+  String? _errorMessage;
+  List<RotaEvent> _rotaEvents = [];
 
   // Cache to avoid duplicate calls for the same month
   final Set<String> _fetchedMonths = {};
 
-  RotaLoadState   get loadState     => _loadState;
-  String?         get errorMessage  => _errorMessage;
-  List<RotaEvent> get rotaEvents    => _rotaEvents;
+  RotaLoadState get loadState => _loadState;
+  String? get errorMessage => _errorMessage;
+  List<RotaEvent> get rotaEvents => _rotaEvents;
 
   // ── Department staff state ───────────────────────────────────────────────
   List<StaffMember> _staffMembers = [];
-  bool              _loadingStaff = false;
+  bool _loadingStaff = false;
 
-  List<StaffMember> get staffMembers   => _staffMembers;
-  bool              get isLoadingStaff => _loadingStaff;
+  List<StaffMember> get staffMembers => _staffMembers;
+  bool get isLoadingStaff => _loadingStaff;
 
   // ── Selected staff member's shifts (for swap "their shift" picker) ───────
   List<RotaEvent> _theirAvailableShifts = [];
-  bool            _loadingTheirShifts   = false;
+  bool _loadingTheirShifts = false;
 
   List<RotaEvent> get theirAvailableShifts => _theirAvailableShifts;
-  bool            get isLoadingTheirShifts => _loadingTheirShifts;
+  bool get isLoadingTheirShifts => _loadingTheirShifts;
 
   // ── Swap submit state ────────────────────────────────────────────────────
   SwapSubmitState _swapState = SwapSubmitState.idle;
-  HrShiftSwap?    _lastSwap;
-  String?         _swapError;
+  HrShiftSwap? _lastSwap;
+  String? _swapError;
 
   SwapSubmitState get swapState => _swapState;
-  HrShiftSwap?    get lastSwap  => _lastSwap;
-  String?         get swapError => _swapError;
+  HrShiftSwap? get lastSwap => _lastSwap;
+  String? get swapError => _swapError;
 
   // ── Swap requests lookup state ─────────────────────────────────────────────
   List<RotaEvent> _swapEvents = [];
@@ -55,13 +58,17 @@ class RotaProvider extends ChangeNotifier {
 
   // ── Full refresh — call after any action that can change what's on screen ──
   Future<void> refreshRotaData(
-      BuildContext context,
-      DateTime month, {
-        String staffName = 'You',
-        String? personnelId,
-      }) async {
+    BuildContext context,
+    DateTime month, {
+    String staffName = 'You',
+    String? personnelId,
+  }) async {
     await Future.wait([
-      refreshShiftsForMonth(context, month, staffName: staffName), // clears cache, refetches
+      refreshShiftsForMonth(
+        context,
+        month,
+        staffName: staffName,
+      ), // clears cache, refetches
       loadSwapRequests(personnelId: personnelId),
     ]);
   }
@@ -69,14 +76,14 @@ class RotaProvider extends ChangeNotifier {
   // ── 1. Load my shifts for a month ────────────────────────────────────────
 
   Future<void> loadShiftsForMonth(
-      BuildContext context,
-      DateTime month, {
-        String staffName = 'You',
-      }) async {
+    BuildContext context,
+    DateTime month, {
+    String staffName = 'You',
+  }) async {
     final monthKey = DateFormat('yyyy-MM').format(month);
     if (_fetchedMonths.contains(monthKey)) return;
 
-    _loadState    = RotaLoadState.loading;
+    _loadState = RotaLoadState.loading;
     _errorMessage = null;
     notifyListeners();
 
@@ -96,7 +103,7 @@ class RotaProvider extends ChangeNotifier {
       _loadState = RotaLoadState.loaded;
     } catch (e) {
       _errorMessage = e.toString();
-      _loadState    = RotaLoadState.error;
+      _loadState = RotaLoadState.error;
     }
 
     notifyListeners();
@@ -105,7 +112,9 @@ class RotaProvider extends ChangeNotifier {
   // We expose a unified list combining normal shifts and swap records
   List<RotaEvent> get allCalendarEvents {
     // Merge standard month shifts with the tracked swap event states
-    final combined = List<RotaEvent>.from(_rotaEvents); // Assuming your normal shifts list is _rotaEvents
+    final combined = List<RotaEvent>.from(
+      _rotaEvents,
+    ); // Assuming your normal shifts list is _rotaEvents
 
     for (var swap in _swapEvents) {
       // Avoid duplicate assignments if it exists in both lists
@@ -115,7 +124,11 @@ class RotaProvider extends ChangeNotifier {
     return combined;
   }
 
-  Future<void> loadSwapRequests({String? periodId, String? personnelId, String? status}) async {
+  Future<void> loadSwapRequests({
+    String? periodId,
+    String? personnelId,
+    String? status,
+  }) async {
     _isLoadingSwaps = true;
     _swapError = null;
     notifyListeners();
@@ -141,10 +154,10 @@ class RotaProvider extends ChangeNotifier {
   }
 
   Future<void> refreshShiftsForMonth(
-      BuildContext context,
-      DateTime month, {
-        String staffName = 'You',
-      }) async {
+    BuildContext context,
+    DateTime month, {
+    String staffName = 'You',
+  }) async {
     final key = DateFormat('yyyy-MM').format(month);
     _fetchedMonths.remove(key);
     await loadShiftsForMonth(context, month, staffName: staffName);
@@ -172,12 +185,12 @@ class RotaProvider extends ChangeNotifier {
     required String periodId,
   }) async {
     _theirAvailableShifts = [];
-    _loadingTheirShifts   = true;
+    _loadingTheirShifts = true;
     notifyListeners();
     try {
       _theirAvailableShifts = await _service.fetchPersonnelShifts(
         personnelId: personnelId,
-        periodId:    periodId,
+        periodId: periodId,
       );
     } catch (e) {
       debugPrint('Failed to load personnel shifts: $e');
@@ -198,12 +211,12 @@ class RotaProvider extends ChangeNotifier {
   Future<bool> submitSwap(HrSwapRequestPayload payload) async {
     _swapState = SwapSubmitState.submitting;
     _swapError = null;
-    _lastSwap  = null;
+    _lastSwap = null;
     notifyListeners();
 
     try {
       final result = await _service.createSwapRequest(payload);
-      _lastSwap  = result;
+      _lastSwap = result;
       _swapState = SwapSubmitState.success;
       notifyListeners();
       return true;
@@ -218,7 +231,7 @@ class RotaProvider extends ChangeNotifier {
   void resetSwapState() {
     _swapState = SwapSubmitState.idle;
     _swapError = null;
-    _lastSwap  = null;
+    _lastSwap = null;
     notifyListeners();
   }
 
@@ -240,21 +253,27 @@ class RotaProvider extends ChangeNotifier {
       case RotaFilter.weekly:
         final now = DateTime.now();
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        final endOfWeek   = startOfWeek.add(const Duration(days: 7));
+        final endOfWeek = startOfWeek.add(const Duration(days: 7));
         return _rotaEvents
-            .where((e) =>
-        !e.date.isBefore(startOfWeek) && e.date.isBefore(endOfWeek))
+            .where(
+              (e) =>
+                  !e.date.isBefore(startOfWeek) && e.date.isBefore(endOfWeek),
+            )
             .toList();
 
       case RotaFilter.monthly:
         return _rotaEvents
-            .where((e) =>
-        e.date.month == focusedDay.month &&
-            e.date.year  == focusedDay.year)
+            .where(
+              (e) =>
+                  e.date.month == focusedDay.month &&
+                  e.date.year == focusedDay.year,
+            )
             .toList();
 
       case RotaFilter.yearly:
-        return _rotaEvents.where((e) => e.date.year == focusedDay.year).toList();
+        return _rotaEvents
+            .where((e) => e.date.year == focusedDay.year)
+            .toList();
     }
   }
 
@@ -272,9 +291,9 @@ class RotaProvider extends ChangeNotifier {
   // ── Reset / logout ────────────────────────────────────────────────────────
 
   void clearUserData() {
-    _rotaEvents            = [];
-    _staffMembers          = [];
-    _theirAvailableShifts  = [];
+    _rotaEvents = [];
+    _staffMembers = [];
+    _theirAvailableShifts = [];
     _fetchedMonths.clear();
     _loadState = RotaLoadState.idle;
     _swapState = SwapSubmitState.idle;
@@ -285,7 +304,12 @@ class RotaProvider extends ChangeNotifier {
     if (swapId == null || swapId.isEmpty) return CancelSwapResult.failed;
     try {
       final ok = await _service.deleteSwapRequest(swapId);
-      return ok ? CancelSwapResult.success : CancelSwapResult.failed;
+      if (ok) {
+        _swapEvents.removeWhere((e) => e.swapId == swapId || e.id == swapId);
+        notifyListeners();
+        return CancelSwapResult.success;
+      }
+      return CancelSwapResult.failed;
     } on SwapAlreadyResolvedException {
       return CancelSwapResult.alreadyResolved;
     } catch (e) {
