@@ -243,9 +243,9 @@ class _CreateGroupModalState extends State<CreateGroupModal> {
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     itemCount: widget.availableUsers.length,
-                    separatorBuilder: (_, __) => const Divider(
+                    separatorBuilder: (_, __) => Divider(
                       height: 1,
-                      color: Color(0xFF1E2638),
+                      color: Theme.of(context).primaryColor.withOpacity(0.6),
                       indent: 16,
                       endIndent: 16,
                     ),

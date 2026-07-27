@@ -32,7 +32,9 @@ class _StatsScreenState extends State<StatsScreen> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: context.read<AvailabilityProvider>()),
+        ChangeNotifierProvider.value(
+          value: context.read<AvailabilityProvider>(),
+        ),
         ChangeNotifierProvider.value(value: context.read<LeaveProvider>()),
         ChangeNotifierProvider.value(value: context.read<RotaProvider>()),
       ],
@@ -44,11 +46,11 @@ class _StatsScreenState extends State<StatsScreen> {
             icon: const Icon(Icons.arrow_back, size: 18),
           ),
           title: const Text(
-              'Statistics',
+            'Statistics',
             style: TextStyle(
               fontFamily: 'Lexend',
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -124,8 +126,13 @@ class _StatsScreenState extends State<StatsScreen> {
     final monthData = data.map((key, value) {
       // Filter only current month data
       final filtered = value.entries.where((entry) {
-        final date = DateTime(_currentMonth.year, _currentMonth.month, entry.key);
-        return date.month == _currentMonth.month && date.year == _currentMonth.year;
+        final date = DateTime(
+          _currentMonth.year,
+          _currentMonth.month,
+          entry.key,
+        );
+        return date.month == _currentMonth.month &&
+            date.year == _currentMonth.year;
       }).toList();
       return MapEntry(key, filtered);
     });
@@ -134,28 +141,48 @@ class _StatsScreenState extends State<StatsScreen> {
       StatData(
         label: 'Available',
         shortLabel: 'Avail',
-        value: monthData[HrAvailabilityStatus.available]?.fold(0, (sum, entry) => sum! + entry.value) ?? 0,
+        value:
+            monthData[HrAvailabilityStatus.available]?.fold(
+              0,
+              (sum, entry) => sum! + entry.value,
+            ) ??
+            0,
         color: HrAvailabilityStatus.available.color,
         count: monthData[HrAvailabilityStatus.available]?.length ?? 0,
       ),
       StatData(
         label: 'Unavailable',
         shortLabel: 'Unavail',
-        value: monthData[HrAvailabilityStatus.unavailable]?.fold(0, (sum, entry) => sum! + entry.value) ?? 0,
+        value:
+            monthData[HrAvailabilityStatus.unavailable]?.fold(
+              0,
+              (sum, entry) => sum! + entry.value,
+            ) ??
+            0,
         color: HrAvailabilityStatus.unavailable.color,
         count: monthData[HrAvailabilityStatus.unavailable]?.length ?? 0,
       ),
       StatData(
         label: 'Preferred',
         shortLabel: 'Pref',
-        value: monthData[HrAvailabilityStatus.preferred]?.fold(0, (sum, entry) => sum! + entry.value) ?? 0,
+        value:
+            monthData[HrAvailabilityStatus.preferred]?.fold(
+              0,
+              (sum, entry) => sum! + entry.value,
+            ) ??
+            0,
         color: HrAvailabilityStatus.preferred.color,
         count: monthData[HrAvailabilityStatus.preferred]?.length ?? 0,
       ),
       StatData(
         label: 'Tentative',
         shortLabel: 'Tent',
-        value: monthData[HrAvailabilityStatus.tentative]?.fold(0, (sum, entry) => sum! + entry.value) ?? 0,
+        value:
+            monthData[HrAvailabilityStatus.tentative]?.fold(
+              0,
+              (sum, entry) => sum! + entry.value,
+            ) ??
+            0,
         color: HrAvailabilityStatus.tentative.color,
         count: monthData[HrAvailabilityStatus.tentative]?.length ?? 0,
       ),
@@ -186,7 +213,11 @@ class _StatsScreenState extends State<StatsScreen> {
         final start = DateTime.parse(r.startDate);
         final end = DateTime.parse(r.endDate);
         final monthStart = DateTime(_currentMonth.year, _currentMonth.month, 1);
-        final monthEnd = DateTime(_currentMonth.year, _currentMonth.month + 1, 0); // last day of month
+        final monthEnd = DateTime(
+          _currentMonth.year,
+          _currentMonth.month + 1,
+          0,
+        ); // last day of month
         return !start.isAfter(monthEnd) && !end.isBefore(monthStart);
       } catch (_) {
         return false;
@@ -200,7 +231,9 @@ class _StatsScreenState extends State<StatsScreen> {
       final label = status.label;
       return StatData(
         label: label,
-        shortLabel: label.length >= 3 ? label.substring(0, 3).toUpperCase() : label.toUpperCase(),
+        shortLabel: label.length >= 3
+            ? label.substring(0, 3).toUpperCase()
+            : label.toUpperCase(),
         value: totalDays,
         color: status.color,
         count: matching.length,
@@ -227,9 +260,13 @@ class _StatsScreenState extends State<StatsScreen> {
     final events = provider.rotaEvents;
 
     // Filter only current month's events
-    final monthEvents = events.where((e) =>
-    e.date.month == _currentMonth.month && e.date.year == _currentMonth.year
-    ).toList();
+    final monthEvents = events
+        .where(
+          (e) =>
+              e.date.month == _currentMonth.month &&
+              e.date.year == _currentMonth.year,
+        )
+        .toList();
 
     final Map<ShiftType, int> counts = {};
     for (final e in monthEvents) {
@@ -282,7 +319,7 @@ class _StatsScreenState extends State<StatsScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(20),
@@ -314,7 +351,7 @@ class _StatsScreenState extends State<StatsScreen> {
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  fontFamily: 'Lexend'
+                  fontFamily: 'Lexend',
                 ),
               ),
               const Spacer(),
@@ -461,7 +498,8 @@ class _StatsScreenState extends State<StatsScreen> {
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
-                  if (index < 0 || index >= stats.length) return const SizedBox();
+                  if (index < 0 || index >= stats.length)
+                    return const SizedBox();
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
@@ -496,7 +534,9 @@ class _StatsScreenState extends State<StatsScreen> {
           ),
           gridData: FlGridData(
             show: true,
-            horizontalInterval: maxValue > 0 ? (maxValue / 5).ceilToDouble() : 2,
+            horizontalInterval: maxValue > 0
+                ? (maxValue / 5).ceilToDouble()
+                : 2,
             drawVerticalLine: false,
             getDrawingHorizontalLine: (value) {
               return FlLine(
@@ -509,14 +549,8 @@ class _StatsScreenState extends State<StatsScreen> {
           borderData: FlBorderData(
             show: true,
             border: Border(
-              bottom: BorderSide(
-                color: Colors.grey.withOpacity(0.3),
-                width: 1,
-              ),
-              left: BorderSide(
-                color: Colors.grey.withOpacity(0.3),
-                width: 1,
-              ),
+              bottom: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1),
+              left: BorderSide(color: Colors.grey.withOpacity(0.3), width: 1),
             ),
           ),
           barTouchData: BarTouchData(
@@ -548,18 +582,12 @@ class _StatsScreenState extends State<StatsScreen> {
         Container(
           width: 12,
           height: 12,
-          decoration: BoxDecoration(
-            color: item.color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: item.color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
         Text(
           '${item.label} (${item.value})',
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         ),
       ],
     );

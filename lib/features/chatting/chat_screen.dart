@@ -190,6 +190,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildBubble(Map<String, dynamic> msg) {
     final isMe = msg['isMe'] as bool;
+    final isYou = widget.user.isYou;
     final msgId = msg['id'];
     final isSelected = _selectedMessageId == msgId;
 
@@ -202,75 +203,145 @@ class _ChatScreenState extends State<ChatScreen> {
           setState(() => _selectedMessageId = null);
         }
       },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Align(
-            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(bottom: 4),
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.68,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                // 👇 Faded purple when selected, normal purple otherwise
-                color: isMe
-                    ? (isSelected
-                          ? const Color(0xFF6C47FF).withOpacity(0.35)
-                          : const Color(0xFF6C47FF))
-                    : Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                  bottomRight: Radius.circular(isMe ? 4 : 16),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    msg['text'] as String,
-                    style: TextStyle(
-                      color: isMe ? Colors.white : const Color(0xFF1A1A2E),
-                      fontSize: 13,
-                      height: 1.4,
+      child: isYou == false
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Align(
+                  alignment: isMe
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(bottom: 4),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.68,
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        msg['time'] as String,
-                        style: TextStyle(
-                          color: isMe ? Colors.white60 : Colors.black38,
-                          fontSize: 10,
-                        ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      // 👇 Faded purple when selected, normal purple otherwise
+                      color: isMe
+                          ? (isSelected
+                                ? const Color(0xFF6C47FF).withOpacity(0.35)
+                                : const Color(0xFF6C47FF))
+                          : Colors.white,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(isMe ? 16 : 4),
+                        bottomRight: Radius.circular(isMe ? 4 : 16),
                       ),
-                      if (isMe) ...[
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.done_all,
-                          size: 13,
-                          color: Colors.white70,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          msg['text'] as String,
+                          style: TextStyle(
+                            color: isMe
+                                ? Colors.white
+                                : const Color(0xFF1A1A2E),
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              msg['time'] as String,
+                              style: TextStyle(
+                                color: isMe ? Colors.white60 : Colors.black38,
+                                fontSize: 10,
+                              ),
+                            ),
+                            if (isMe) ...[
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.done_all,
+                                size: 13,
+                                color: Colors.white70,
+                              ),
+                            ],
+                          ],
                         ),
                       ],
-                    ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+
+                // 👇 Action bar appears below the bubble on long press
+                if (isSelected && isMe) _buildMessageActionBar(msgId),
+
+                const SizedBox(height: 6),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    margin: const EdgeInsets.only(bottom: 4),
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.68,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      // 👇 Faded purple when selected, normal purple otherwise
+                      color: const Color(0xFF6C47FF),
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(4),
+                        bottomRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          msg['text'] as String,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              msg['time'] as String,
+                              style: TextStyle(
+                                color: Colors.white60,
+                                fontSize: 10,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.done_all,
+                              size: 13,
+                              color: Colors.white70,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 6),
+              ],
             ),
-          ),
-
-          // 👇 Action bar appears below the bubble on long press
-          if (isSelected && isMe) _buildMessageActionBar(msgId),
-
-          const SizedBox(height: 6),
-        ],
-      ),
     );
   }
 

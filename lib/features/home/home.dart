@@ -124,22 +124,14 @@ class _BMCHomeState extends State<BMCHome> {
                           isRota: false,
                         ),
                         const SizedBox(height: 14),
-                        _buildMessagesList(
-                          userProvider,
-                          Theme.of(context).cardColor,
-                        ),
-                        const SizedBox(height: 24),
-
+                        _buildMessagesList(Theme.of(context).cardColor),
                         const _SectionTitle(
                           title: "Recent Notifications",
                           badge: "10",
                           isRota: false,
                         ),
                         const SizedBox(height: 14),
-                        _buildNotificationList(
-                          userProvider,
-                          Theme.of(context).cardColor,
-                        ),
+                        _buildNotificationList(Theme.of(context).cardColor),
                       ],
                     ),
                   ),
@@ -255,7 +247,7 @@ class _BMCHomeState extends State<BMCHome> {
     );
   }
 
-  Widget _buildMessagesList(UserProvider userProvider, Color cardColor) {
+  Widget _buildMessagesList(Color cardColor) {
     final List<Map<String, dynamic>> msgs = [
       {
         'title': 'I won’t come to work tomorrow ma',
@@ -296,7 +288,7 @@ class _BMCHomeState extends State<BMCHome> {
     );
   }
 
-  Widget _buildNotificationList(UserProvider userProvider, Color cardColor) {
+  Widget _buildNotificationList(Color cardColor) {
     final List<Map<String, dynamic>> notes = [
       {
         'title': 'Availability window open closes 30/05/2026 at 23:59',
