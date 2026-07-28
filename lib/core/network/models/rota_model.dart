@@ -49,9 +49,9 @@ extension ShiftTypeExt on ShiftType {
 
   Color get color {
     switch (this) {
-      case ShiftType.day:     return const Color(0xFF08F6EC);
-      case ShiftType.night:   return const Color(0xFF2196F3);
-      case ShiftType.evening: return const Color(0xFFF39C12);
+      case ShiftType.day:     return const Color.fromARGB(255, 253, 149, 2);
+      case ShiftType.night:   return const Color.fromARGB(255, 2, 81, 209);
+      case ShiftType.evening: return const Color.fromARGB(255, 2, 225, 255);
       case ShiftType.onCall:  return const Color(0xFFE74C3C);
       case ShiftType.custom:  return const Color(0xFF009688);
     }

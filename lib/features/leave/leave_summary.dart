@@ -135,51 +135,6 @@ class _LeaveSummaryCardState extends State<LeaveSummaryCard> {
     }
   }
 
-  // ───────────────── STATUS LABEL ─────────────────
-
-  String _getStatusLabel(HrLeaveRequest request) {
-    if (request.status == HrLeaveRequestStatus.approved) {
-      final now = DateTime.now();
-      final start = DateTime.parse(request.startDate);
-      final end = DateTime.parse(request.endDate);
-
-      if (now.isAfter(end)) {
-        return 'Completed';
-      }
-
-      final daysSinceStart = now.difference(start).inDays;
-
-      // If within 7 days of start and not ended, show "Ongoing"
-      if (daysSinceStart >= 0 && daysSinceStart <= 7) {
-        return 'Ongoing';
-      }
-      return 'Approved';
-    }
-    return request.status.label;
-  }
-
-  Color _getStatusColor(HrLeaveRequest request) {
-    final label = _getStatusLabel(request);
-    if (label == 'Ongoing') {
-      return const Color(0xFF6C47FF);
-    }
-    if (label == 'Completed') {
-      return const Color(0xFF22C55E);
-    }
-    return request.status.color;
-  }
-
-  Color _getStatusBgColor(HrLeaveRequest request) {
-    final label = _getStatusLabel(request);
-    if (label == 'Ongoing') {
-      return const Color(0xFFEDE9FF);
-    }
-    if (label == 'Completed') {
-      return const Color(0xFFE8F5E9);
-    }
-    return request.status.bgColor;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Consumer<LeaveProvider>(

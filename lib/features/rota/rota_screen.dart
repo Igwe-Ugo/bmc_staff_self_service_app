@@ -42,6 +42,13 @@ class _RotaScreenState extends State<RotaScreen> {
     });
   }
 
+  bool _isPastDay(DateTime day) {
+    final today = DateTime.now();
+    final todayOnly = DateTime(today.year, today.month, today.day);
+    final dayOnly = DateTime(day.year, day.month, day.day);
+    return dayOnly.isBefore(todayOnly);
+  }
+
   List<RotaEvent> get _filtered {
     return context.watch<RotaProvider>().filteredEvents(
       filter: _filter,
@@ -53,16 +60,6 @@ class _RotaScreenState extends State<RotaScreen> {
   Map<ShiftType, int> get _yearlyCounts {
     final rotaProvider = context.read<RotaProvider>();
     return rotaProvider.yearlyCounts(_filtered);
-  }
-
-  ShiftType? _shiftTypeForDay(DateTime day) {
-    final match = context.read<RotaProvider>().rotaEvents.where(
-      (e) => isSameDay(e.date, day),
-    );
-    if (match.isNotEmpty) {
-      return match.first.type;
-    }
-    return null;
   }
 
   @override
@@ -83,34 +80,45 @@ class _RotaScreenState extends State<RotaScreen> {
         backgroundColor: Colors.transparent,
         actions: [
           // ── Swap shift quick-access button ───────────────────────────────────
-          GestureDetector(
-            onTap: rotaProvider.allCalendarEvents.isEmpty
-                ? null
-                : () => _openSwapShiftWorkflow(rotaProvider),
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              margin: const EdgeInsets.only(right: 16),
-              height: 40,
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    'Request shift swap',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      fontFamily: 'Lexend',
-                      color: Colors.white,
+          Builder(
+            builder: (context) {
+              final hasEligibleShifts = rotaProvider.rotaEvents.any(
+                (e) => !_isPastDay(e.date),
+              );
+
+              return GestureDetector(
+                onTap: hasEligibleShifts
+                    ? () => _openSwapShiftWorkflow(rotaProvider)
+                    : null,
+                child: Opacity(
+                  opacity: hasEligibleShifts ? 1.0 : 0.4,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    margin: const EdgeInsets.only(right: 16),
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Request shift swap',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            fontFamily: 'Lexend',
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Icon(Icons.swap_horiz_rounded, color: Colors.white),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 5),
-                  Icon(Icons.swap_horiz_rounded, color: Colors.white),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -126,18 +134,21 @@ class _RotaScreenState extends State<RotaScreen> {
             personnelId: userProvider.user?.personnelId,
           );
         },
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
-              child: YearlySummaryCard(counts: _yearlyCounts),
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 0),
+                child: YearlySummaryCard(counts: _yearlyCounts),
+              ),
             ),
-            const SizedBox(height: 12),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
             // Expanded forces the calendar container to fill remaining space
-            Expanded(
+            SliverFillRemaining(
               child: Container(
-                margin: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 100.0),
+                margin: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 120.0),
                 padding: const EdgeInsets.symmetric(
                   vertical: 12,
                   horizontal: 10,
@@ -155,7 +166,7 @@ class _RotaScreenState extends State<RotaScreen> {
 
                     return TableCalendar(
                       firstDay: DateTime.utc(2020, 1, 1),
-                      lastDay: DateTime.utc(2030, 12, 31),
+                      lastDay: DateTime.utc(2050, 12, 31),
                       focusedDay: _focusedDay,
                       calendarFormat: CalendarFormat.month,
                       rowHeight: dynamicRowHeight,
@@ -240,6 +251,10 @@ class _RotaScreenState extends State<RotaScreen> {
                           bool isSelected = isSameDay(_selectedDay, date);
                           bool isToday = isSameDay(DateTime.now(), date);
 
+                          final isPast = _isPastDay(
+                            date,
+                          ); // fetching to check if a date is past
+
                           // Default colors using the event's type
                           Color cellBgColor = event.type.color.withOpacity(
                             0.12,
@@ -255,23 +270,26 @@ class _RotaScreenState extends State<RotaScreen> {
                               0xFFFFF3E0,
                             ); // Light orange background
                             cellBorder = Border.all(
-                              color: const Color(0xFFF39C12),
+                              color: const Color.fromARGB(255, 243, 18, 153),
                               width: 2,
                             );
-                            textColor = const Color(0xFFE67E22);
+                            textColor = const Color.fromARGB(255, 243, 18, 153);
                             statusLabel = 'PENDING';
-                            statusLabelColor = const Color(0xFFF39C12);
-                          } else if (isApprovedSwap) {
-                            cellBgColor = const Color(
-                              0xFFE8F5E9,
-                            ); // Light green background
-                            cellBorder = Border.all(
-                              color: const Color(0xFF27AE60),
-                              width: 1.5,
+                            statusLabelColor = const Color.fromARGB(
+                              255,
+                              243,
+                              18,
+                              153,
                             );
-                            textColor = const Color(0xFF27AE60);
+                          } else if (isApprovedSwap) {
+                            cellBgColor = Colors.grey.shade200;
+                            cellBorder = Border.all(
+                              color: Colors.grey.shade400,
+                              width: 1,
+                            );
+                            textColor = Colors.grey.shade500;
                             statusLabel = 'SWAPPED';
-                            statusLabelColor = const Color(0xFF27AE60);
+                            statusLabelColor = Colors.grey.shade500;
                           } else if (isRejectedSwap) {
                             cellBgColor = const Color(
                               0xFFFFEBEE,
@@ -296,55 +314,64 @@ class _RotaScreenState extends State<RotaScreen> {
                               color: Theme.of(context).primaryColor,
                               width: 1.5,
                             );
+                          } else {
+                            cellBorder = Border.all(
+                              color: event.type.color,
+                              width: 1,
+                            );
                           }
 
                           // Build the cell
-                          return Container(
-                            margin: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: cellBgColor,
-                              border: cellBorder,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            alignment: Alignment.center,
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                // Day number
-                                Text(
-                                  '${date.day}',
-                                  style: TextStyle(
-                                    fontWeight: (isToday || isSelected)
-                                        ? FontWeight.bold
-                                        : FontWeight.normal,
-                                    color: textColor,
-                                    decoration: isCancelledSwap
-                                        ? TextDecoration.lineThrough
-                                        : null,
-                                  ),
-                                ),
-                                // Status label for swaps
-                                if (statusLabel != null)
+                          return Opacity(
+                            opacity: isPast ? 0.3 : 1.0,
+                            child: Container(
+                              margin: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: cellBgColor,
+                                border: cellBorder,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Day number
                                   Text(
-                                    statusLabel,
+                                    '${date.day}',
                                     style: TextStyle(
-                                      fontSize: 7,
-                                      fontWeight: FontWeight.bold,
-                                      color: statusLabelColor,
+                                      fontWeight: (isToday || isSelected)
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                      color: textColor,
+                                      decoration:
+                                          (isCancelledSwap || isApprovedSwap)
+                                          ? TextDecoration.lineThrough
+                                          : null,
                                     ),
                                   ),
-                                // Small dot indicator for regular shifts (non-swap)
-                                if (!isSwapEvent && primaryShift != null)
-                                  Container(
-                                    width: 4,
-                                    height: 4,
-                                    margin: const EdgeInsets.only(top: 2),
-                                    decoration: BoxDecoration(
-                                      color: primaryShift.type.color,
-                                      shape: BoxShape.circle,
+                                  // Status label for swaps
+                                  if (statusLabel != null)
+                                    Text(
+                                      statusLabel,
+                                      style: TextStyle(
+                                        fontSize: 5,
+                                        fontWeight: FontWeight.bold,
+                                        color: statusLabelColor,
+                                      ),
                                     ),
-                                  ),
-                              ],
+                                  // Small dot indicator for regular shifts (non-swap)
+                                  if (!isSwapEvent && primaryShift != null)
+                                    Container(
+                                      width: 4,
+                                      height: 4,
+                                      margin: const EdgeInsets.only(top: 2),
+                                      decoration: BoxDecoration(
+                                        color: primaryShift.type.color,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           );
                         },
@@ -368,6 +395,9 @@ class _RotaScreenState extends State<RotaScreen> {
   // ── Swap workflow ────────────────────────────────────────────────────────────
   void _openSwapShiftWorkflow(RotaProvider provider) {
     final userProvider = context.read<UserProvider>();
+    final eligibleShifts = provider.rotaEvents
+        .where((e) => !_isPastDay(e.date))
+        .toList();
 
     // Load this user's department colleagues for the coworker search.
     // defaultDept on UserModel is a deptId string.
@@ -382,9 +412,12 @@ class _RotaScreenState extends State<RotaScreen> {
       builder: (_) => ChangeNotifierProvider.value(
         value: provider,
         child: SwapShiftSheet(
-          myShifts: provider.rotaEvents,
+          myShifts: eligibleShifts,
           staffMembers: provider.staffMembers,
-          defaultSelectedDate: _selectedDay ?? _focusedDay,
+          defaultSelectedDate:
+              (_selectedDay != null && !_isPastDay(_selectedDay!))
+              ? _selectedDay!
+              : DateTime.now(),
           onSubmit: (payload) async {
             final success = await provider.submitSwap(payload);
             if (!mounted) return;
@@ -416,6 +449,7 @@ class _RotaScreenState extends State<RotaScreen> {
   void _showShiftDetailsSheet(BuildContext context, RotaEvent event) {
     final userProvider = context.read<UserProvider>();
     final rotaProvider = context.read<RotaProvider>();
+    final isPastShift = _isPastDay(event.date);
 
     showModalBottomSheet(
       context: context,
@@ -544,115 +578,135 @@ class _RotaScreenState extends State<RotaScreen> {
                 cardBg: Theme.of(context).cardColor,
                 userProvider: userProvider,
               ),
-              const SizedBox(height: 7),
+              isPastShift ? SizedBox.shrink() : const SizedBox(height: 7),
               // Action Buttons Structure Base
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
-                child: Column(
-                  children: [
-                    if (isPending) ...[
-                      // 2. Destructive Delete Action Workflow inside the popup dialog
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () async {
-                            Navigator.pop(context);
+              isPastShift
+                  ? SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      child: Column(
+                        children: [
+                          if (isPending) ...[
+                            // 2. Destructive Delete Action Workflow inside the popup dialog
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () async {
+                                  final result = await rotaProvider
+                                      .cancelSwapRequest(event.swapId);
 
-                            final result = await rotaProvider.cancelSwapRequest(
-                              event.swapId,
-                            );
+                                  if (!mounted) {
+                                    return; // ← RotaScreen's own State.mounted, not the sheet's
+                                  }
+                                  Navigator.of(
+                                    context,
+                                  ).pop(); // close the sheet AFTER we've read the result
 
-                            if (context.mounted) {
-                              switch (result) {
-                                case CancelSwapResult.success:
-                                  showMessage(
-                                    "Swap request successfully deleted",
-                                    context,
-                                    status: MessageStatus.success,
-                                  );
-                                  break;
-                                case CancelSwapResult.alreadyResolved:
-                                  showMessage(
-                                    "This request was already handled — refreshing your rota.",
-                                    context,
-                                    status: MessageStatus.info,
-                                  );
-                                  break;
-                                case CancelSwapResult.failed:
-                                  showMessage(
-                                    "Failed to delete swap request",
-                                    context,
-                                    status: MessageStatus.error,
-                                  );
-                                  break;
-                              }
+                                  switch (result) {
+                                    case CancelSwapResult.success:
+                                      showMessage(
+                                        "Swap request successfully deleted",
+                                        this.context, // outer screen context — stays alive
+                                        status: MessageStatus.success,
+                                      );
+                                      break;
+                                    case CancelSwapResult.alreadyResolved:
+                                      showMessage(
+                                        "This request was already handled — refreshing your rota.",
+                                        this.context,
+                                        status: MessageStatus.info,
+                                      );
+                                      break;
+                                    case CancelSwapResult.failed:
+                                      showMessage(
+                                        "Failed to delete swap request",
+                                        this.context,
+                                        status: MessageStatus.error,
+                                      );
+                                      break;
+                                  }
 
-                              if (result != CancelSwapResult.failed) {
-                                final userProvider = context
-                                    .read<UserProvider>();
-                                rotaProvider.refreshRotaData(
-                                  context,
-                                  _focusedDay,
-                                  staffName: userProvider.displayName.isNotEmpty
-                                      ? userProvider.displayName
-                                      : 'You',
-                                  personnelId: userProvider.user?.personnelId,
-                                );
-                              }
-                            }
-                          },
-                          icon: const Icon(
-                            Iconsax.trash,
-                            size: 18,
-                            color: Colors.white,
-                          ),
-                          label: const Text(
-                            'Delete Swap Request',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                                  if (result != CancelSwapResult.failed) {
+                                    final userProvider = this.context
+                                        .read<UserProvider>();
+                                    rotaProvider.refreshRotaData(
+                                      this.context,
+                                      _focusedDay,
+                                      staffName:
+                                          userProvider.displayName.isNotEmpty
+                                          ? userProvider.displayName
+                                          : 'You',
+                                      personnelId:
+                                          userProvider.user?.personnelId,
+                                    );
+                                  }
+                                },
+                                icon: const Icon(
+                                  Iconsax.trash,
+                                  size: 18,
+                                  color: Colors.white,
+                                ),
+                                label: const Text(
+                                  'Delete Swap Request',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(
+                                    0xFFDA1E28,
+                                  ), // Destructive Red
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 25,
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(
-                              0xFFDA1E28,
-                            ), // Destructive Red
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          ] else if (!isCancelled) ...[
+                            // Standard Workflow Swap Selector Trigger Button
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: isPastShift
+                                    ? SizedBox
+                                          .shrink // disabled — greys itself out automatically
+                                    : () {
+                                        Navigator.pop(context);
+                                        _openSwapShiftWorkflow(rotaProvider);
+                                      },
+                                icon: const Icon(
+                                  Icons.swap_horiz_rounded,
+                                  size: 18,
+                                ),
+                                label: const Text(
+                                  'Request swap for this shift',
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Theme.of(
+                                    context,
+                                  ).primaryColor,
+                                  side: BorderSide(
+                                    color: Theme.of(context).primaryColor,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 20,
+                                  ),
+                                ),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(vertical: 25),
-                          ),
-                        ),
+                          ],
+                        ],
                       ),
-                    ] else if (!isCancelled) ...[
-                      // Standard Workflow Swap Selector Trigger Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pop(context);
-                            _openSwapShiftWorkflow(rotaProvider);
-                          },
-                          icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                          label: const Text('Request swap for this shift'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Theme.of(context).primaryColor,
-                            side: BorderSide(
-                              color: Theme.of(context).primaryColor,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+                    ),
             ],
           ),
         );

@@ -1,3 +1,5 @@
+// ignore_for_file: no_leading_underscores_for_local_identifiers
+
 import 'package:bmc_app/features/leave/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -15,7 +17,8 @@ class LeaveScreen extends StatefulWidget {
   State<LeaveScreen> createState() => _LeaveScreenState();
 }
 
-class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStateMixin {
+class _LeaveScreenState extends State<LeaveScreen>
+    with SingleTickerProviderStateMixin {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
   bool _dropdownOpen = false;
@@ -74,15 +77,13 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
 
   // ── Calendar helpers ──────────────────────────────────────────────────────
 
-  List<HrLeaveRequest> _requestsForDay(
-      DateTime day, List<HrLeaveRequest> all) {
+  List<HrLeaveRequest> _requestsForDay(DateTime day, List<HrLeaveRequest> all) {
     final key = DateTime(day.year, day.month, day.day);
     return all.where((r) {
       if (_calendarFilter != null && r.leaveType != _calendarFilter) {
         return false;
       }
-      return r.days.any((d) =>
-      DateTime(d.year, d.month, d.day) == key);
+      return r.days.any((d) => DateTime(d.year, d.month, d.day) == key);
     }).toList();
   }
 
@@ -163,15 +164,16 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
                   child: FloatingActionButton.extended(
                     elevation: 6,
                     backgroundColor: Theme.of(context).primaryColor,
-                    onPressed: () => _openRequestSheet(
-                        context, leaveProvider, personnelId),
+                    onPressed: () =>
+                        _openRequestSheet(context, leaveProvider, personnelId),
                     icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text('Request Leave',
-                        style: TextStyle(color: Colors.white)),
+                    label: const Text(
+                      'Request Leave',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ),
-                if (_dropdownOpen)
-                  _buildDropdownOverlay(leaveProvider),
+                if (_dropdownOpen) _buildDropdownOverlay(leaveProvider),
               ],
             ),
           ),
@@ -245,44 +247,48 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
         children: [
-          const Text('Leave',
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Leave',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const Spacer(),
           if (provider.pendingRequests.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(right: 10),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF3E0),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: const Color(0xFFF39C12), width: 1),
+                border: Border.all(color: const Color(0xFFF39C12), width: 1),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.hourglass_top_outlined,
-                      size: 12, color: Color(0xFFF39C12)),
+                  const Icon(
+                    Icons.hourglass_top_outlined,
+                    size: 12,
+                    color: Color(0xFFF39C12),
+                  ),
                   const SizedBox(width: 4),
                   Text(
                     '${provider.pendingRequests.length} pending',
                     style: const TextStyle(
-                        fontSize: 11,
-                        color: Color(0xFFF39C12),
-                        fontWeight: FontWeight.w600),
+                      fontSize: 11,
+                      color: Color(0xFFF39C12),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
             ),
           if (uniqueTypes.isNotEmpty)
             GestureDetector(
-              onTap: () =>
-                  setState(() => _dropdownOpen = !_dropdownOpen),
+              onTap: () => setState(() => _dropdownOpen = !_dropdownOpen),
               child: Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 7),
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(20),
@@ -293,8 +299,9 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
                     Text(
                       _calendarFilter ?? 'All types',
                       style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(width: 4),
                     Icon(
@@ -320,6 +327,8 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
+    final totalSpanDays = end.difference(start).inDays + 1;
+
     double progress;
     String statusLabel;
 
@@ -331,9 +340,21 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
       progress = 1.0;
       statusLabel = 'Completed';
     } else {
-      final daysElapsed = today.difference(start).inDays + 1; // inclusive
-      progress = (daysElapsed / r.totalDays).clamp(0.0, 1.0);
-      statusLabel = 'Day $daysElapsed of ${r.totalDays}';
+      final daysElapsed = today.difference(start).inDays + 1;
+      progress = totalSpanDays > 0
+          ? (daysElapsed / totalSpanDays).clamp(0.0, 1.0)
+          : 1.0;
+      statusLabel = 'Day $daysElapsed of $totalSpanDays';
+    }
+
+    Color _progressColor(double progress) {
+      if (progress <= 1 / 3) {
+        return const Color(0xFF22C55E); // Green
+      }
+      if (progress <= 2 / 3) {
+        return const Color(0xFFF59E0B); // Yellow/Orange
+      }
+      return const Color(0xFFDC2626); // Red
     }
 
     return Column(
@@ -342,34 +363,23 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
         const SizedBox(height: 6),
         ClipRRect(
           borderRadius: BorderRadius.circular(4),
-          child: SizedBox(
-            height: 6,
-            child: Stack(
-              children: [
-                // Static track split into thirds: green → yellow → red
-                const Row(
-                  children: [
-                    Expanded(child: ColoredBox(color: Color(0xFF27AE60))),
-                    Expanded(child: ColoredBox(color: Color(0xFFF39C12))),
-                    Expanded(child: ColoredBox(color: Color(0xFFE74C3C))),
-                  ],
-                ),
-                // Dim the portion of the stay not yet reached
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: FractionallySizedBox(
-                    widthFactor: 1 - progress,
-                    child: Container(color: Colors.black.withOpacity(0.28)),
-                  ),
-                ),
-              ],
+          child: LinearProgressIndicator(
+            value: progress > 0 ? progress : 0.15,
+            minHeight: 4,
+            backgroundColor: Colors.grey.shade300,
+            valueColor: AlwaysStoppedAnimation(
+              progress > 0 ? _progressColor(progress) : const Color(0xFF22C55E),
             ),
           ),
         ),
         const SizedBox(height: 3),
         Text(
           statusLabel,
-          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: Color(0xFF8E8E93)),
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF8E8E93),
+          ),
         ),
       ],
     );
@@ -378,10 +388,10 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
   // ── Type dropdown overlay ─────────────────────────────────────────────────
 
   Widget _buildDropdownOverlay(LeaveProvider provider) {
-    final types = ['All', ...provider.myRequests
-        .map((r) => r.leaveType)
-        .toSet()
-        ];
+    final types = [
+      'All',
+      ...provider.myRequests.map((r) => r.leaveType).toSet(),
+    ];
 
     return Positioned(
       top: 52,
@@ -407,7 +417,9 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 12),
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? Theme.of(context).primaryColor.withOpacity(0.1)
@@ -484,38 +496,41 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               final hits = _requestsForDay(selected, all);
               if (hits.isNotEmpty) _showDayRequests(hits);
             },
-            onPageChanged: (focused) =>
-                setState(() => _focusedDay = focused),
+            onPageChanged: (focused) => setState(() => _focusedDay = focused),
             calendarFormat: CalendarFormat.month,
-            availableCalendarFormats: const {
-              CalendarFormat.month: 'Month'
-            },
+            availableCalendarFormats: const {CalendarFormat.month: 'Month'},
             headerStyle: HeaderStyle(
               titleCentered: true,
               formatButtonVisible: false,
               titleTextStyle: const TextStyle(
-                  fontWeight: FontWeight.bold, fontSize: 16),
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
               leftChevronIcon: _chevron(Icons.chevron_left),
               rightChevronIcon: _chevron(Icons.chevron_right),
               headerPadding: const EdgeInsets.symmetric(vertical: 12),
             ),
             daysOfWeekStyle: const DaysOfWeekStyle(
               weekdayStyle: TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
               weekendStyle: TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w600),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             calendarStyle: CalendarStyle(
               outsideDaysVisible: false,
               todayDecoration: BoxDecoration(
                 border: Border.all(
-                    color: Theme.of(context).primaryColor,
-                    width: 1.5),
+                  color: Theme.of(context).primaryColor,
+                  width: 1.5,
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
               todayTextStyle: TextStyle(
-                color: Theme.of(context).brightness ==
-                    Brightness.dark
+                color: Theme.of(context).brightness == Brightness.dark
                     ? Colors.white
                     : Colors.black,
                 fontWeight: FontWeight.bold,
@@ -531,18 +546,15 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               defaultBuilder: (ctx, day, _) {
                 final hits = _requestsForDay(day, all);
                 if (hits.isEmpty) return null;
-                return _leaveCell(
-                    day, hits, isToday: false, isSelected: false);
+                return _leaveCell(day, hits, isToday: false, isSelected: false);
               },
               todayBuilder: (ctx, day, _) {
                 final hits = _requestsForDay(day, all);
-                return _leaveCell(
-                    day, hits, isToday: true, isSelected: false);
+                return _leaveCell(day, hits, isToday: true, isSelected: false);
               },
               selectedBuilder: (ctx, day, _) {
                 final hits = _requestsForDay(day, all);
-                return _leaveCell(
-                    day, hits, isToday: false, isSelected: true);
+                return _leaveCell(day, hits, isToday: false, isSelected: true);
               },
             ),
           ),
@@ -553,15 +565,13 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
   }
 
   Widget _leaveCell(
-      DateTime day,
-      List<HrLeaveRequest> hits, {
-        required bool isToday,
-        required bool isSelected,
-      }) {
+    DateTime day,
+    List<HrLeaveRequest> hits, {
+    required bool isToday,
+    required bool isSelected,
+  }) {
     final hasLeave = hits.isNotEmpty;
-    final firstColor = hasLeave
-        ? _leaveTypeColor(hits.first.leaveType)
-        : null;
+    final firstColor = hasLeave ? _leaveTypeColor(hits.first.leaveType) : null;
 
     Color? bg;
     Color textColor = Theme.of(context).brightness == Brightness.dark
@@ -580,8 +590,7 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
       bg = Theme.of(context).primaryColor;
       textColor = Colors.white;
     } else if (isToday) {
-      border = Border.all(
-          color: Theme.of(context).primaryColor, width: 1.5);
+      border = Border.all(color: Theme.of(context).primaryColor, width: 1.5);
     }
 
     return Container(
@@ -590,15 +599,16 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
       decoration: BoxDecoration(
         color: bg,
         shape: BoxShape.rectangle,
-        border: border
+        border: border,
       ),
       alignment: Alignment.center,
       child: Text(
         '${day.day}',
         style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: textColor),
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
       ),
     );
   }
@@ -608,21 +618,25 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: Wrap(
-        spacing: 12, runSpacing: 6,
+        spacing: 12,
+        runSpacing: 6,
         children: types.map((t) {
           return Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 10, height: 10,
+                width: 10,
+                height: 10,
                 decoration: BoxDecoration(
-                    color: _leaveTypeColor(t),
-                    shape: BoxShape.circle),
+                  color: _leaveTypeColor(t),
+                  shape: BoxShape.circle,
+                ),
               ),
               const SizedBox(width: 4),
-              Text(_formatType(t),
-                  style: const TextStyle(
-                      fontSize: 11, color: Color(0xFF8E8E93))),
+              Text(
+                _formatType(t),
+                style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
+              ),
             ],
           );
         }).toList(),
@@ -645,22 +659,29 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Leave on this day',
-                style: TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Leave on this day',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
-            ...hits.map((r) => _requestTile(r,
-                compact: true, onTap: () {
+            ...hits.map(
+              (r) => _requestTile(
+                r,
+                compact: true,
+                onTap: () {
                   Navigator.pop(ctx);
                   _showRequestDetail(r);
-                })),
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -697,9 +718,7 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
           // Append count to the text label: e.g., "All (5)" or "Pending (2)"
           final label = isAll ? 'All ($count)' : '${s.label} ($count)';
 
-          final color = isAll
-              ? Theme.of(context).primaryColor
-              : s.color;
+          final color = isAll ? Theme.of(context).primaryColor : s.color;
 
           return GestureDetector(
             onTap: () => leaveProvider.setStatusFilter(s),
@@ -733,18 +752,22 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
 
   Widget _buildRequestList(LeaveProvider leaveProvider, String personnelId) {
     if (leaveProvider.isLoading) {
-      return Center(child: LoadingAnimationWidget.staggeredDotsWave(
-        color: Theme.of(context).primaryColor,
-        size: 70,
-      ));
+      return Center(
+        child: LoadingAnimationWidget.staggeredDotsWave(
+          color: Theme.of(context).primaryColor,
+          size: 70,
+        ),
+      );
     }
 
     if (leaveProvider.state == LeaveState.error) {
       return Center(
         child: Column(
           children: [
-            Text(leaveProvider.errorMessage ?? 'Something went wrong',
-                style: const TextStyle(color: Color(0xFFE74C3C))),
+            Text(
+              leaveProvider.errorMessage ?? 'Something went wrong',
+              style: const TextStyle(color: Color(0xFFE74C3C)),
+            ),
             const SizedBox(height: 12),
             TextButton.icon(
               onPressed: leaveProvider.refresh,
@@ -764,18 +787,24 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Column(
             children: [
-              Icon(Icons.event_busy_outlined,
-                  size: 48,
-                  color: Theme.of(context).hintColor),
+              Icon(
+                Icons.event_busy_outlined,
+                size: 48,
+                color: Theme.of(context).hintColor,
+              ),
               const SizedBox(height: 12),
-              Text('No leave requests yet',
-                  style: TextStyle(
-                      color: Theme.of(context).hintColor,
-                      fontSize: 14)),
+              Text(
+                'No leave requests yet',
+                style: TextStyle(
+                  color: Theme.of(context).hintColor,
+                  fontSize: 14,
+                ),
+              ),
               const SizedBox(height: 6),
-              const Text('Tap the button below to request leave',
-                  style: TextStyle(
-                      color: Color(0xFF8E8E93), fontSize: 12)),
+              const Text(
+                'Tap the button below to request leave',
+                style: TextStyle(color: Color(0xFF8E8E93), fontSize: 12),
+              ),
             ],
           ),
         ),
@@ -788,25 +817,29 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
         Text(
           '${requests.length} request${requests.length == 1 ? '' : 's'}',
           style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF8E8E93)),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF8E8E93),
+          ),
         ),
         const SizedBox(height: 12),
-        ...requests.map((r) => _requestTile(
-          key: ValueKey(r.id),
+        ...requests.map(
+          (r) => _requestTile(
+            key: ValueKey(r.id),
             r,
-            onTap: () => _showRequestDetail(r))),
+            onTap: () => _showRequestDetail(r),
+          ),
+        ),
       ],
     );
   }
 
   Widget _requestTile(
-      HrLeaveRequest r, {
-        Key? key,
-        bool compact = false,
-        VoidCallback? onTap,
-      }) {
+    HrLeaveRequest r, {
+    Key? key,
+    bool compact = false,
+    VoidCallback? onTap,
+  }) {
     final color = _leaveTypeColor(r.leaveType);
     return GestureDetector(
       key: key,
@@ -830,7 +863,8 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 40, height: 40,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
@@ -838,7 +872,11 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               alignment: Alignment.center,
               child: Text(
                 _formatType(r.leaveType).characters.first.toUpperCase(),
-                style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 16),
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -846,22 +884,36 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_formatType(r.leaveType),
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                  Text(
+                    _formatType(r.leaveType),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Text(
-                    '${_fmtDate(r.startDate)} → ${_fmtDate(r.endDate)}  ·  ${r.totalDays} day${r.totalDays == 1 ? '' : 's'}',
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
+                    '${_fmtDate(r.startDate)} → ${_fmtDate(r.endDate)}  ·  '
+                    '${r.endDateTime.difference(r.startDateTime).inDays + 1} day${r.endDateTime.difference(r.startDateTime).inDays + 1 == 1 ? '' : 's'}',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF8E8E93),
+                    ),
                   ),
                   r.status == HrLeaveRequestStatus.approved
                       ? _leaveProgressBar(r)
                       : const SizedBox.shrink(),
                   if (!compact && r.reason != null && r.reason!.isNotEmpty) ...[
                     const SizedBox(height: 2),
-                    Text(r.reason!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11, color: Color(0xFFAEAEB2))),
+                    Text(
+                      r.reason!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Color(0xFFAEAEB2),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -873,8 +925,14 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
                 color: r.status.bgColor,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(r.status.label,
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: r.status.color)),
+              child: Text(
+                r.status.label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: r.status.color,
+                ),
+              ),
             ),
           ],
         ),
@@ -892,12 +950,15 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) {
         return Container(
           color: Theme.of(context).cardColor,
           padding: EdgeInsets.fromLTRB(
-            20, 20, 20,
+            20,
+            20,
+            20,
             120 + MediaQuery.of(ctx).viewInsets.bottom,
           ),
           child: Column(
@@ -906,55 +967,80 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      borderRadius: BorderRadius.circular(2)),
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
-                    child: Text(_formatType(r.leaveType),
-                        style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold)),
+                    child: Text(
+                      _formatType(r.leaveType),
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 5),
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
                     decoration: BoxDecoration(
                       color: r.status.bgColor,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(r.status.label,
-                        style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: r.status.color)),
+                    child: Text(
+                      r.status.label,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: r.status.color,
+                      ),
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-              _detailRow(Icons.calendar_today_outlined, 'Start',
-                  _fmtDate(r.startDate)),
+              _detailRow(
+                Icons.calendar_today_outlined,
+                'Start',
+                _fmtDate(r.startDate),
+              ),
               const SizedBox(height: 8),
-              _detailRow(Icons.event_outlined, 'End',
-                  _fmtDate(r.endDate)),
+              _detailRow(Icons.event_outlined, 'End', _fmtDate(r.endDate)),
               const SizedBox(height: 8),
-              _detailRow(Icons.timelapse_outlined, 'Duration',
-                  '${r.totalDays} day${r.totalDays == 1 ? '' : 's'}'),
+              _detailRow(
+                Icons.timelapse_outlined,
+                'Duration',
+                '${r.totalDays} day${r.totalDays == 1 ? '' : 's'}',
+              ),
               if (r.reason != null && r.reason!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 _detailRow(Icons.notes_outlined, 'Reason', r.reason!),
               ],
-              if (r.decisionNotes != null &&
-                  r.decisionNotes!.isNotEmpty) ...[
+              if (r.decisionNotes != null && r.decisionNotes!.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                _detailRow(Icons.comment_outlined, 'Decision note',
-                    r.decisionNotes!),
+                _detailRow(
+                  Icons.comment_outlined,
+                  'Decision note',
+                  r.decisionNotes!,
+                ),
               ],
+              const SizedBox(height: 13),
+              r.status == HrLeaveRequestStatus.approved
+                  ? Text('Leave Progress Indicator')
+                  : const SizedBox.shrink(),
+              const SizedBox(height: 5),
+              r.status == HrLeaveRequestStatus.approved
+                  ? _leaveProgressBar(r)
+                  : SizedBox.shrink(),
               const SizedBox(height: 20),
               if (canModify)
                 Row(
@@ -965,16 +1051,16 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
                           Navigator.pop(ctx);
                           _openEditSheet(r, provider);
                         },
-                        icon: const Icon(Icons.edit_outlined,
-                            size: 16),
+                        icon: const Icon(Icons.edit_outlined, size: 16),
                         label: const Text('Edit'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Theme.of(context).primaryColor,
                           side: BorderSide(
-                              color: Theme.of(context).primaryColor),
+                            color: Theme.of(context).primaryColor,
+                          ),
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -985,16 +1071,14 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
                           Navigator.pop(ctx);
                           await _confirmDelete(r, provider);
                         },
-                        icon: const Icon(Icons.delete_outline,
-                            size: 16),
+                        icon: const Icon(Icons.delete_outline, size: 16),
                         label: const Text('Delete'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFE74C3C),
-                          side: const BorderSide(
-                              color: Color(0xFFE74C3C)),
+                          side: const BorderSide(color: Color(0xFFE74C3C)),
                           shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(12)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ),
@@ -1017,14 +1101,18 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 11, color: Color(0xFF8E8E93))),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 11, color: Color(0xFF8E8E93)),
+              ),
               const SizedBox(height: 2),
-              Text(value,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500)),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
         ),
@@ -1034,32 +1122,35 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
 
   // ── Delete confirm ────────────────────────────────────────────────────────
 
-  Future<void> _confirmDelete(
-      HrLeaveRequest r,
-      LeaveProvider provider) async {
+  Future<void> _confirmDelete(HrLeaveRequest r, LeaveProvider provider) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: Theme.of(context).cardColor,
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         title: const Text('Delete request?'),
         content: Text(
-            'This will permanently remove your '
-                '${_formatType(r.leaveType)} request '
-                '(${_fmtDate(r.startDate)} – ${_fmtDate(r.endDate)}).'),
+          'This will permanently remove your '
+          '${_formatType(r.leaveType)} request '
+          '(${_fmtDate(r.startDate)} – ${_fmtDate(r.endDate)}).',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: Color(0xFF8E8E93))),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF8E8E93)),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete',
-                style: TextStyle(
-                    color: Color(0xFFE74C3C),
-                    fontWeight: FontWeight.w600)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(
+                color: Color(0xFFE74C3C),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -1074,9 +1165,12 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
         : provider.errorMessage ?? 'Delete failed.';
 
     if (!mounted) return;
-    showMessage(msg, context,
-        status: success ? MessageStatus.success : MessageStatus.error,
-        title: success ? 'Done' : 'Error');
+    showMessage(
+      msg,
+      context,
+      status: success ? MessageStatus.success : MessageStatus.error,
+      title: success ? 'Done' : 'Error',
+    );
   }
 
   // ── Request sheet ─────────────────────────────────────────────────────────
@@ -1084,14 +1178,16 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
   // ── Request sheet ─────────────────────────────────────────────────────────
 
   void _openRequestSheet(
-      BuildContext context,
-      LeaveProvider provider,
-      String personnelId) {
+    BuildContext context,
+    LeaveProvider provider,
+    String personnelId,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => LeaveFormSheet(
         personnelId: personnelId,
         onSave: (data) async {
@@ -1103,9 +1199,12 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               ? 'Leave request submitted!'
               : provider.errorMessage ?? 'Submission failed.';
           if (!mounted) return success;
-          showMessage(msg, context,
-              status: success ? MessageStatus.success : MessageStatus.error,
-              title: success ? 'Done' : 'Error');
+          showMessage(
+            msg,
+            context,
+            status: success ? MessageStatus.success : MessageStatus.error,
+            title: success ? 'Done' : 'Error',
+          );
 
           return success;
         },
@@ -1118,7 +1217,8 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => LeaveFormSheet(
         personnelId: r.personnelId,
         existing: r,
@@ -1138,9 +1238,12 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
               ? 'Leave request updated!'
               : provider.errorMessage ?? 'Update failed.';
           if (!mounted) return success;
-          showMessage(msg, context,
-              status: success ? MessageStatus.success : MessageStatus.error,
-              title: success ? 'Done' : 'Error');
+          showMessage(
+            msg,
+            context,
+            status: success ? MessageStatus.success : MessageStatus.error,
+            title: success ? 'Done' : 'Error',
+          );
 
           return success;
         },
@@ -1150,10 +1253,10 @@ class _LeaveScreenState extends State<LeaveScreen> with SingleTickerProviderStat
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  String _formatType(String raw) =>
-      raw.split('_').map((w) =>
-      w.isEmpty ? '' : '${w[0]}${w.substring(1).toLowerCase()}')
-          .join(' ');
+  String _formatType(String raw) => raw
+      .split('_')
+      .map((w) => w.isEmpty ? '' : '${w[0]}${w.substring(1).toLowerCase()}')
+      .join(' ');
 
   String _fmtDate(String iso) {
     try {

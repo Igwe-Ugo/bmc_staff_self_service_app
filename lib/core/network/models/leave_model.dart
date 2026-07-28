@@ -22,53 +22,77 @@ const List<String> availableLeaveTypes = [
 // Optional: Helper extension for formatting
 extension LeaveTypeExt on String {
   String get formatted => split('_')
-      .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}' : '')
+      .map(
+        (w) => w.isNotEmpty
+            ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}'
+            : '',
+      )
       .join(' ');
 }
 
 extension HrLeaveRequestStatusExt on HrLeaveRequestStatus {
   String get value {
     switch (this) {
-      case HrLeaveRequestStatus.pending:   return 'PENDING';
-      case HrLeaveRequestStatus.approved:  return 'APPROVED';
-      case HrLeaveRequestStatus.rejected:  return 'REJECTED';
-      case HrLeaveRequestStatus.cancelled: return 'CANCELLED';
+      case HrLeaveRequestStatus.pending:
+        return 'PENDING';
+      case HrLeaveRequestStatus.approved:
+        return 'APPROVED';
+      case HrLeaveRequestStatus.rejected:
+        return 'REJECTED';
+      case HrLeaveRequestStatus.cancelled:
+        return 'CANCELLED';
     }
   }
 
   String get label {
     switch (this) {
-      case HrLeaveRequestStatus.pending:   return 'Pending';
-      case HrLeaveRequestStatus.approved:  return 'Approved';
-      case HrLeaveRequestStatus.rejected:  return 'Rejected';
-      case HrLeaveRequestStatus.cancelled: return 'Cancelled';
+      case HrLeaveRequestStatus.pending:
+        return 'Pending';
+      case HrLeaveRequestStatus.approved:
+        return 'Approved';
+      case HrLeaveRequestStatus.rejected:
+        return 'Rejected';
+      case HrLeaveRequestStatus.cancelled:
+        return 'Cancelled';
     }
   }
 
   Color get color {
     switch (this) {
-      case HrLeaveRequestStatus.pending:   return const Color(0xFFF39C12);
-      case HrLeaveRequestStatus.approved:  return const Color(0xFF27AE60);
-      case HrLeaveRequestStatus.rejected:  return const Color(0xFFE74C3C);
-      case HrLeaveRequestStatus.cancelled: return const Color(0xFF8E8E93);
+      case HrLeaveRequestStatus.pending:
+        return const Color(0xFFF39C12);
+      case HrLeaveRequestStatus.approved:
+        return const Color(0xFF27AE60);
+      case HrLeaveRequestStatus.rejected:
+        return const Color(0xFFE74C3C);
+      case HrLeaveRequestStatus.cancelled:
+        return const Color(0xFF8E8E93);
     }
   }
 
   Color get bgColor {
     switch (this) {
-      case HrLeaveRequestStatus.pending:   return const Color(0xFFFFF3E0);
-      case HrLeaveRequestStatus.approved:  return const Color(0xFFE8F5E9);
-      case HrLeaveRequestStatus.rejected:  return const Color(0xFFFFEBEE);
-      case HrLeaveRequestStatus.cancelled: return const Color(0xFFF2F2F7);
+      case HrLeaveRequestStatus.pending:
+        return const Color(0xFFFFF3E0);
+      case HrLeaveRequestStatus.approved:
+        return const Color(0xFFE8F5E9);
+      case HrLeaveRequestStatus.rejected:
+        return const Color(0xFFFFEBEE);
+      case HrLeaveRequestStatus.cancelled:
+        return const Color(0xFFF2F2F7);
     }
   }
 
   static HrLeaveRequestStatus fromString(String value) {
     switch (value.toUpperCase()) {
-      case 'APPROVED':  return HrLeaveRequestStatus.approved;
-      case 'REJECTED':  return HrLeaveRequestStatus.rejected;
-      case 'CANCELLED': return HrLeaveRequestStatus.cancelled;
-      default:          return HrLeaveRequestStatus.pending;
+      case 'APPROVED':
+        return HrLeaveRequestStatus.approved;
+      case 'REJECTED':
+        return HrLeaveRequestStatus.rejected;
+      case 'CANCELLED':
+        return HrLeaveRequestStatus.cancelled;
+      default:
+        return HrLeaveRequestStatus.pending;
     }
   }
 }
@@ -76,21 +100,21 @@ extension HrLeaveRequestStatusExt on HrLeaveRequestStatus {
 // ── HrLeaveRequest ────────────────────────────────────────────────────────────
 
 class HrLeaveRequest {
-  final String               id;
-  final String               personnelId;
-  final String               leaveType;
-  final String               startDate;   // yyyy-MM-dd
-  final String               endDate;     // yyyy-MM-dd
-  final int                  totalDays;
-  final String?              reason;
+  final String id;
+  final String personnelId;
+  final String leaveType;
+  final String startDate; // yyyy-MM-dd
+  final String endDate; // yyyy-MM-dd
+  final int totalDays;
+  final String? reason;
   final HrLeaveRequestStatus status;
-  final String?              approvedBy;
-  final String?              approvedAt;
-  final String?              decisionNotes;
-  final String               createdBy;
-  final String               createdAt;
-  final String?              updatedBy;
-  final String?              updatedAt;
+  final String? approvedBy;
+  final String? approvedAt;
+  final String? decisionNotes;
+  final String createdBy;
+  final String createdAt;
+  final String? updatedBy;
+  final String? updatedAt;
 
   // extended query fields (may be null for basic responses)
   final String? personnelName;
@@ -123,7 +147,7 @@ class HrLeaveRequest {
   });
 
   DateTime get startDateTime => DateTime.parse(startDate);
-  DateTime get endDateTime   => DateTime.parse(endDate);
+  DateTime get endDateTime => DateTime.parse(endDate);
 
   /// All calendar days covered by this request (inclusive).
   List<DateTime> get days {
@@ -147,7 +171,10 @@ class HrLeaveRequest {
     int safeInt(dynamic value) {
       if (value == null) return 0;
       if (value is int) return value;
-      if (value is String) return int.tryParse(value) ?? 0;
+      if (value is String) {
+        final parsed = double.tryParse(value);
+        return parsed?.round() ?? 0;
+      }
       return 0;
     }
 
@@ -166,7 +193,8 @@ class HrLeaveRequest {
       approvedAt: safeString(json['approvedAt']),
       decisionNotes: safeString(json['decisionNotes']),
       createdBy: safeString(json['createdBy']) ?? '',
-      createdAt: safeString(json['createdAt']) ?? DateTime.now().toIso8601String(),
+      createdAt:
+          safeString(json['createdAt']) ?? DateTime.now().toIso8601String(),
       updatedBy: safeString(json['updatedBy']),
       updatedAt: safeString(json['updatedAt']),
       personnelName: safeString(json['personnelName']),
@@ -178,32 +206,32 @@ class HrLeaveRequest {
   }
 
   Map<String, dynamic> toJson() => {
-    'id':               id,
-    'personnelId':      personnelId,
-    'leaveType':        leaveType,
-    'startDate':        startDate,
-    'endDate':          endDate,
-    'totalDays':        totalDays,
-    'reason':           reason,
-    'status':           status.value,
-    'approvedBy':       approvedBy,
-    'approvedAt':       approvedAt,
-    'decisionNotes':    decisionNotes,
-    'createdBy':        createdBy,
-    'createdAt':        createdAt,
-    'updatedBy':        updatedBy,
-    'updatedAt':        updatedAt,
+    'id': id,
+    'personnelId': personnelId,
+    'leaveType': leaveType,
+    'startDate': startDate,
+    'endDate': endDate,
+    'totalDays': totalDays,
+    'reason': reason,
+    'status': status.value,
+    'approvedBy': approvedBy,
+    'approvedAt': approvedAt,
+    'decisionNotes': decisionNotes,
+    'createdBy': createdBy,
+    'createdAt': createdAt,
+    'updatedBy': updatedBy,
+    'updatedAt': updatedAt,
   };
 }
 
 // ── Form data ─────────────────────────────────────────────────────────────────
 
 class HrLeaveRequestFormData {
-  final String  personnelId;
-  final String  leaveType;
-  final String  startDate;
-  final String  endDate;
-  final int     totalDays;
+  final String personnelId;
+  final String leaveType;
+  final String startDate;
+  final String endDate;
+  final int totalDays;
   final String? reason;
 
   const HrLeaveRequestFormData({
@@ -217,19 +245,19 @@ class HrLeaveRequestFormData {
 
   Map<String, dynamic> toJson() => {
     'personnelId': personnelId,
-    'leaveType':   leaveType,
-    'startDate':   startDate,
-    'endDate':     endDate,
-    'totalDays':   totalDays,
+    'leaveType': leaveType,
+    'startDate': startDate,
+    'endDate': endDate,
+    'totalDays': totalDays,
     if (reason != null && reason!.isNotEmpty) 'reason': reason,
   };
 }
 
 class HrLeaveUpdateFormData {
-  final String  leaveType;
-  final String  startDate;
-  final String  endDate;
-  final int     totalDays;
+  final String leaveType;
+  final String startDate;
+  final String endDate;
+  final int totalDays;
   final String? reason;
 
   const HrLeaveUpdateFormData({
@@ -243,14 +271,14 @@ class HrLeaveUpdateFormData {
   Map<String, dynamic> toJson() => {
     'leaveType': leaveType,
     'startDate': startDate,
-    'endDate':   endDate,
+    'endDate': endDate,
     'totalDays': totalDays,
     if (reason != null && reason!.isNotEmpty) 'reason': reason,
   };
 }
 
 class HrLeaveDecisionFormData {
-  final String  status; // 'APPROVED' | 'REJECTED'
+  final String status; // 'APPROVED' | 'REJECTED'
   final String? decisionNotes;
 
   const HrLeaveDecisionFormData({required this.status, this.decisionNotes});
@@ -266,12 +294,12 @@ class HrLeaveDecisionFormData {
 class HrLeaveBalance {
   final String id;
   final String personnelId;
-  final int    year;
+  final int year;
   final String leaveType;
-  final int    entitlement;
-  final int    carriedOver;
-  final int    used;
-  final int    pending;
+  final int entitlement;
+  final int carriedOver;
+  final int used;
+  final int pending;
   final String createdBy;
   final String createdAt;
 
@@ -291,19 +319,18 @@ class HrLeaveBalance {
   int get available => entitlement + carriedOver - used - pending;
 
   factory HrLeaveBalance.fromJson(Map<String, dynamic> json) {
-    int i(dynamic v) =>
-        v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
+    int i(dynamic v) => v is int ? v : int.tryParse(v?.toString() ?? '0') ?? 0;
     return HrLeaveBalance(
-      id:          json['id']          as String,
+      id: json['id'] as String,
       personnelId: json['personnelId'] as String,
-      year:        i(json['year']),
-      leaveType:   json['leaveType']   as String,
+      year: i(json['year']),
+      leaveType: json['leaveType'] as String,
       entitlement: i(json['entitlement']),
       carriedOver: i(json['carriedOver']),
-      used:        i(json['used']),
-      pending:     i(json['pending']),
-      createdBy:   json['createdBy']   as String,
-      createdAt:   json['createdAt']   as String,
+      used: i(json['used']),
+      pending: i(json['pending']),
+      createdBy: json['createdBy'] as String,
+      createdAt: json['createdAt'] as String,
     );
   }
 }
@@ -311,12 +338,12 @@ class HrLeaveBalance {
 // ── Filter query ──────────────────────────────────────────────────────────────
 
 class HrLeaveRequestFilters {
-  final String?               personnelId;
-  final String?               deptId;
+  final String? personnelId;
+  final String? deptId;
   final HrLeaveRequestStatus? status;
-  final String?               leaveType;
-  final String?               startDate;
-  final String?               endDate;
+  final String? leaveType;
+  final String? startDate;
+  final String? endDate;
 
   const HrLeaveRequestFilters({
     this.personnelId,
@@ -330,11 +357,11 @@ class HrLeaveRequestFilters {
   Map<String, String> toQueryParams() {
     final m = <String, String>{};
     if (personnelId != null) m['personnelId'] = personnelId!;
-    if (deptId      != null) m['deptId']      = deptId!;
-    if (status      != null) m['status']      = status!.value;
-    if (leaveType   != null) m['leaveType']   = leaveType!;
-    if (startDate   != null) m['startDate']   = startDate!;
-    if (endDate     != null) m['endDate']      = endDate!;
+    if (deptId != null) m['deptId'] = deptId!;
+    if (status != null) m['status'] = status!.value;
+    if (leaveType != null) m['leaveType'] = leaveType!;
+    if (startDate != null) m['startDate'] = startDate!;
+    if (endDate != null) m['endDate'] = endDate!;
     return m;
   }
 }

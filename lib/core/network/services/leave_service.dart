@@ -47,6 +47,8 @@ class LeaveService {
             .map((e) => HrLeaveRequest.fromJson(e as Map<String, dynamic>))
             .toList();
       }
+      debugPrint('🔍 LEAVE PAYLOAD (${payload.runtimeType}): $payload');
+      
       // Some backends wrap in { data: { requests: [...] } }
       if (payload is Map && payload.containsKey('requests')) {
         return (payload['requests'] as List)

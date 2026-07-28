@@ -234,6 +234,7 @@ class _SwapShiftSheetState extends State<SwapShiftSheet> {
                       ),
                     ],
                   ),
+                  clipBehavior: Clip.antiAlias,
                   child: _filteredStaff.isEmpty
                       ? Center(
                           child: Text(
@@ -241,48 +242,51 @@ class _SwapShiftSheetState extends State<SwapShiftSheet> {
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         )
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: _filteredStaff.length,
-                          itemBuilder: (context, index) {
-                            final staff = _filteredStaff[index];
-                            return ListTile(
-                              dense: true,
-                              title: Text(
-                                staff.name,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
+                      : Material(
+                        type: MaterialType.transparency,
+                        child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: _filteredStaff.length,
+                            itemBuilder: (context, index) {
+                              final staff = _filteredStaff[index];
+                              return ListTile(
+                                dense: true,
+                                title: Text(
+                                  staff.name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                              subtitle: Text(
-                                staff.employeeId,
-                                style: TextStyle(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 11,
+                                subtitle: Text(
+                                  staff.employeeId,
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 11,
+                                  ),
                                 ),
-                              ),
-                              onTap: () {
-                                setState(() {
-                                  _selectedStaff = staff;
-                                  _selectedTheirShift = null;
-                                  _searchController.text = staff.name;
-                                  _isSearchingStaff = false;
-                                });
-                                _searchFocusNode.unfocus();
-
-                                // Use the SAME periodId as the selected shift's
-                                // rota period — this is what scopes "their" shifts
-                                // to the relevant rota window.
-                                if (_selectedMyShift != null) {
-                                  rotaProvider.loadPersonnelShifts(
-                                    personnelId: staff.id,
-                                    periodId: _selectedMyShift!.swapId,
-                                  );
-                                }
-                              },
-                            );
-                          },
-                        ),
+                                onTap: () {
+                                  setState(() {
+                                    _selectedStaff = staff;
+                                    _selectedTheirShift = null;
+                                    _searchController.text = staff.name;
+                                    _isSearchingStaff = false;
+                                  });
+                                  _searchFocusNode.unfocus();
+                        
+                                  // Use the SAME periodId as the selected shift's
+                                  // rota period — this is what scopes "their" shifts
+                                  // to the relevant rota window.
+                                  if (_selectedMyShift != null) {
+                                    rotaProvider.loadPersonnelShifts(
+                                      personnelId: staff.id,
+                                      periodId: _selectedMyShift!.swapId,
+                                    );
+                                  }
+                                },
+                              );
+                            },
+                          ),
+                      ),
                 ),
             ],
             const SizedBox(height: 16),

@@ -63,6 +63,38 @@ class LeaveProvider extends ChangeNotifier {
     }
   }
 
+  // ── Month-scoped load ────────────────────────────────────────────────────
+  /// Ensures data for [month]'s year is loaded, then returns the subset of
+  /// requests that overlap that month. Call this from screens (like Stats)
+  /// that need a specific month rather than the whole-year list.
+  Future<void> loadRequestsForMonth(DateTime month) async {
+    // Keep the year filter in sync with the month being requested so
+    // _loadMyRequests() pulls the right year from the backend.
+    if (_filterYear != month.year || _myRequests.isEmpty) {
+      _filterYear = month.year;
+      _setState(LeaveState.loading);
+      await _loadMyRequests();
+    }
+  }
+
+  /// Requests that touch [month] at all (started in it, ended in it, or
+  /// span across it). Pure client-side filter over the already-loaded
+  /// _myRequests — call loadRequestsForMonth() first to make sure the
+  /// right year is in memory.
+  List<HrLeaveRequest> requestsForMonth(DateTime month) {
+    final monthStart = DateTime(month.year, month.month, 1);
+    final monthEnd = DateTime(month.year, month.month + 1, 0); // last day
+
+    return _myRequests.where((r) {
+      try {
+        return !r.startDateTime.isAfter(monthEnd) &&
+            !r.endDateTime.isBefore(monthStart);
+      } catch (_) {
+        return false;
+      }
+    }).toList();
+  }
+
   Future<void> refresh() async {
     _setState(LeaveState.loading);
     await _loadMyRequests();
@@ -121,7 +153,7 @@ class LeaveProvider extends ChangeNotifier {
     _submitting = true;
     notifyListeners();
     try {
-      final created = await _service.createRequest(data);
+      await _service.createRequest(data);
       // Refresh the entire list to get the latest data from server
       await refresh();
       _submitting = false;
@@ -140,7 +172,7 @@ class LeaveProvider extends ChangeNotifier {
     _submitting = true;
     notifyListeners();
     try {
-      final updated = await _service.updateRequest(id, data);
+      await _service.updateRequest(id, data);
       // Refresh the entire list to get the latest data from server
       await refresh();
       _submitting = false;

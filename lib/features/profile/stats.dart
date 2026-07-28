@@ -25,6 +25,8 @@ class _StatsScreenState extends State<StatsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final rotaProvider = context.read<RotaProvider>();
       rotaProvider.loadShiftsForMonth(context, _currentMonth);
+      final leaveProvider = context.read<LeaveProvider>();
+      leaveProvider.loadRequestsForMonth(_currentMonth);
     });
   }
 
@@ -122,7 +124,6 @@ class _StatsScreenState extends State<StatsScreen> {
     final data = provider.chartData;
 
     // Get current month's data
-    final monthKey = DateFormat('yyyy-MM').format(_currentMonth);
     final monthData = data.map((key, value) {
       // Filter only current month data
       final filtered = value.entries.where((entry) {
@@ -205,24 +206,7 @@ class _StatsScreenState extends State<StatsScreen> {
   // ── LEAVE STATS ───────────────────────────────────────────────────────────
   Widget _buildLeaveStats(BuildContext context) {
     final provider = context.watch<LeaveProvider>();
-    final requests = provider.myRequests;
-
-    // Requests that touch the current month at all (started or ended in it)
-    final monthRequests = requests.where((r) {
-      try {
-        final start = DateTime.parse(r.startDate);
-        final end = DateTime.parse(r.endDate);
-        final monthStart = DateTime(_currentMonth.year, _currentMonth.month, 1);
-        final monthEnd = DateTime(
-          _currentMonth.year,
-          _currentMonth.month + 1,
-          0,
-        ); // last day of month
-        return !start.isAfter(monthEnd) && !end.isBefore(monthStart);
-      } catch (_) {
-        return false;
-      }
-    }).toList();
+    final monthRequests = provider.requestsForMonth(_currentMonth);
 
     // Always show all four statuses, even at zero — matches the Rota stat card pattern
     final stats = HrLeaveRequestStatus.values.map((status) {
@@ -498,8 +482,9 @@ class _StatsScreenState extends State<StatsScreen> {
                 showTitles: true,
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
-                  if (index < 0 || index >= stats.length)
+                  if (index < 0 || index >= stats.length) {
                     return const SizedBox();
+                  }
                   return Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
