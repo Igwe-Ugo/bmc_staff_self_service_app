@@ -54,13 +54,12 @@ class UserServices {
     }
 
     try {
-      debugPrint('📤 PROFILE UPDATE PAYLOAD: $body');
-      final response = await _dio.patch(
-        ApiEndpoints.updateProfile,
-        data: body,
-      );
+      print('📤 PROFILE UPDATE PAYLOAD: $body');
+      debugPrint("Data Type of body: ${body.runtimeType}");
+      final response = await _dio.patch(ApiEndpoints.updateProfile, data: body);
       debugPrint('📡 UPDATE PROFILE STATUS: ${response.statusCode}');
       final payload = _unwrap(response.data);
+      debugPrint('Uwrapped Payload: $payload');
       return UserModel.fromJson(payload as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('❌ UPDATE PROFILE ERROR: ${e.response?.data}');

@@ -166,10 +166,6 @@ class ProfileProvider extends ChangeNotifier {
     final userId = userProvider.user?.id;
     if (userId == null || userId.isEmpty) return false;
     if (passwordError != null) return false;
-    if (userId.isEmpty) {
-      debugPrint('❌ Cannot save profile: no userId on current user');
-      return false;
-    }
 
     final data = UserProfileUpdateData(
       id: userId, // ← now sends the correct User ID
