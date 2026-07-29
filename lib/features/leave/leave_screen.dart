@@ -159,7 +159,7 @@ class _LeaveScreenState extends State<LeaveScreen>
                   ),
                 ),
                 Positioned(
-                  bottom: 20,
+                  bottom: 0,
                   right: 20,
                   child: FloatingActionButton.extended(
                     elevation: 6,
@@ -361,16 +361,25 @@ class _LeaveScreenState extends State<LeaveScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: progress > 0 ? progress : 0.15,
-            minHeight: 4,
-            backgroundColor: Colors.grey.shade300,
-            valueColor: AlwaysStoppedAnimation(
-              progress > 0 ? _progressColor(progress) : const Color(0xFF22C55E),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            Icon(Icons.bed_outlined),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress > 0 ? progress : 0.15,
+                minHeight: 4,
+                backgroundColor: Colors.grey.shade300,
+                valueColor: AlwaysStoppedAnimation(
+                  progress > 0
+                      ? _progressColor(progress)
+                      : const Color(0xFF22C55E),
+                ),
+              ),
             ),
-          ),
+            Icon(Icons.work_outline),
+          ],
         ),
         const SizedBox(height: 3),
         Text(

@@ -118,6 +118,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       await userProvider.fetchMe();
       _state = AuthState.success;
+      debugPrint('✅ User ID from login. userId = ${userProvider.user?.id}');
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
         // Token expired AND refresh failed — clear and force login

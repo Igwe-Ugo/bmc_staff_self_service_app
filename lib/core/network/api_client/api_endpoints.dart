@@ -43,6 +43,7 @@ class ApiEndpoints {
   // ── Profile ──────────────────────────────────────────────────────────────────────
   static const String usersRegular = '/users/regular';
   static const String updateProfile = '/users/profile';
+  static const String worldCountries = '/system-apis/world-countries';
 
   static String fill(String path, Map<String, String> params) {
     var result = path;

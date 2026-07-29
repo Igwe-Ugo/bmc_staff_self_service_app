@@ -30,19 +30,24 @@ class ProfileService {
     for (var i = 0; i < attempts; i++) {
       try {
         final response = await _dio.get(
-          'https://countriesnow.space/api/v0.1/countries/states',
+          ApiEndpoints.worldCountries,
           options: Options(
             sendTimeout: const Duration(seconds: 15),
             receiveTimeout: const Duration(seconds: 15),
           ),
         );
-        final data = response.data;
-        final List<dynamic> list =
-        (data is Map && data['data'] is List) ? data['data'] as List : [];
-        final countries =
-        list.map((e) => Country.fromJson(e as Map<String, dynamic>)).toList();
-        countries.sort((a, b) => a.name.compareTo(b.name));
-        return countries;
+
+        final raw = response.data;
+        final payload = (raw is Map && raw.containsKey('data'))
+            ? raw['data']
+            : raw;
+
+        if (payload is! Map<String, dynamic>) {
+          debugPrint('⚠️ Unexpected world-countries response shape: ${payload.runtimeType}');
+          return [];
+        }
+
+        return Country.buildDirectory(payload);
       } on DioException catch (e) {
         lastError = e;
         final status = e.response?.statusCode;
@@ -95,8 +100,6 @@ class ProfileService {
   }
 
   // ── Call from your login success handler — fire-and-forget ─────────────
-  // Warms the on-device cache before the user ever opens Profile, so the
-  // dropdown is instant and one flaky API moment doesn't block them.
   static void preload() {
     ProfileService().fetchCountriesWithStates().then((countries) {
       debugPrint('✅ Preloaded ${countries.length} countries into cache');

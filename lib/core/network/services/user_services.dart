@@ -37,7 +37,8 @@ class UserServices {
       return UserModel.fromJson(payload as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('❌ GET USER ERROR: ${e.response?.data}');
-      final msg = _extractMessage(e.response?.data) ?? 'Failed to load profile.';
+      final msg =
+          _extractMessage(e.response?.data) ?? 'Failed to load profile.';
       throw ApiException(message: msg, statusCode: e.response?.statusCode);
     }
   }
@@ -48,13 +49,12 @@ class UserServices {
   /// data is never accidentally overwritten with blanks.
   Future<UserModel> updateProfile(UserProfileUpdateData data) async {
     final body = data.toJson();
-    if (body.length <= 1) { // only 'id' present — nothing to update
+    if (body.length <= 1) {
       throw ApiException(message: 'No changes to save.', statusCode: null);
     }
 
     try {
-      debugPrint('📤 PROFILE UPDATE PAYLOAD: ${data.toJson()}');
-      debugPrint('📡 PATCH /users/profile body keys: ${body.keys.toList()}');
+      debugPrint('📤 PROFILE UPDATE PAYLOAD: $body');
       final response = await _dio.patch(
         ApiEndpoints.updateProfile,
         data: body,
@@ -64,7 +64,8 @@ class UserServices {
       return UserModel.fromJson(payload as Map<String, dynamic>);
     } on DioException catch (e) {
       debugPrint('❌ UPDATE PROFILE ERROR: ${e.response?.data}');
-      final msg = _extractMessage(e.response?.data) ?? e.message ?? 'Update failed.';
+      final msg =
+          _extractMessage(e.response?.data) ?? e.message ?? 'Update failed.';
       throw ApiException(message: msg, statusCode: e.response?.statusCode);
     }
   }

@@ -11,37 +11,39 @@ import '../services/widget.dart';
 
 class ProfileProvider extends ChangeNotifier {
   final ProfileService _service = ProfileService();
-  final UserProvider   userProvider;
+  final UserProvider userProvider;
 
   ProfileProvider(this.userProvider);
 
   // ── Controllers ───────────────────────────────────────────────────────────
-  final phoneCtrl   = TextEditingController();
+  final phoneCtrl = TextEditingController();
   final addressCtrl = TextEditingController();
-  final cityCtrl    = TextEditingController();
-  final passCtrl    = TextEditingController();
+  final cityCtrl = TextEditingController();
+  final passCtrl = TextEditingController();
   final confirmCtrl = TextEditingController();
 
   // ── Image ─────────────────────────────────────────────────────────────────
-  File?   imageFile;
+  // ── Image ─────────────────────────────────────────────────────────────────
+  File? imageFile;
   String? _base64Avatar;
+  bool _avatarRemoved = false; // ← new
   final ImagePicker _imagePicker = ImagePicker();
 
   // ── Dropdown state ───────────────────────────────────────────────────────
   String country = '';
-  String state   = '';
+  String state = '';
 
   // Fetched once, cached — countryName -> list of state names
-  List<Country>   _allCountries = [];
-  List<String>    countries = [];
-  List<String>    states    = [];
-  bool            isLoadingCountries = false;
+  List<Country> _allCountries = [];
+  List<String> countries = [];
+  List<String> states = [];
+  bool isLoadingCountries = false;
 
   // ── Dirty tracking ───────────────────────────────────────────────────────
-  bool hasChanges  = false;
+  bool hasChanges = false;
   bool _initialised = false;
 
-  bool    get isUpdating   => userProvider.isUpdating;
+  bool get isUpdating => userProvider.isUpdating;
   String? get errorMessage => userProvider.errorMessage;
 
   // ── Init ──────────────────────────────────────────────────────────────────
@@ -64,11 +66,11 @@ class ProfileProvider extends ChangeNotifier {
   void _populateFromUser() {
     final u = userProvider.user;
     if (u == null) return;
-    phoneCtrl.text   = u.telno   ?? '';
+    phoneCtrl.text = u.telno ?? '';
     addressCtrl.text = u.address ?? '';
-    cityCtrl.text    = u.city    ?? '';
+    cityCtrl.text = u.city ?? '';
     country = u.country ?? '';
-    state   = u.state   ?? '';
+    state = u.state ?? '';
   }
 
   void markDirty() {
@@ -78,12 +80,14 @@ class ProfileProvider extends ChangeNotifier {
     }
   }
 
-// ── Fetch once — countries + all their states come back together ────────
+  // ── Fetch once — countries + all their states come back together ────────
   Future<void> loadCountries({bool forceRefresh = false}) async {
     isLoadingCountries = true;
     notifyListeners();
     try {
-      _allCountries = await _service.fetchCountriesWithStates(forceRefresh: forceRefresh);
+      _allCountries = await _service.fetchCountriesWithStates(
+        forceRefresh: forceRefresh,
+      );
       countries = _allCountries.map((c) => c.name).toList();
     } catch (e) {
       debugPrint('Failed to load countries: $e');
@@ -94,10 +98,10 @@ class ProfileProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-// Local lookup — no network call, instant
+  // Local lookup — no network call, instant
   void _applyStatesForCountry(String countryName) {
     final match = _allCountries.firstWhere(
-          (c) => c.name.toLowerCase() == countryName.toLowerCase(),
+      (c) => c.name.toLowerCase() == countryName.toLowerCase(),
       orElse: () => const Country(name: '', iso2: '', states: []),
     );
     states = match.states;
@@ -105,7 +109,7 @@ class ProfileProvider extends ChangeNotifier {
 
   void updateCountry(String? v) {
     country = v ?? '';
-    state   = '';
+    state = '';
     hasChanges = true;
     _applyStatesForCountry(country);
     notifyListeners();
@@ -114,7 +118,7 @@ class ProfileProvider extends ChangeNotifier {
   void updateState(String? v) {
     state = v ?? '';
     hasChanges = true;
-    markDirty();
+    notifyListeners();
   }
 
   // ── Image picking ─────────────────────────────────────────────────────────
@@ -126,22 +130,24 @@ class ProfileProvider extends ChangeNotifier {
     );
     if (picked == null) return;
 
-    final file   = File(picked.path);
-    final bytes  = await file.readAsBytes();
+    final file = File(picked.path);
+    final bytes = await file.readAsBytes();
     final base64 = base64Encode(bytes);
-    final ext    = picked.path.split('.').last.toLowerCase();
-    final mime   = ext == 'png' ? 'image/png' : 'image/jpeg';
+    final ext = picked.path.split('.').last.toLowerCase();
+    final mime = ext == 'png' ? 'image/png' : 'image/jpeg';
 
-    imageFile     = file;
+    imageFile = file;
     _base64Avatar = 'data:$mime;base64,$base64';
-    hasChanges    = true;
+    _avatarRemoved = false; // ← picking a new photo cancels a pending removal
+    hasChanges = true;
     notifyListeners();
   }
 
   void removeAvatar() {
-    imageFile     = null;
+    imageFile = null;
     _base64Avatar = null;
-    hasChanges    = true;
+    _avatarRemoved = true; // ← new
+    hasChanges = true;
     notifyListeners();
   }
 
@@ -149,7 +155,9 @@ class ProfileProvider extends ChangeNotifier {
   String? get passwordError {
     if (passCtrl.text.isEmpty) return null;
     if (passCtrl.text != confirmCtrl.text) return 'Passwords do not match';
-    if (passCtrl.text.length < 6) return 'Password must be at least 6 characters';
+    if (passCtrl.text.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
     return null;
   }
 
@@ -158,22 +166,28 @@ class ProfileProvider extends ChangeNotifier {
     final userId = userProvider.user?.id;
     if (userId == null || userId.isEmpty) return false;
     if (passwordError != null) return false;
+    if (userId.isEmpty) {
+      debugPrint('❌ Cannot save profile: no userId on current user');
+      return false;
+    }
 
     final data = UserProfileUpdateData(
-      id:       userId,
-      avatar:   _base64Avatar,
-      address:  addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
-      city:     cityCtrl.text.trim().isEmpty    ? null : cityCtrl.text.trim(),
-      telno:    phoneCtrl.text.trim().isEmpty   ? null : phoneCtrl.text.trim(),
-      state:    state.isEmpty   ? null : state,
-      country:  country.isEmpty ? null : country,
+      id: userId, // ← now sends the correct User ID
+      avatar: _base64Avatar,
+      removeAvatar: _avatarRemoved,
+      address: addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
+      city: cityCtrl.text.trim().isEmpty ? null : cityCtrl.text.trim(),
+      telno: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
+      state: state.isEmpty ? null : state,
+      country: country.isEmpty ? null : country,
       password: passCtrl.text.trim().isEmpty ? null : passCtrl.text.trim(),
     );
 
     final success = await userProvider.updateProfile(data);
     if (success) {
       hasChanges = false;
-      imageFile  = null;
+      imageFile = null;
+      _avatarRemoved = false;
       passCtrl.clear();
       confirmCtrl.clear();
       notifyListeners();
@@ -183,9 +197,10 @@ class ProfileProvider extends ChangeNotifier {
 
   void cancel() {
     _populateFromUser();
-    hasChanges    = false;
-    imageFile     = null;
+    hasChanges = false;
+    imageFile = null;
     _base64Avatar = null;
+    _avatarRemoved = false; // ← new
     passCtrl.clear();
     confirmCtrl.clear();
     if (country.isNotEmpty) _applyStatesForCountry(country);

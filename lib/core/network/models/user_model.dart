@@ -316,8 +316,9 @@ class UserModel {
 // PATCH /api/users/profile — { id, avatar, address, city, telno, state, country, password }
 
 class UserProfileUpdateData {
-  final String   id;        // required — identifies which user to update
-  final String?  avatar;    // base64 string
+  final String   id;
+  final String?  avatar;
+  final bool     removeAvatar; // ← new
   final String?  address;
   final String?  city;
   final String?  telno;
@@ -328,6 +329,7 @@ class UserProfileUpdateData {
   const UserProfileUpdateData({
     required this.id,
     this.avatar,
+    this.removeAvatar = false,
     this.address,
     this.city,
     this.telno,
@@ -336,11 +338,15 @@ class UserProfileUpdateData {
     this.password,
   });
 
-  /// `id` is always sent. Other fields are only sent when non-null/non-empty
-  /// so a partial save never wipes existing data on the server.
   Map<String, dynamic> toJson() {
     final m = <String, dynamic>{'id': id};
-    if (avatar   != null && avatar!.isNotEmpty)   m['avatar']   = avatar;
+
+    if (removeAvatar) {
+      m['avatar'] = '';
+    } else if (avatar != null && avatar!.isNotEmpty) {
+      m['avatar'] = avatar;
+    }
+
     if (address  != null && address!.isNotEmpty)  m['address']  = address;
     if (city     != null && city!.isNotEmpty)     m['city']     = city;
     if (telno    != null && telno!.isNotEmpty)    m['telno']    = telno;

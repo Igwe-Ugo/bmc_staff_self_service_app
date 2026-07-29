@@ -237,6 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         height: 24,
                         child: Checkbox(
                           value: _rememberMe,
+                          checkColor: Colors.white,
                           activeColor: Theme.of(context).primaryColor,
                           onChanged: (bool? newValue) {
                             setState(() {
