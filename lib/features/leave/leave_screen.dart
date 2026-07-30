@@ -361,25 +361,16 @@ class _LeaveScreenState extends State<LeaveScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 6),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            Icon(Icons.bed_outlined),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: progress > 0 ? progress : 0.15,
-                minHeight: 4,
-                backgroundColor: Colors.grey.shade300,
-                valueColor: AlwaysStoppedAnimation(
-                  progress > 0
-                      ? _progressColor(progress)
-                      : const Color(0xFF22C55E),
-                ),
-              ),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: progress > 0 ? progress : 0.15,
+            minHeight: 4,
+            backgroundColor: Colors.grey.shade300,
+            valueColor: AlwaysStoppedAnimation(
+              progress > 0 ? _progressColor(progress) : const Color(0xFF22C55E),
             ),
-            Icon(Icons.work_outline),
-          ],
+          ),
         ),
         const SizedBox(height: 3),
         Text(
@@ -1183,9 +1174,6 @@ class _LeaveScreenState extends State<LeaveScreen>
   }
 
   // ── Request sheet ─────────────────────────────────────────────────────────
-
-  // ── Request sheet ─────────────────────────────────────────────────────────
-
   void _openRequestSheet(
     BuildContext context,
     LeaveProvider provider,
