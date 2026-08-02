@@ -56,7 +56,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
+      body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 20, 24, 60),
           child: Column(
@@ -90,7 +90,8 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                 fit: BoxFit.contain,
               ),
 
-              Spacer(),
+              //Spacer(),
+              const SizedBox(height: 80),
 
               DefaultTabController(
                 length: entries.length,
@@ -219,7 +220,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 margin: const EdgeInsets.symmetric(horizontal: 4),
-                width: _currentPage == index ? 16 : 8,
+                width: _currentPage == index ? 18 : 8,
                 height: 8,
                 decoration: BoxDecoration(
                   color: _currentPage == index ? Colors.white : Colors.white54,
