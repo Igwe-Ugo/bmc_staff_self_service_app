@@ -148,7 +148,7 @@ class _RotaScreenState extends State<RotaScreen> {
             // Expanded forces the calendar container to fill remaining space
             SliverFillRemaining(
               child: Container(
-                margin: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 120.0),
+                margin: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 110.0),
                 padding: const EdgeInsets.symmetric(
                   vertical: 12,
                   horizontal: 10,
@@ -159,7 +159,7 @@ class _RotaScreenState extends State<RotaScreen> {
                 ),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final calendarGridHeight = constraints.maxHeight * 0.88;
+                    final calendarGridHeight = constraints.maxHeight * 0.84;
                     final dynamicRowHeight = (calendarGridHeight > 0)
                         ? (calendarGridHeight / 6.8)
                         : 52.0;

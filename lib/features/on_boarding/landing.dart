@@ -113,7 +113,7 @@ class _LandingState extends State<Landing> with SingleTickerProviderStateMixin {
                       /// 🔹 STATIC BUTTON
                       SizedBox(
                         width: double.infinity,
-                        height: 32,
+                        height: 50,
                         child: ElevatedButton(
                           onPressed: () {
                             Navigator.push(
