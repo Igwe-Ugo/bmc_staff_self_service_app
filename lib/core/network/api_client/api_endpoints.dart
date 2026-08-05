@@ -1,46 +1,71 @@
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-
 class ApiEndpoints {
   ApiEndpoints._();
 
-  static String get baseUrl =>
-      dotenv.env['API_BASE_URL'] ?? '';
+  // ── Environment Configurations (Build-time injection) ─────────────────────
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
 
-  static int get timeoutSeconds =>
-      int.tryParse(dotenv.env['API_TIMEOUT_SECONDS'] ?? '15') ?? 15;
+  static const String apiKey = String.fromEnvironment(
+    'API_KEY',
+    defaultValue: '',
+  );
 
-  // ✅ Read the API key from .env
-  static String get apiKey =>
-      dotenv.env['API_KEY'] ?? '';
+  static const int timeoutSeconds = int.fromEnvironment(
+    'API_TIMEOUT_SECONDS',
+    defaultValue: 15,
+  );
 
-  // ✅ The header name your backend expects
+  // The header name your backend expects
   static const String apiKeyHeader = 'x-api-key';
 
-  // Routes
+  /// Call this method at app startup (e.g., in lib/main.dart) to ensure 
+  /// required build variables are provided before making network calls.
+  static void validateEnv() {
+    assert(
+      baseUrl.isNotEmpty,
+      'CRITICAL BUILD ERROR: API_BASE_URL was not provided at build time!',
+    );
+    assert(
+      apiKey.isNotEmpty,
+      'CRITICAL BUILD ERROR: API_KEY was not provided at build time!',
+    );
+
+    if (baseUrl.isEmpty || apiKey.isEmpty) {
+      throw Exception(
+        'Missing required environment variables. '
+        'Ensure you run Flutter with --dart-define or --dart-define-from-file.',
+      );
+    }
+  }
+
+  // ── Routes ──────────────────────────────────────────────────────────────────
   static const String login = '/mobapp/auth/login';
   static const String logout = '/mobapp/auth/logout';
   static const String refresh = '/mobapp/auth/refresh';
 
-  // ── Availability ──────────────────────────────────────────────────────────────
-  static const String availabilityCurrentWindow = '/hr/availability/windows/current'; // getting the open window and can only be seen when made available. Which would be readonly when not available
-  static const String availabilityMyCalendar = '/hr/availability/my-calendar'; // fetches the calendar itself.
-  static const String availabilityBulk = '/hr/availability/bulk'; // for saving the availability
-  static const String deleteAvailability = '/hr/availability/{slotId}'; // for deleting the availability
+  // ── Availability ────────────────────────────────────────────────────────────
+  static const String availabilityCurrentWindow =
+      '/hr/availability/windows/current';
+  static const String availabilityMyCalendar = '/hr/availability/my-calendar';
+  static const String availabilityBulk = '/hr/availability/bulk';
+  static const String deleteAvailability = '/hr/availability/{slotId}';
 
-  // ── Leave Request ─────────────────────────────────────────────────────────────
-  static const String leaveRequests    = '/hr/leave/requests';
-  static const String leaveMyRequests  = '/hr/leave/my-requests';
-  static const String leaveSearch      = '/hr/leave/search';
+  // ── Leave Request ───────────────────────────────────────────────────────────
+  static const String leaveRequests = '/hr/leave/requests';
+  static const String leaveMyRequests = '/hr/leave/my-requests';
+  static const String leaveSearch = '/hr/leave/search';
 
-  // ── Rota ──────────────────────────────────────────────────────────────────────
-  static const String rotaMyShifts        = '/hr/rota/my-shifts';
-  static const String requestRotaSwaps    = '/hr/rota/swaps';
+  // ── Rota ────────────────────────────────────────────────────────────────────
+  static const String rotaMyShifts = '/hr/rota/my-shifts';
+  static const String requestRotaSwaps = '/hr/rota/swaps';
   static const String displayRotaSwaps = '/hr/rota/swaps';
-  static const String personnel           = '/hr/personnel';
+  static const String personnel = '/hr/personnel';
   static const String deleteSwapRequest = '/hr/rota/swaps';
   static const String rotaPersonnelShifts = '/hr/rota/personnel-shifts';
 
-  // ── Profile ──────────────────────────────────────────────────────────────────────
+  // ── Profile ─────────────────────────────────────────────────────────────────
   static const String usersRegular = '/users/regular';
   static const String updateProfile = '/users/profile';
   static const String worldCountries = '/system-apis/world-countries';

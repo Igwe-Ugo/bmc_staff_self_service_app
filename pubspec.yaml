@@ -2,7 +2,7 @@ name: bmc_app
 description: "BMC Staff Self-Serviice"
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-version: 1.0.2+2
+version: 1.0.2+3
 
 environment:
   sdk: ^3.8.0
@@ -37,6 +37,7 @@ dependencies:
   custom_refresh_indicator: ^4.0.1
   flutter_launcher_icons: ^0.14.4
   flutter_chat_ui: ^2.11.1
+  socket_io_client: ^3.1.6
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -59,7 +60,6 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
-    - .env
 
   fonts:
     - family: Montserrat

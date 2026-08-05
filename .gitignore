@@ -16,7 +16,7 @@ migrate_working_dir/
 *.iml
 *.ipr
 *.iws
-.env
+env.json
 .idea/
 
 # Android signing keys and credentials
