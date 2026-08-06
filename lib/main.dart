@@ -10,6 +10,11 @@ import '../../core/network/provider/widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // MUST precede configure() below
+
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details, forceReport: true);
+  };
+  
   ApiEndpoints.validateEnv(); // validating environment variables at startup
   BMCRouter(); // 👈 triggers _internal() which sets router
 

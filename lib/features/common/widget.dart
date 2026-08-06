@@ -9,3 +9,4 @@ export 'nav_visibility.dart';
 export 'message_badge_icon.dart';
 export 'show_message.dart';
 export 'user_avatar.dart';
+export 'presence_status.dart';

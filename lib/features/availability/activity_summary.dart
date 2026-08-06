@@ -172,36 +172,39 @@ class _WeeklyAvailabilityWidgetState extends State<WeeklyAvailabilityWidget> {
           ),
           content: SizedBox(
             width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: daySlots.length,
-              itemBuilder: (context, index) {
-                final slot = daySlots[index];
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: slot.availability.color,
-                      shape: BoxShape.circle,
+            child: Material(
+              type: MaterialType.transparency,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: daySlots.length,
+                itemBuilder: (context, index) {
+                  final slot = daySlots[index];
+                  return ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: slot.availability.color,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  title: Text(
-                    slot.availability.label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: slot.availability.color,
-                      fontFamily: 'Lexend',
-                      fontSize: 14,
+                    title: Text(
+                      slot.availability.label,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: slot.availability.color,
+                        fontFamily: 'Lexend',
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
-                  subtitle: Text(
-                    slot.timeSlot.label,
-                    style: const TextStyle(fontFamily: 'Lexend', fontSize: 12),
-                  ),
-                );
-              },
+                    subtitle: Text(
+                      slot.timeSlot.label,
+                      style: const TextStyle(fontFamily: 'Lexend', fontSize: 12),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
           actions: [

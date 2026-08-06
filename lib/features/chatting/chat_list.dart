@@ -57,7 +57,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
       if (timeA != null && timeB != null) {
         return timeB.compareTo(timeA);
       }
-      
+
       // Case B: User A has a message but User B doesn't -> User A comes first
       if (timeA != null) return -1;
 
@@ -298,23 +298,23 @@ class _MessagesListScreenState extends State<MessagesListScreen>
                   ),
                   padding: const EdgeInsets.all(1.5),
                   child: CircleAvatar(
-                    radius: 22,
+                    radius: 20,
                     backgroundColor: avatarColorFor(user.userId),
                     child: user.avatar != null
                         ? UserAvatar(
                             image: user.avatar,
                             initials: initialsFor(user.username),
-                            radius: 22,
+                            radius: 20,
                             initialsColor: Colors.white,
                           )
                         : CircleAvatar(
-                            radius: 22,
+                            radius: 20,
                             backgroundColor: avatarColorFor(user.userId),
                             child: Text(
                               initialsFor(user.username),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -347,7 +347,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
                   Text(
                     user.username, // display name (see naming note above)
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: Theme.of(context).brightness == Brightness.dark
                           ? Colors.white
@@ -360,7 +360,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 10,
                       color: hasUnread
                           ? Theme.of(context).primaryColor
                           : const Color(0xFF8E8E93),
@@ -374,12 +374,10 @@ class _MessagesListScreenState extends State<MessagesListScreen>
             // Action icons
             Row(
               children: [
-                _buildActionIcon(
-                  icon: Icons.notifications_outlined,
-                  filled: hasUnread,
+                PresenceStatusBadge(
+                  presence: user.presence,
+                  hasNotifications: hasUnread,
                 ),
-                const SizedBox(width: 8),
-                _buildActionIcon(icon: Icons.block, filled: false),
               ],
             ),
           ],

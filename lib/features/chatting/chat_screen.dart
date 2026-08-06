@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/network/models/widget.dart';
 import '../../core/network/provider/widget.dart';
 import '../common/widget.dart';
-import 'chat_ui_utils.dart';
+import 'widget.dart';
 
 class ChatScreen extends StatefulWidget {
   /// 1-on-1 target. Mutually exclusive with [group].
@@ -167,7 +167,12 @@ class _ChatScreenState extends State<ChatScreen> {
     final presence = widget.isGroup ? null : context.watch<PresenceProvider>();
     final online = widget.isGroup
         ? false
-        : (presence?.isReachable(widget.peer!.userId) ?? false);
+        : (presence?.isReachable(widget.peer?.userId ?? '') ?? false);
+
+    // Safely extract avatar details depending on group vs 1-on-1 chat
+    final String currentId = widget.conversationKey;
+    final String? avatarUrl = widget.isGroup ? null : widget.peer?.avatar;
+    final String initials = initialsFor(widget.title);
 
     return Container(
       height: 65,
@@ -177,27 +182,26 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           CircleAvatar(
             radius: 18,
-            backgroundColor: avatarColorFor(widget.peer!.userId),
-            child: widget.peer?.avatar != null
+            backgroundColor: avatarColorFor(currentId),
+            child: avatarUrl != null
                 ? UserAvatar(
-                    image: widget.peer!.avatar,
-                    initials: initialsFor(widget.peer!.username),
+                    image: avatarUrl,
+                    initials: initials,
                     radius: 17,
                     initialsColor: Colors.white,
                   )
-                :  CircleAvatar(
-                                      radius: 13,
-                                      backgroundColor:
-                                          avatarColorFor(widget.peer!.userId),
-                                      child: Text(
-                                        initialsFor(widget.peer!.username),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
+                : CircleAvatar(
+                    radius: 13,
+                    backgroundColor: avatarColorFor(currentId),
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -222,7 +226,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     fontSize: 11,
                     color: isPeerTyping
                         ? Theme.of(context).primaryColor
-                        : (online ? const Color(0xFF34C759) : Colors.white38),
+                        : (online
+                              ? const Color(0xFF34C759)
+                              : Colors.grey.shade500),
                     fontWeight: isPeerTyping
                         ? FontWeight.w600
                         : FontWeight.normal,
@@ -231,6 +237,33 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
+          // Inside _buildAppBar in chat_screen_2.dart
+
+          // 1. Show the Info Button only for groups
+          if (widget.isGroup) ...[
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GroupDetailsScreen(group: widget.group!),
+                  ),
+                );
+              },
+              child: Container(
+                width: 25,
+                height: 25,
+                decoration: const BoxDecoration(
+                  color: Colors.white12,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.info_outline, size: 27),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+
+          // 2. Your existing close button
           GestureDetector(
             onTap: () {
               Navigator.pop(context);
