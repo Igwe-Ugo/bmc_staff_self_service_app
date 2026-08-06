@@ -4,8 +4,8 @@ import 'package:bmc_app/core/storage/secure_storage.dart';
 import 'package:flutter/material.dart';
 import '../api_client/widget.dart';
 import '../models/widget.dart';
-import '../services/auth_services.dart';
 import '../../../core/errors/api_exceptions.dart';
+import '../services/widget.dart';
 import 'widget.dart';
 
 enum AuthState { idle, loading, success, error }
@@ -28,7 +28,13 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _state == AuthState.loading;
   bool get isAuthenticated => _state == AuthState.success;
 
-  Future<bool> login(String username, String password, UserProvider userProvider) async {
+  Future<bool> login(
+    String username,
+    String password,
+    UserProvider userProvider,
+    PresenceProvider presenceProvider,
+    ChatProvider chatProvider,
+  ) async {
     _state = AuthState.loading;
     _errorTitle = null;
     _errorMessage = null;
@@ -41,6 +47,15 @@ class AuthProvider extends ChangeNotifier {
       );
       // ✅ Seed UserProvider directly from the login response
       userProvider.setUserFromLogin(response.user);
+
+      // USERNAME, not response.user.id — the socket mesh's identity space is
+      // the login username (uuid is REST-only). See socket_models.dart for
+      // the full naming note; getting this backwards means messages are
+      // silently delivered to a room nobody is in.
+      presenceProvider.me = response.user.username;
+      chatProvider.me = response.user.username;
+      await SocketService.instance.connect();
+
       _state = AuthState.success;
       notifyListeners();
       return true;
@@ -95,6 +110,11 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Before clearing storage — this emits process-user-sign-out, which
+    // clears this surface's presence flag immediately rather than waiting
+    // on the server's disconnect handler to notice a dropped transport.
+    await SocketService.instance.disconnect();
+
     await _authServices.logout();
     _state = AuthState.idle;
     _errorTitle = null;
@@ -104,8 +124,13 @@ class AuthProvider extends ChangeNotifier {
   }
 
   // Check if user is already logged in (e.g., on app start)
-  // Call this from your router or app startup
-  Future<void> checkAuthStatus(UserProvider userProvider) async {
+  // Call this from your router or app startup — this is the warm-start path,
+  // so it connects the socket too (login() only covers the fresh-login path).
+  Future<void> checkAuthStatus(
+    UserProvider userProvider,
+    PresenceProvider presenceProvider,
+    ChatProvider chatProvider,
+  ) async {
     final hasSession = await SecureStorage.instance.hasValidSession();
 
     if (!hasSession) {
@@ -119,6 +144,13 @@ class AuthProvider extends ChangeNotifier {
       await userProvider.fetchMe();
       _state = AuthState.success;
       debugPrint('✅ User ID from login. userId = ${userProvider.user?.id}');
+
+      final username = userProvider.user?.username;
+      if (username != null && username.isNotEmpty) {
+        presenceProvider.me = username;
+        chatProvider.me = username;
+        await SocketService.instance.connect();
+      }
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
         // Token expired AND refresh failed — clear and force login

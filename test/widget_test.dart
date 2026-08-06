@@ -1,30 +1,22 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:bmc_app/core/network/provider/widget.dart';
 import 'package:flutter_test/flutter_test.dart';
-
+import 'package:bmc_app/features/common/widget.dart'; // BMCRouter
 import 'package:bmc_app/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const BMCStaffSelfService());
+  testWidgets('App builds and renders without crashing', (WidgetTester tester) async {
+    // BMCRouter() runs the same one-time router setup main() does before
+    // build() reads BMCRouter.router — without this, the widget tree throws
+    // on the very first pump.
+    BMCRouter();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+    final userProvider = UserProvider();
+    await tester.pumpWidget(BMCStaffSelfService(userProvider: userProvider));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Replace with something real once you settle on what the very first
+    // frame should show — e.g. if BMCRouter's initial route is the login
+    // screen:
+    // expect(find.text('LOGIN PORTAL'), findsOneWidget);
   });
 }

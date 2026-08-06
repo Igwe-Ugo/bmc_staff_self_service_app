@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
-import '../../core/network/models/widget.dart'; // Adjust import path to your ChatUser model
+import '../../core/network/models/widget.dart';
+import '../common/widget.dart';
+import 'chat_ui_utils.dart';
 
 class CreateGroupModal extends StatefulWidget {
-  final List<ChatUser> availableUsers;
-  final Function(
+  final List<SocketUser> availableUsers;
+
+  /// Returns the group name, optional description, and the selected members'
+  /// USERNAMES (SocketUser.userId) — the identity SocketService.createGroup
+  /// expects.
+  final void Function(
     String name,
     String description,
-    List<ChatUser> selectedMembers,
+    List<String> selectedMemberIds,
   )
   onCreateGroup;
 
@@ -25,8 +31,10 @@ class _CreateGroupModalState extends State<CreateGroupModal> {
   final TextEditingController _groupNameController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
-  // Track selected members using a Set for clean add/remove lookups
-  final Set<ChatUser> _selectedUsers = {};
+  // Keyed by userId (username), not by SocketUser instance — the roster can
+  // rebuild SocketUser objects on every presence event, so identity-based
+  // Set membership would silently drop a selection mid-edit.
+  final Set<String> _selectedUserIds = {};
 
   @override
   void dispose() {
@@ -35,12 +43,12 @@ class _CreateGroupModalState extends State<CreateGroupModal> {
     super.dispose();
   }
 
-  void _toggleUserSelection(ChatUser user) {
+  void _toggleUserSelection(SocketUser user) {
     setState(() {
-      if (_selectedUsers.contains(user)) {
-        _selectedUsers.remove(user);
+      if (_selectedUserIds.contains(user.userId)) {
+        _selectedUserIds.remove(user.userId);
       } else {
-        _selectedUsers.add(user);
+        _selectedUserIds.add(user.userId);
       }
     });
   }
@@ -75,7 +83,7 @@ class _CreateGroupModalState extends State<CreateGroupModal> {
                         : Colors.black,
                     size: 20,
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Text(
                     "Create New Group",
                     style: TextStyle(
@@ -103,12 +111,10 @@ class _CreateGroupModalState extends State<CreateGroupModal> {
 
               // ── Group Name Input ───────────────────────────────────────────
               RichText(
-                text: TextSpan(
+                text: const TextSpan(
                   text: "Group Name ",
                   style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
+                    color: Colors.white,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                     fontFamily: 'Lexend',
@@ -205,10 +211,8 @@ class _CreateGroupModalState extends State<CreateGroupModal> {
               RichText(
                 text: TextSpan(
                   text: "Select Members ",
-                  style: TextStyle(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.white
-                        : Colors.black,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                     fontFamily: 'Lexend',
@@ -219,7 +223,7 @@ class _CreateGroupModalState extends State<CreateGroupModal> {
                       style: TextStyle(color: Colors.red),
                     ),
                     TextSpan(
-                      text: "(${_selectedUsers.length} selected)",
+                      text: "(${_selectedUserIds.length} selected)",
                       style: const TextStyle(
                         color: textMutedColor,
                         fontWeight: FontWeight.normal,
@@ -238,87 +242,124 @@ class _CreateGroupModalState extends State<CreateGroupModal> {
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: inputBorderColor, width: 1),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    itemCount: widget.availableUsers.length,
-                    separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: Theme.of(context).primaryColor.withOpacity(0.6),
-                      indent: 16,
-                      endIndent: 16,
-                    ),
-                    itemBuilder: (context, index) {
-                      final user = widget.availableUsers[index];
-                      final isSelected = _selectedUsers.contains(user);
-
-                      return InkWell(
-                        onTap: () => _toggleUserSelection(user),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          child: Row(
-                            children: [
-                              // Checkbox widget
-                              SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: Checkbox(
-                                  value: isSelected,
-                                  onChanged: (_) => _toggleUserSelection(user),
-                                  activeColor: const Color(0xFF6366F1),
-                                  side: const BorderSide(
-                                    color: textMutedColor,
-                                    width: 1.5,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 14),
-
-                              // Avatar
-                              CircleAvatar(
-                                radius: 13,
-                                backgroundColor: user.avatarColor,
-                                child: Text(
-                                  user.initials,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-
-                              // User Name
-                              Expanded(
-                                child: Text(
-                                  user.name,
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? Colors.white
-                                        : Colors.black,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    fontFamily: 'Lexend',
-                                  ),
-                                ),
-                              ),
-                            ],
+                child: widget.availableUsers.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No users available',
+                          style: TextStyle(
+                            color: textMutedColor,
+                            fontSize: 13,
+                            fontFamily: 'Lexend',
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          itemCount: widget.availableUsers.length,
+                          separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            color: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.6),
+                            indent: 16,
+                            endIndent: 16,
+                          ),
+                          itemBuilder: (context, index) {
+                            final user = widget.availableUsers[index];
+                            final isSelected = _selectedUserIds.contains(
+                              user.userId,
+                            );
+
+                            return InkWell(
+                              onTap: () => _toggleUserSelection(user),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 10,
+                                ),
+                                child: Row(
+                                  children: [
+                                    // Checkbox widget
+                                    SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: Checkbox(
+                                        value: isSelected,
+                                        onChanged: (_) =>
+                                            _toggleUserSelection(user),
+                                        activeColor: const Color(0xFF6366F1),
+                                        side: const BorderSide(
+                                          color: textMutedColor,
+                                          width: 1.5,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+
+                                    // Avatar
+                                    CircleAvatar(
+                                      radius: 13,
+                                      backgroundColor: avatarColorFor(
+                                        user.userId,
+                                      ),
+                                      child: user.avatar != null
+                                          ? UserAvatar(
+                                              image: user.avatar,
+                                              initials: initialsFor(
+                                                user.username,
+                                              ),
+                                              radius: 13,
+                                              initialsColor: Colors.white,
+                                            )
+                                          : CircleAvatar(
+                                              radius: 13,
+                                              backgroundColor: avatarColorFor(
+                                                user.userId,
+                                              ),
+                                              child: Text(
+                                                initialsFor(user.username),
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                    ),
+
+                                    const SizedBox(width: 12),
+
+                                    // User Name (display name — see naming
+                                    // note in socket_models.dart)
+                                    Expanded(
+                                      child: Text(
+                                        user.username,
+                                        style: TextStyle(
+                                          color:
+                                              Theme.of(context).brightness ==
+                                                  Brightness.dark
+                                              ? Colors.white
+                                              : Colors.black,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          fontFamily: 'Lexend',
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
               ),
 
               const SizedBox(height: 28),
@@ -368,18 +409,24 @@ class _CreateGroupModalState extends State<CreateGroupModal> {
                         );
                         return;
                       }
+                      if (_selectedUserIds.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Select at least one member'),
+                          ),
+                        );
+                        return;
+                      }
 
                       widget.onCreateGroup(
                         groupName,
                         _descriptionController.text.trim(),
-                        _selectedUsers.toList(),
+                        _selectedUserIds.toList(),
                       );
                       Navigator.of(context).pop();
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(
-                        0xFF312E81,
-                      ), // Dark indigo button
+                      backgroundColor: const Color(0xFF312E81),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20,

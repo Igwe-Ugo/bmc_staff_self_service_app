@@ -4,3 +4,5 @@ export 'availability_provider.dart';
 export 'leave_provider.dart';
 export 'rota_provider.dart';
 export 'profile_provider.dart';
+export 'chat_provider.dart';
+export 'presence_provider.dart';

@@ -6,6 +6,11 @@ class ApiEndpoints {
     'API_BASE_URL',
     defaultValue: '',
   );
+   
+  static const String socketUrl = String.fromEnvironment(
+    'APP_SERVER_BASE_URL',
+    defaultValue: '',
+  );
 
   static const String apiKey = String.fromEnvironment(
     'API_KEY',

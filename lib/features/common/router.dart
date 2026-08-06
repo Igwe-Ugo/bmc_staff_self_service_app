@@ -1,7 +1,7 @@
-import 'package:bmc_app/core/network/models/widget.dart';
 import 'package:bmc_app/features/notification/notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/network/models/widget.dart';
 import '../authentication/widget.dart';
 import '../availability/widget.dart';
 import '../chatting/widget.dart';
@@ -115,14 +115,8 @@ class BMCRouter {
                       GoRoute(
                         path: chatPath,
                         builder: (context, state) {
-                          final users = state.extra as ChatUser?;
-                          if (users != null) {
-                            return ChatScreen(user: users);
-                          } else {
-                            return const Center(
-                              child: Text("Users not available!"),
-                            );
-                          }
+                         final extra = state.extra;
+                        return extra is ChatGroup ? ChatScreen(group: extra) : ChatScreen(peer: extra as SocketUser);
                         },
                       ),
                     ],

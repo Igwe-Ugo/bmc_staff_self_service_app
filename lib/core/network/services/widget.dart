@@ -3,3 +3,5 @@ export 'availability_service.dart';
 export 'leave_service.dart';
 export 'rota_service.dart';
 export 'profile_service.dart';
+export 'socket_service.dart';
+export 'socket_events.dart';

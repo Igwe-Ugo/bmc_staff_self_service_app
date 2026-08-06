@@ -2,6 +2,9 @@ import 'package:bmc_app/features/common/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:provider/provider.dart';
+
+import '../../core/network/provider/widget.dart';
 
 /// Notification icon with badge showing unread count. Tapping navigates to notifications.
 class MessageBadgeIcon extends StatelessWidget {
@@ -9,6 +12,10 @@ class MessageBadgeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // watching total unread messages from chatprovider
+    final unreadCount = context.watch<ChatProvider>().totalUnread;
+    ;
+    ;
     return InkWell(
       onTap: () {
         GoRouter.of(
@@ -35,34 +42,35 @@ class MessageBadgeIcon extends StatelessWidget {
                   ? Colors.white
                   : Colors.black,
             ),
-            Positioned(
-              right: -7,
-              top: -4,
-              child: CircleAvatar(
-                backgroundColor: Colors.red.withOpacity(0.3),
-                radius: 10,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  constraints: const BoxConstraints(
-                    minWidth: 14,
-                    minHeight: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    '23',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 7,
-                      fontWeight: FontWeight.w600,
+            if (unreadCount > 0)
+              Positioned(
+                right: -7,
+                top: -4,
+                child: CircleAvatar(
+                  backgroundColor: Colors.red.withOpacity(0.3),
+                  radius: 10,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
                     ),
-                    textAlign: TextAlign.center,
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      unreadCount > 99 ? '99+' : unreadCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 7,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),

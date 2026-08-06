@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                /// 隼 BACK BUTTON
+                /// 隼 BACK BUTTON
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -155,7 +155,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 23),
 
-                /// 隼 TITLE
+                /// 隼 TITLE
                 const Text(
                   "LOGIN PORTAL",
                   style: TextStyle(
@@ -178,7 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 25),
 
-                /// 隼 USERNAME
+                /// 隼 USERNAME
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -201,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                /// 隼 PASSWORD
+                /// 隼 PASSWORD
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
@@ -331,9 +331,6 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _login() async {
     final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
-    setState(() {
-      _isLoading = true;
-    });
 
     if (username.isEmpty || password.isEmpty) {
       showMessage(
@@ -342,13 +339,29 @@ class _LoginScreenState extends State<LoginScreen> {
         status: MessageStatus.warning,
         title: 'Missing Fields',
       );
+      // NOTE: this used to return here without ever setting _isLoading back
+      // to false, since it was set true below the original check. Moved the
+      // setState below this guard so the button doesn't get stuck spinning
+      // on an empty-fields submit.
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
     final authProvider = context.read<AuthProvider>();
     final userProvider = context.read<UserProvider>();
+    final presenceProvider = context.read<PresenceProvider>();
+    final chatProvider = context.read<ChatProvider>();
     ProfileService.preload();
-    final success = await authProvider.login(username, password, userProvider);
+    final success = await authProvider.login(
+      username,
+      password,
+      userProvider,
+      presenceProvider,
+      chatProvider,
+    );
 
     if (success) {
       // sawe or clear credentials asynchronously before route redirection
