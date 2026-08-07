@@ -430,8 +430,8 @@ class _MessagesListScreenState extends State<MessagesListScreen>
                 color: Color(0xFF8E8E93),
               ),
             ),
-            const SizedBox(height: 24),
-            _buildCreateGroupButton(presence),
+           /*  const SizedBox(height: 24),
+            _buildCreateGroupButton(presence), */
           ],
         ),
       );
@@ -447,10 +447,10 @@ class _MessagesListScreenState extends State<MessagesListScreen>
                 _buildGroupTile(chat.groups[index], chat),
           ),
         ),
-        Padding(
+        /* Padding(
           padding: const EdgeInsets.all(16.0),
           child: _buildCreateGroupButton(presence),
-        ),
+        ), */
       ],
     );
   }
@@ -544,7 +544,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
     );
   }
 
-  Widget _buildCreateGroupButton(PresenceProvider presence) {
+ /*  Widget _buildCreateGroupButton(PresenceProvider presence) {
     return ElevatedButton.icon(
       onPressed: () => _openCreateGroupModal(presence),
       icon: const Icon(Iconsax.add, size: 18, color: Colors.white),
@@ -563,7 +563,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
-  }
+  } */
 
   // ── Trigger Modal Helper ─────────────────────────────────────────────────
 

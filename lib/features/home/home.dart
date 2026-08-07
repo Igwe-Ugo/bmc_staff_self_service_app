@@ -264,11 +264,17 @@ class _BMCHomeState extends State<BMCHome> {
             child: CircleAvatar(
               radius: 18,
               backgroundColor: Theme.of(context).primaryColor,
-              child: UserAvatar(
-                image: userProvider.avatar,
-                initials: userProvider.initials,
-                radius: 16,
-              ),
+              child: userProvider.hasAvatar
+                  ? UserAvatar(
+                      image: userProvider.avatar,
+                      initials: userProvider.initials,
+                      radius: 16,
+                    )
+                  : UserAvatar(
+                      image: userProvider.avatar,
+                      initials: userProvider.initials,
+                      radius: 16,
+                    ),
             ),
           ),
           const SizedBox(width: 10),

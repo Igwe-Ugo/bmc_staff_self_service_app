@@ -1,3 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
@@ -35,7 +41,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
+  bool _showEmojiPicker = false;
   late final ChatProvider _chatProvider;
   String? _selectedMessageId;
 
@@ -55,6 +61,17 @@ class _ChatScreenState extends State<ChatScreen> {
       isGroup: widget.isGroup,
     );
     _messageController.addListener(_handleTypingChanged);
+  }
+
+  void _toggleEmojiPicker() {
+    setState(() => _showEmojiPicker = !_showEmojiPicker);
+  }
+
+  // hide emoji keyboard when user taps into the text field
+  void _onTextFieldTapEmoji() {
+    if (_showEmojiPicker) {
+      setState(() => _showEmojiPicker = false);
+    }
   }
 
   void _handleTypingChanged() {
@@ -120,6 +137,69 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  // Inside _ChatScreenState:
+
+  Future<void> _pickAndSendFile() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+        withData: true,
+      );
+
+      if (result == null || result.files.isEmpty) return; // user cancelled
+
+      final file = result.files.first;
+
+      String? base64Data;
+      if (file.bytes != null) {
+        base64Data = base64Encode(file.bytes!);
+      } else if (file.path != null) {
+        final fileBytes = await File(file.path!).readAsBytes();
+        base64Data = base64Encode(fileBytes);
+      }
+
+      if (base64Data == null) {
+        if (!mounted) return;
+        showMessage(
+          'Could not read that file.',
+          context,
+          status: MessageStatus.error,
+        );
+        return;
+      }
+
+      final attachment = MessageAttachment(
+        name: file.name,
+        type: file.extension ?? 'bin',
+        size: file.size,
+        data: base64Data,
+      );
+
+      _chatProvider.send(
+        to: widget.conversationKey,
+        content: _messageController.text.trim().isNotEmpty
+            ? _messageController.text.trim()
+            : 'Sent an attachment: ${file.name}',
+        isGroup: widget.isGroup,
+        urgency: _pendingUrgency ?? MessageUrgency.normal,
+        replyTo: _pendingReplyTo,
+        file: attachment,
+      );
+
+      _messageController.clear();
+      _clearPendingReply();
+    } catch (e, st) {
+      debugPrint('❌ _pickAndSendFile failed: $e\n$st');
+      if (!mounted) return;
+      showMessage(
+        'Could not attach file: $e',
+        context,
+        status: MessageStatus.error,
+      );
+    }
+  }
+
   @override
   void dispose() {
     _messageController.removeListener(_handleTypingChanged);
@@ -135,8 +215,112 @@ class _ChatScreenState extends State<ChatScreen> {
     final messages = chat.messagesWith(widget.conversationKey);
     final isPeerTyping =
         !widget.isGroup && chat.isTyping(widget.conversationKey);
+    final presence = widget.isGroup ? null : context.watch<PresenceProvider>();
+    final online = widget.isGroup
+        ? false
+        : (presence?.isReachable(widget.peer?.userId ?? '') ?? false);
+
+    // Safely extract avatar details depending on group vs 1-on-1 chat
+    final String currentId = widget.conversationKey;
+    final String? avatarUrl = widget.isGroup ? null : widget.peer?.avatar;
+    final String initials = initialsFor(widget.title);
 
     return Scaffold(
+      appBar: AppBar(
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () {
+            Navigator.pop(context);
+            navBarVisible.value = true;
+          },
+          icon: const Icon(Icons.arrow_back, size: 18),
+        ),
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: avatarColorFor(currentId),
+              child: avatarUrl != null
+                  ? UserAvatar(
+                      image: avatarUrl,
+                      initials: initials,
+                      radius: 17,
+                      initialsColor: Colors.white,
+                    )
+                  : CircleAvatar(
+                      radius: 13,
+                      backgroundColor: avatarColorFor(currentId),
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isPeerTyping
+                        ? 'typing…'
+                        : (widget.isGroup
+                              ? '${widget.group!.members.length} members'
+                              : (online ? 'Online' : 'Offline')),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isPeerTyping
+                          ? Theme.of(context).primaryColor
+                          : (online
+                                ? const Color(0xFF34C759)
+                                : Colors.grey.shade500),
+                      fontWeight: isPeerTyping
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (widget.isGroup) ...[
+            GestureDetector(
+              onTap: () {
+                /* Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => GroupDetailsScreen(group: widget.group!),
+                  ),
+                ); */
+              },
+              child: Container(
+                width: 25,
+                height: 25,
+                decoration: const BoxDecoration(
+                  color: Colors.white12,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.info_outline, size: 27),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
       body: Container(
         decoration: const BoxDecoration(
           image: DecorationImage(
@@ -152,10 +336,68 @@ class _ChatScreenState extends State<ChatScreen> {
         child: SafeArea(
           child: Column(
             children: [
-              _buildAppBar(context, isPeerTyping),
               Expanded(child: _buildMessageList(messages, chat.me)),
               if (_pendingReplyTo != null) _buildPendingReplyBar(),
               _buildInputBar(),
+              // Emoji Picker container
+              if (_showEmojiPicker)
+                SizedBox(
+                  height: 250,
+                  child: EmojiPicker(
+                    textEditingController: _messageController,
+                    config: Config(
+                      height: 250,
+                      checkPlatformCompatibility: true,
+                      skinToneConfig: const SkinToneConfig(
+                        rememberSkinTone: true,
+                      ),
+                      categoryViewConfig: CategoryViewConfig(
+                        iconColorSelected: Theme.of(context).primaryColor,
+                        indicatorColor: Theme.of(context).primaryColor,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor,
+                        iconColor:
+                            Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                      ),
+                      bottomActionBarConfig: BottomActionBarConfig(
+                        buttonIconColor:
+                            Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                        buttonColor: Theme.of(context).scaffoldBackgroundColor,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor,
+                      ),
+                      searchViewConfig: SearchViewConfig(
+                        buttonIconColor:
+                            Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white
+                            : Colors.black,
+                        backgroundColor:
+                            ThemeData.light().scaffoldBackgroundColor,
+                      ),
+                      emojiViewConfig: EmojiViewConfig(
+                        backgroundColor: Theme.of(context).cardColor,
+                        emojiSizeMax:
+                            28 *
+                            (foundation.defaultTargetPlatform ==
+                                    TargetPlatform.iOS
+                                ? 1.20
+                                : 1.0),
+                      ),
+                    ),
+                    onEmojiSelected: (category, emoji) {
+                      _messageController.text += emoji.emoji;
+                      _messageController.selection = TextSelection.fromPosition(
+                        TextPosition(offset: _messageController.text.length),
+                      );
+                    },
+                  ),
+                ),
             ],
           ),
         ),
@@ -163,120 +405,47 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context, bool isPeerTyping) {
-    final presence = widget.isGroup ? null : context.watch<PresenceProvider>();
-    final online = widget.isGroup
-        ? false
-        : (presence?.isReachable(widget.peer?.userId ?? '') ?? false);
-
-    // Safely extract avatar details depending on group vs 1-on-1 chat
-    final String currentId = widget.conversationKey;
-    final String? avatarUrl = widget.isGroup ? null : widget.peer?.avatar;
-    final String initials = initialsFor(widget.title);
-
+  Widget _buildBubbleAttachment(MessageAttachment attachment, bool isMe) {
     return Container(
-      height: 65,
-      color: Theme.of(context).scaffoldBackgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: isMe
+            ? Colors.white.withOpacity(0.15)
+            : Colors.black.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: avatarColorFor(currentId),
-            child: avatarUrl != null
-                ? UserAvatar(
-                    image: avatarUrl,
-                    initials: initials,
-                    radius: 17,
-                    initialsColor: Colors.white,
-                  )
-                : CircleAvatar(
-                    radius: 13,
-                    backgroundColor: avatarColorFor(currentId),
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+          Icon(
+            Icons.insert_drive_file,
+            size: 20,
+            color: isMe ? Colors.white : const Color(0xFF6C47FF),
           ),
-          const SizedBox(width: 10),
-          Expanded(
+          const SizedBox(width: 8),
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  isPeerTyping
-                      ? 'typing…'
-                      : (widget.isGroup
-                            ? '${widget.group!.members.length} members'
-                            : (online ? 'Online' : 'Offline')),
+                  attachment.name,
                   style: TextStyle(
-                    fontSize: 11,
-                    color: isPeerTyping
-                        ? Theme.of(context).primaryColor
-                        : (online
-                              ? const Color(0xFF34C759)
-                              : Colors.grey.shade500),
-                    fontWeight: isPeerTyping
-                        ? FontWeight.w600
-                        : FontWeight.normal,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isMe ? Colors.white : Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  '${(attachment.size / 1024).toStringAsFixed(1)} KB • ${attachment.type.toUpperCase()}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isMe ? Colors.white70 : Colors.black54,
                   ),
                 ),
               ],
-            ),
-          ),
-          // Inside _buildAppBar in chat_screen_2.dart
-
-          // 1. Show the Info Button only for groups
-          if (widget.isGroup) ...[
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GroupDetailsScreen(group: widget.group!),
-                  ),
-                );
-              },
-              child: Container(
-                width: 25,
-                height: 25,
-                decoration: const BoxDecoration(
-                  color: Colors.white12,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.info_outline, size: 27),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-
-          // 2. Your existing close button
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              navBarVisible.value = true;
-            },
-            child: Container(
-              width: 25,
-              height: 25,
-              decoration: const BoxDecoration(
-                color: Colors.white12,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Iconsax.close_circle, size: 27),
             ),
           ),
         ],
@@ -378,6 +547,11 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  if (msg.file != null)
+                    _buildBubbleAttachment(
+                      msg.file!,
+                      isMe,
+                    ), // Render attachment preview
                   if (msg.replyTo != null)
                     _buildQuotedReply(msg.replyTo!, isMe),
                   if (msg.urgency != MessageUrgency.normal)
@@ -605,18 +779,25 @@ class _ChatScreenState extends State<ChatScreen> {
           // image_picker), base64-encode the bytes, and build a
           // MessageAttachment(name, type, size, data) to pass into
           // ChatProvider.send(file: ...).
-          const Icon(Icons.attach_file, color: Colors.white38, size: 20),
+          GestureDetector(
+            onTap: _pickAndSendFile,
+            child: Icon(Icons.attach_file, color: Colors.white38, size: 20),
+          ),
           const SizedBox(width: 8),
-          const Icon(
-            Icons.emoji_emotions_outlined,
-            color: Colors.white38,
-            size: 20,
+          GestureDetector(
+            onTap: _toggleEmojiPicker,
+            child: const Icon(
+              Icons.emoji_emotions_outlined,
+              color: Colors.white38,
+              size: 20,
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 100),
               child: TextField(
+                onTap: _onTextFieldTapEmoji,
                 controller: _messageController,
                 keyboardType: TextInputType.multiline,
                 textInputAction: TextInputAction.newline,

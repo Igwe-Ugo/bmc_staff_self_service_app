@@ -23,10 +23,9 @@ class ProfileProvider extends ChangeNotifier {
   final confirmCtrl = TextEditingController();
 
   // ── Image ─────────────────────────────────────────────────────────────────
-  // ── Image ─────────────────────────────────────────────────────────────────
   File? imageFile;
   String? _base64Avatar;
-  bool _avatarRemoved = false; // ← new
+  bool _avatarRemoved = false;
   final ImagePicker _imagePicker = ImagePicker();
 
   // ── Dropdown state ───────────────────────────────────────────────────────
@@ -48,29 +47,48 @@ class ProfileProvider extends ChangeNotifier {
 
   // ── Init ──────────────────────────────────────────────────────────────────
   Future<void> init() async {
-    if (_initialised) return;
-    _initialised = true;
-
     _populateFromUser();
+
+    if (!_initialised) {
+      _initialised = true;
+      _attachListeners();
+      await loadCountries();
+    }
+
+    if (country.isNotEmpty) _applyStatesForCountry(country);
+    notifyListeners();
+  }
+
+  void _attachListeners() {
     phoneCtrl.addListener(markDirty);
     addressCtrl.addListener(markDirty);
     cityCtrl.addListener(markDirty);
     passCtrl.addListener(markDirty);
     confirmCtrl.addListener(markDirty);
+  }
 
-    await loadCountries();
-    if (country.isNotEmpty) _applyStatesForCountry(country);
-    notifyListeners();
+  void _removeListeners() {
+    phoneCtrl.removeListener(markDirty);
+    addressCtrl.removeListener(markDirty);
+    cityCtrl.removeListener(markDirty);
+    passCtrl.removeListener(markDirty);
+    confirmCtrl.removeListener(markDirty);
   }
 
   void _populateFromUser() {
+    // Detach listeners temporarily so programmatic updates don't flag hasChanges = true
+    _removeListeners();
+
     final u = userProvider.user;
-    if (u == null) return;
-    phoneCtrl.text = u.telno ?? '';
-    addressCtrl.text = u.address ?? '';
-    cityCtrl.text = u.city ?? '';
-    country = u.country ?? '';
-    state = u.state ?? '';
+    if (u != null) {
+      phoneCtrl.text = u.telno ?? '';
+      addressCtrl.text = u.address ?? '';
+      cityCtrl.text = u.city ?? '';
+      country = u.country ?? '';
+      state = u.state ?? '';
+    }
+
+    _attachListeners();
   }
 
   void markDirty() {
@@ -138,7 +156,7 @@ class ProfileProvider extends ChangeNotifier {
 
     imageFile = file;
     _base64Avatar = 'data:$mime;base64,$base64';
-    _avatarRemoved = false; // ← picking a new photo cancels a pending removal
+    _avatarRemoved = false;
     hasChanges = true;
     notifyListeners();
   }
@@ -146,7 +164,7 @@ class ProfileProvider extends ChangeNotifier {
   void removeAvatar() {
     imageFile = null;
     _base64Avatar = null;
-    _avatarRemoved = true; // ← new
+    _avatarRemoved = true;
     hasChanges = true;
     notifyListeners();
   }
@@ -168,7 +186,7 @@ class ProfileProvider extends ChangeNotifier {
     if (passwordError != null) return false;
 
     final data = UserProfileUpdateData(
-      id: userId, // ← now sends the correct User ID
+      id: userId,
       avatar: _base64Avatar,
       removeAvatar: _avatarRemoved,
       address: addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
@@ -181,11 +199,22 @@ class ProfileProvider extends ChangeNotifier {
 
     final success = await userProvider.updateProfile(data);
     if (success) {
+      // 1. Re-populate form state directly from the newly updated userProvider model
+      _populateFromUser();
+
+      // 2. Clear volatile fields & reset state
       hasChanges = false;
       imageFile = null;
+      _base64Avatar = null;
       _avatarRemoved = false;
+
+      _removeListeners();
       passCtrl.clear();
       confirmCtrl.clear();
+      _attachListeners();
+
+      if (country.isNotEmpty) _applyStatesForCountry(country);
+
       notifyListeners();
     }
     return success;
@@ -196,15 +225,20 @@ class ProfileProvider extends ChangeNotifier {
     hasChanges = false;
     imageFile = null;
     _base64Avatar = null;
-    _avatarRemoved = false; // ← new
+    _avatarRemoved = false;
+
+    _removeListeners();
     passCtrl.clear();
     confirmCtrl.clear();
+    _attachListeners();
+
     if (country.isNotEmpty) _applyStatesForCountry(country);
     notifyListeners();
   }
 
   @override
   void dispose() {
+    _removeListeners();
     phoneCtrl.dispose();
     addressCtrl.dispose();
     cityCtrl.dispose();

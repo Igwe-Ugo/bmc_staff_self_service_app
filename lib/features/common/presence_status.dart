@@ -40,19 +40,6 @@ class PresenceStatusBadge extends StatelessWidget {
           isActive: presence.mobile,
           activeColor: const Color(0xFF10B981), // Green
         ),
-        const SizedBox(width: 4),
-
-        // 4. Offline / Online reachability state indicator
-        _buildCircleIcon(
-          icon: presence.isConnected ? Iconsax.eye : Iconsax.eye_slash,
-          isActive: presence.isConnected,
-          activeColor: const Color.fromARGB(
-            255,
-            170,
-            247,
-            3,
-          ), // Slate / Neutral Gray
-        ),
       ],
     );
   }

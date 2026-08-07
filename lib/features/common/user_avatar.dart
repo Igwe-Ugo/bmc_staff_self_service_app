@@ -4,16 +4,16 @@ import 'package:flutter/material.dart';
 
 class UserAvatar extends StatelessWidget {
   final String? image;
-  final String  initials;
-  final double  radius;
-  final Color?  backgroundColor;
-  final Color?  initialsColor;
+  final String initials;
+  final double radius;
+  final Color? backgroundColor;
+  final Color? initialsColor;
 
   const UserAvatar({
     super.key,
     required this.image,
     required this.initials,
-    this.radius          = 24,
+    this.radius = 24,
     this.backgroundColor,
     this.initialsColor,
   });
@@ -39,10 +39,9 @@ class UserAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = backgroundColor ??
-        Theme.of(context).primaryColor.withOpacity(0.15);
-    final fgColor = initialsColor ??
-        Theme.of(context).primaryColor;
+    final bgColor =
+        backgroundColor ?? Theme.of(context).primaryColor.withOpacity(0.05);
+    final fgColor = initialsColor ?? Theme.of(context).primaryColor;
 
     // ── No image: show initials ──────────────────────────────────────────────
     if (image == null || image!.isEmpty) {
@@ -57,12 +56,10 @@ class UserAvatar extends StatelessWidget {
     // ── Network URL: use CachedNetworkImage ──────────────────────────────────
     return CachedNetworkImage(
       imageUrl: image!,
-      imageBuilder: (context, imageProvider) => CircleAvatar(
-        radius: radius,
-        backgroundImage: imageProvider,
-      ),
+      imageBuilder: (context, imageProvider) =>
+          CircleAvatar(radius: radius, backgroundImage: imageProvider),
       placeholder: (context, url) => _loadingAvatar(bgColor),
-      errorWidget:  (context, url, error) => _initialsAvatar(bgColor, fgColor),
+      errorWidget: (context, url, error) => _initialsAvatar(bgColor, fgColor),
     );
   }
 

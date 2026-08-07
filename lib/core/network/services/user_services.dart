@@ -54,13 +54,23 @@ class UserServices {
     }
 
     try {
-      print('📤 PROFILE UPDATE PAYLOAD: $body');
-      debugPrint("Data Type of body: ${body.runtimeType}");
-      final response = await _dio.patch(ApiEndpoints.updateProfile, data: body);
+      debugPrint('📤 PROFILE UPDATE PAYLOAD: $body');
+      final response = await _dio.patch(
+        ApiEndpoints.updateProfile,
+        data: {'data': body},
+      );
       debugPrint('📡 UPDATE PROFILE STATUS: ${response.statusCode}');
-      final payload = _unwrap(response.data);
-      debugPrint('Uwrapped Payload: $payload');
-      return UserModel.fromJson(payload as Map<String, dynamic>);
+
+      // 1. Verify response status
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw ApiException(
+          message: 'Update failed.',
+          statusCode: response.statusCode,
+        );
+      }
+
+      // 2. Fetch fresh user data using current userId
+      return await getUser(userId: data.id);
     } on DioException catch (e) {
       debugPrint('❌ UPDATE PROFILE ERROR: ${e.response?.data}');
       final msg =

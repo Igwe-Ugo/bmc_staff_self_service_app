@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/network/provider/widget.dart';
 import '../../core/network/services/widget.dart';
+import '../chatting/widget.dart';
 
 class ProfileDrawer extends StatelessWidget {
   final VoidCallback onClose;
@@ -14,7 +15,7 @@ class ProfileDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-        return Material(
+    return Material(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         child: Padding(
@@ -33,7 +34,10 @@ class ProfileDrawer extends StatelessWidget {
                   },
                   child: CircleAvatar(
                     radius: 22,
-                    backgroundColor: Theme.of(context).brightness == Brightness.dark ? Colors.black12.withOpacity(0.3) : Theme.of(context).hoverColor,
+                    backgroundColor:
+                        Theme.of(context).brightness == Brightness.dark
+                        ? Colors.black12.withOpacity(0.3)
+                        : Theme.of(context).hoverColor,
                     child: Icon(Iconsax.arrow_left, size: 20),
                   ),
                 ),
@@ -56,16 +60,20 @@ class ProfileDrawer extends StatelessWidget {
                         children: [
                           CircleAvatar(
                             radius: 40,
-                            backgroundColor: Theme.of(context)
-                                .primaryColor
-                                .withOpacity(0.15),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).primaryColor.withOpacity(0.15),
                             child: userProvider.hasAvatar
                                 ? UserAvatar(
-                              image:    userProvider.avatar,
-                              initials: userProvider.initials,
-                              radius:   40,
-                            )
-                                : null,
+                                    image: userProvider.avatar,
+                                    initials: userProvider.initials,
+                                    radius: 40,
+                                  )
+                                : UserAvatar(
+                                    image: userProvider.avatar,
+                                    initials: userProvider.initials,
+                                    radius: 40,
+                                  ),
                           ),
                           const SizedBox(width: 22),
                           Expanded(
@@ -95,16 +103,15 @@ class ProfileDrawer extends StatelessWidget {
                                         label,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color:
-                                          Theme.of(context).primaryColor,
+                                          color: Theme.of(context).primaryColor,
                                         ),
                                       ),
                                       backgroundColor:
-                                      Theme.of(context).brightness ==
-                                          Brightness.light
-                                          ? Theme.of(context)
-                                          .primaryColor
-                                          .withOpacity(0.1)
+                                          Theme.of(context).brightness ==
+                                              Brightness.light
+                                          ? Theme.of(
+                                              context,
+                                            ).primaryColor.withOpacity(0.1)
                                           : Colors.white,
                                       side: BorderSide.none,
                                       padding: EdgeInsets.zero,
@@ -155,9 +162,9 @@ class ProfileDrawer extends StatelessWidget {
                 fontSize: 14,
               ),
             ),
-            onTap: () => GoRouter.of(context).go(
-              '${BMCRouter.homePath}/${BMCRouter.profilePath}',
-            ),
+            onTap: () => GoRouter.of(
+              context,
+            ).go('${BMCRouter.homePath}/${BMCRouter.profilePath}'),
           ),
           const SizedBox(height: 14),
           ListTile(
@@ -171,9 +178,9 @@ class ProfileDrawer extends StatelessWidget {
                 fontSize: 14,
               ),
             ),
-            onTap: () => GoRouter.of(context).go(
-              '${BMCRouter.homePath}/${BMCRouter.documentsPath}',
-            ),
+            onTap: () => GoRouter.of(
+              context,
+            ).go('${BMCRouter.homePath}/${BMCRouter.documentsPath}'),
           ),
           const SizedBox(height: 14),
           ListTile(
@@ -187,23 +194,9 @@ class ProfileDrawer extends StatelessWidget {
                 fontSize: 14,
               ),
             ),
-            onTap: () => GoRouter.of(context).go(
-    '${BMCRouter.homePath}/${BMCRouter.statsPath}',
-    ),
-          ),
-          const SizedBox(height: 14),
-          ListTile(
-            leading: const Icon(Iconsax.setting_2),
-            trailing: const Icon(Iconsax.arrow_right_3, size: 15),
-            title: const Text(
-              'Settings',
-              style: TextStyle(
-                fontFamily: 'Lexend',
-                fontWeight: FontWeight.w400,
-                fontSize: 14,
-              ),
-            ),
-            onTap: () {},
+            onTap: () => GoRouter.of(
+              context,
+            ).go('${BMCRouter.homePath}/${BMCRouter.statsPath}'),
           ),
         ],
       ),
@@ -232,51 +225,66 @@ class ProfileDrawer extends StatelessWidget {
                 fontSize: 14,
               ),
             ),
-            onTap: () => GoRouter.of(context).go(
-              '${BMCRouter.homePath}/${BMCRouter.aboutAppPath}',
-            ),
+            onTap: () => GoRouter.of(
+              context,
+            ).go('${BMCRouter.homePath}/${BMCRouter.aboutAppPath}'),
           ),
           const SizedBox(height: 14),
 
-          Consumer5<UserProvider, AuthProvider, LeaveProvider, RotaProvider, AvailabilityProvider>(
-            builder: (context, userProvider, authProvider, leaveProvider, rotaProvider, availabilityProvider, _) {
-              final AuthServices authServices = AuthServices();
-              return ListTile(
-                leading: const Icon(Iconsax.logout),
-                trailing: const Icon(Iconsax.arrow_right_3, size: 15),
-                title: const Text(
-                  'Logout',
-                  style: TextStyle(
-                    fontFamily: 'Lexend',
-                    fontWeight: FontWeight.w400,
-                    fontSize: 14,
-                  ),
-                ),
-                  onTap: () async {
-                  // 1. Safe frame-aligned navigation redirect
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (context.mounted) {
-                        GoRouter.of(context).go(BMCRouter.loginPath);
-                        showMessage(
-                          'Logout Successful!',
-                          context,
-                          status: MessageStatus.success,
-                        );
-                      }
-                    });
-                    // 2. Wipe out data states from memory immediately
-                    userProvider.clear();
-                    leaveProvider.clearUserData();
-                    rotaProvider.clearUserData();
-                    availabilityProvider.clearUserData();
+          Consumer5<
+            UserProvider,
+            AuthProvider,
+            LeaveProvider,
+            RotaProvider,
+            AvailabilityProvider
+          >(
+            builder:
+                (
+                  context,
+                  userProvider,
+                  authProvider,
+                  leaveProvider,
+                  rotaProvider,
+                  availabilityProvider,
+                  _,
+                ) {
+                  final AuthServices authServices = AuthServices();
+                  return ListTile(
+                    leading: const Icon(Iconsax.logout),
+                    trailing: const Icon(Iconsax.arrow_right_3, size: 15),
+                    title: const Text(
+                      'Logout',
+                      style: TextStyle(
+                        fontFamily: 'Lexend',
+                        fontWeight: FontWeight.w400,
+                        fontSize: 14,
+                      ),
+                    ),
+                    onTap: () async {
+                      // 1. Safe frame-aligned navigation redirect
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (context.mounted) {
+                          GoRouter.of(context).go(BMCRouter.loginPath);
+                          showMessage(
+                            'Logout Successful!',
+                            context,
+                            status: MessageStatus.success,
+                          );
+                        }
+                      });
+                      // 2. Wipe out data states from memory immediately
+                      userProvider.clear();
+                      leaveProvider.clearUserData();
+                      rotaProvider.clearUserData();
+                      availabilityProvider.clearUserData();
 
-                    // 3. Trigger the secure storage & backend token invalidation
-                    authProvider.reset();
-                    await authServices.logout(); // Calling your service clear block
-
-                  }
-              );
-            },
+                      // 3. Trigger the secure storage & backend token invalidation
+                      authProvider.reset();
+                      await authServices
+                          .logout(); // Calling your service clear block
+                    },
+                  );
+                },
           ),
 
           const SizedBox(height: 14),
