@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' as foundation;
@@ -136,67 +135,133 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  // ── Group / peer details navigation ─────────────────────────────────────
+  //
+  // Groups get a full screen (GroupDetailsScreen already has its own AppBar,
+  // admin actions, etc.). Individuals get a bottom sheet, since we're
+  // already inside the conversation with them — a full page switch would be
+  // a bigger interruption than the info warrants.
+
+  void _openDetails() {
+    if (widget.isGroup) {
+      _openGroupDetails();
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => FractionallySizedBox(
+        heightFactor: 0.7,
+        child: _PeerDetailsSheet(peer: widget.peer!),
+      ),
+    );
+  }
+
+  /// GroupDetailsScreen wants a ready-made Map<String, UserModel>, not
+  /// per-item futures — so unlike the 1-on-1 sheet (which resolves lazily
+  /// inside its own FutureBuilder), this resolves the whole group's members
+  /// up front behind a brief loading dialog.
+  Future<void> _openGroupDetails() async {
+    final group = widget.group!;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    final userLookup = await MemberDirectory.instance.getMany(group.members);
+
+    if (!mounted) return;
+    Navigator.pop(context); // close the loading dialog
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GroupDetailsScreen(
+          group: group,
+          currentUserId: _chatProvider.me,
+          userLookup: userLookup,
+          // TODO: GroupDetailsScreen also wants a directory of ALL app
+          // users (for "Add Member"), not just this group's current
+          // members. UserProvider only tracks the logged-in user, and
+          // UserServices only exposes per-user lookups by id — there's no
+          // "list every user" endpoint visible from what I have. Until
+          // that's confirmed/added, "Add Member" has nothing to show.
+          availableUsers: const [],
+          onStartPrivateChat: _startPrivateChatFromDetails,
+        ),
+      ),
+    );
+  }
+
+  /// Passed into GroupDetailsScreen as onStartPrivateChat. By the time this
+  /// fires, GroupDetailsScreen has already popped itself (see its own
+  /// _showMemberDialog), so this lands back on whichever screen opened the
+  /// group and pushes a fresh 1-on-1 ChatScreen on top of it.
+  void _startPrivateChatFromDetails(UserModel user) {
+    final peer = context.read<PresenceProvider>().user(user.id);
+    if (peer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${user.name} is not reachable right now.')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ChatScreen(peer: peer)),
+    );
+  }
+
   // Inside _ChatScreenState:
 
   Future<void> _pickAndSendFile() async {
-    try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.any,
-        allowMultiple: false,
-        withData: true,
-      );
+    // 1. Pick file from device storage
+    final result = await FilePicker.pickFiles(
+      type: FileType.any,
+      allowMultiple: false,
+      withData: true, // Loads bytes into memory for base64 encoding
+    );
 
-      if (result == null || result.files.isEmpty) return; // user cancelled
+    if (result == null || result.files.isEmpty) return;
 
-      final file = result.files.first;
+    final file = result.files.first;
 
-      String? base64Data;
-      if (file.bytes != null) {
-        base64Data = base64Encode(file.bytes!);
-      } else if (file.path != null) {
-        final fileBytes = await File(file.path!).readAsBytes();
-        base64Data = base64Encode(fileBytes);
-      }
-
-      if (base64Data == null) {
-        if (!mounted) return;
-        showMessage(
-          'Could not read that file.',
-          context,
-          status: MessageStatus.error,
-        );
-        return;
-      }
-
-      final attachment = MessageAttachment(
-        name: file.name,
-        type: file.extension ?? 'bin',
-        size: file.size,
-        data: base64Data,
-      );
-
-      _chatProvider.send(
-        to: widget.conversationKey,
-        content: _messageController.text.trim().isNotEmpty
-            ? _messageController.text.trim()
-            : 'Sent an attachment: ${file.name}',
-        isGroup: widget.isGroup,
-        urgency: _pendingUrgency ?? MessageUrgency.normal,
-        replyTo: _pendingReplyTo,
-        file: attachment,
-      );
-
-      _messageController.clear();
-      _clearPendingReply();
-    } catch (e, st) {
-      debugPrint('❌ _pickAndSendFile failed: $e\n$st');
-      if (!mounted) return;
-      showMessage(
-        'Could not attach file: $e',
-        context,
-        status: MessageStatus.error,
-      );
+    // 2. Encode file bytes to base64 string
+    String? base64Data;
+    if (file.bytes != null) {
+      base64Data = base64Encode(file.bytes!);
+    } else if (file.path != null) {
+      final fileBytes = await File(file.path!).readAsBytes();
+      base64Data = base64Encode(fileBytes);
     }
+
+    if (base64Data == null) return;
+
+    // 3. Construct the MessageAttachment object
+    final attachment = MessageAttachment(
+      name: file.name,
+      type: file.extension ?? 'bin',
+      size: file.size,
+      data: base64Data,
+    );
+
+    // 4. Send message via ChatProvider
+    _chatProvider.send(
+      to: widget.conversationKey,
+      content: _messageController.text.trim().isNotEmpty
+          ? _messageController.text.trim()
+          : 'Sent an attachment: ${file.name}',
+      isGroup: widget.isGroup,
+      urgency: _pendingUrgency ?? MessageUrgency.normal,
+      replyTo: _pendingReplyTo,
+      file: attachment, // Pass attachment here
+    );
+
+    _messageController.clear();
+    _clearPendingReply();
   }
 
   @override
@@ -234,90 +299,88 @@ class _ChatScreenState extends State<ChatScreen> {
           },
           icon: const Icon(Icons.arrow_back, size: 18),
         ),
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: avatarColorFor(currentId),
-              child: avatarUrl != null
-                  ? UserAvatar(
-                      image: avatarUrl,
-                      initials: initials,
-                      radius: 17,
-                      initialsColor: Colors.white,
-                    )
-                  : CircleAvatar(
-                      radius: 13,
-                      backgroundColor: avatarColorFor(currentId),
-                      child: Text(
-                        initials,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
+        title: GestureDetector(
+          onTap: _openDetails,
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: avatarColorFor(currentId),
+                child: avatarUrl != null
+                    ? UserAvatar(
+                        image: avatarUrl,
+                        initials: initials,
+                        radius: 17,
+                        initialsColor: Colors.white,
+                      )
+                    : CircleAvatar(
+                        radius: 13,
+                        backgroundColor: avatarColorFor(currentId),
+                        child: Text(
+                          initials,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
-                    ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    isPeerTyping
-                        ? 'typing…'
-                        : (widget.isGroup
-                              ? '${widget.group!.members.length} members'
-                              : (online ? 'Online' : 'Offline')),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isPeerTyping
-                          ? Theme.of(context).primaryColor
-                          : (online
-                                ? const Color(0xFF34C759)
-                                : Colors.grey.shade500),
-                      fontWeight: isPeerTyping
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ],
               ),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isPeerTyping
+                          ? 'typing…'
+                          : (widget.isGroup
+                                ? '${widget.group!.members.length} members'
+                                : (online ? 'Online' : 'Offline')),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isPeerTyping
+                            ? Theme.of(context).primaryColor
+                            : (online
+                                  ? const Color(0xFF34C759)
+                                  : Colors.grey.shade500),
+                        fontWeight: isPeerTyping
+                            ? FontWeight.w600
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
-          if (widget.isGroup) ...[
-            GestureDetector(
-              onTap: () {
-                /* Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GroupDetailsScreen(group: widget.group!),
-                  ),
-                ); */
-              },
-              child: Container(
-                width: 25,
-                height: 25,
-                decoration: const BoxDecoration(
-                  color: Colors.white12,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.info_outline, size: 27),
+          // Shown for BOTH groups and 1-on-1s now — previously this only
+          // existed for groups, so peers had no way to reach their details
+          // at all. _openDetails() branches internally on widget.isGroup.
+          GestureDetector(
+            onTap: _openDetails,
+            child: Container(
+              width: 25,
+              height: 25,
+              decoration: const BoxDecoration(
+                color: Colors.white12,
+                shape: BoxShape.circle,
               ),
+              child: const Icon(Icons.info_outline, size: 27),
             ),
-            const SizedBox(width: 8),
-          ],
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Container(
@@ -825,6 +888,68 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               child: const Icon(Icons.send, color: Colors.white, size: 16),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Bottom-sheet wrapper around UserDetailsScreen for a 1-on-1 peer.
+///
+/// UserDetailsScreen itself has no Scaffold/AppBar (it's a plain scrollable
+/// Container), which is exactly what makes it embeddable here — that's not
+/// true of GroupDetailsScreen, which is why groups get a full page push
+/// instead. No onStartChat is passed: we're already inside this exact
+/// conversation, so the "Send Message" button would be redundant — passing
+/// null keeps UserDetailsScreen from rendering it at all.
+class _PeerDetailsSheet extends StatelessWidget {
+  final SocketUser peer;
+
+  const _PeerDetailsSheet({required this.peer});
+
+  UserModel _toFallbackUserModel(SocketUser user) {
+    final displayName = user.username.isNotEmpty ? user.username : user.userId;
+    return UserModel(
+      id: user.userId,
+      username: user.userId,
+      name: displayName,
+      email: '',
+      image: user.avatar,
+      initials: initialsFor(displayName),
+      privileges: const [],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Same staff directory GroupDetailsScreen uses — see the TODO on
+    // _openDetails() above if this getter name doesn't match your actual
+    // UserProvider.
+    // SocketUser -> UserModel (instant fallback, no network call)
+    final fallback = _toFallbackUserModel(peer);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade400,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: fallback == null
+                ? const Center(child: Text('Could not load this profile.'))
+                : UserDetailsScreen(user: fallback),
           ),
         ],
       ),

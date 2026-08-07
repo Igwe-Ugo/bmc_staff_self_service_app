@@ -8,7 +8,8 @@ import 'widget.dart';
 class GroupDetailsScreen extends StatefulWidget {
   final ChatGroup group;
   final String currentUserId;
-  final Map<String, UserModel> userLookup; // Map of userId/username to UserModel
+  final Map<String, UserModel>
+  userLookup; // Map of userId/username to UserModel
   final List<UserModel> availableUsers; // All app users for adding members
   final Function(UserModel user)? onStartPrivateChat;
 
@@ -29,7 +30,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   late ChatGroup _group;
 
   bool get isSuperAdmin => widget.currentUserId == _group.createdBy;
-  bool get isAdmin => isSuperAdmin || (_group.admins?.contains(widget.currentUserId) ?? false);
+  bool get isAdmin =>
+      isSuperAdmin || (_group.admins?.contains(widget.currentUserId) ?? false);
 
   @override
   void initState() {
@@ -56,7 +58,11 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
               child: (user.image == null || user.image!.isEmpty)
                   ? Text(
                       user.initials,
-                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     )
                   : null,
             ),
@@ -75,19 +81,32 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                 ),
                 child: const Text(
                   'Admin',
-                  style: TextStyle(fontSize: 10, color: Colors.amber, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             const SizedBox(height: 16),
 
             // Profile Info Fields
-            _infoRow(Icons.business, 'Department', user.deptName ?? user.defaultDept ?? 'N/A'),
-            _infoRow(Icons.email_outlined, 'Email', user.email.isNotEmpty ? user.email : 'N/A'),
+            _infoRow(
+              Icons.business,
+              'Department',
+              user.deptName ?? user.defaultDept ?? 'N/A',
+            ),
+            _infoRow(
+              Icons.email_outlined,
+              'Email',
+              user.email.isNotEmpty ? user.email : 'N/A',
+            ),
             _infoRow(Icons.phone_outlined, 'Phone', user.telno ?? 'N/A'),
           ],
         ),
         actions: [
-          if (user.id != widget.currentUserId && widget.onStartPrivateChat != null)
+          if (user.id != widget.currentUserId &&
+              widget.onStartPrivateChat != null)
             TextButton.icon(
               onPressed: () {
                 Navigator.pop(ctx);
@@ -113,7 +132,10 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         children: [
           Icon(icon, size: 16, color: Colors.grey),
           const SizedBox(width: 8),
-          Text('$label: ', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(
+            '$label: ',
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
           Expanded(
             child: Text(
               value,
@@ -139,12 +161,21 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: nameController, decoration: const InputDecoration(labelText: 'Group Name')),
-            TextField(controller: descController, decoration: const InputDecoration(labelText: 'Description')),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Group Name'),
+            ),
+            TextField(
+              controller: descController,
+              decoration: const InputDecoration(labelText: 'Description'),
+            ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
             onPressed: () {
               SocketService.instance.updateGroup(
@@ -162,7 +193,9 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   }
 
   void _addMemberDialog() {
-    final nonMembers = widget.availableUsers.where((u) => !_group.members.contains(u.id)).toList();
+    final nonMembers = widget.availableUsers
+        .where((u) => !_group.members.contains(u.id))
+        .toList();
 
     showDialog(
       context: context,
@@ -221,7 +254,10 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                 )
               else
                 ListTile(
-                  leading: const Icon(Icons.remove_moderator, color: Colors.orange),
+                  leading: const Icon(
+                    Icons.remove_moderator,
+                    color: Colors.orange,
+                  ),
                   title: const Text('Dismiss as Admin'),
                   onTap: () {
                     SocketService.instance.demoteAdmin(_group.id, user.id);
@@ -232,7 +268,10 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
             if (isAdmin && !isCreator && user.id != widget.currentUserId)
               ListTile(
                 leading: const Icon(Icons.person_remove, color: Colors.red),
-                title: const Text('Remove from Group', style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Remove from Group',
+                  style: TextStyle(color: Colors.red),
+                ),
                 onTap: () {
                   SocketService.instance.removeGroupMember(_group.id, user.id);
                   Navigator.pop(ctx);
@@ -249,9 +288,14 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Group'),
-        content: const Text('Are you sure you want to delete this group? This action cannot be undone.'),
+        content: const Text(
+          'Are you sure you want to delete this group? This action cannot be undone.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               SocketService.instance.deleteGroup(_group.id);
@@ -271,7 +315,8 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final creatorUser = widget.userLookup[_group.createdBy];
-    final hasDescription = _group.description != null && _group.description!.trim().isNotEmpty;
+    final hasDescription =
+        _group.description != null && _group.description!.trim().isNotEmpty;
     final displayDescription = hasDescription
         ? _group.description!
         : 'Created by ${creatorUser?.name ?? 'Admin'}';
@@ -366,7 +411,10 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
             children: [
               Text(
                 'MEMBERS (${_group.members.length})',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               if (isAdmin)
                 IconButton(
@@ -378,40 +426,44 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
           const SizedBox(height: 8),
 
           // 4. Members ListView
-          Container(
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
+          Material(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(12),
             child: ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: _group.members.length,
-              separatorBuilder: (_, __) => const Divider(color: Colors.grey, height: 1),
+              separatorBuilder: (_, __) =>
+                  const Divider(color: Colors.grey, height: 1),
               itemBuilder: (context, index) {
                 final memberId = _group.members[index];
-                
+
                 // Fetch details using memberId, hiding usernames completely
-                final user = widget.userLookup[memberId] ??
+                final user =
+                    widget.userLookup[memberId] ??
                     UserModel(
                       id: memberId,
                       username: '', // concealed
-                      name: 'User $memberId',
+                      name: memberId,
                       email: '',
                       initials: initialsFor('User $memberId'),
                       privileges: const [],
                     );
 
-                final isMemberAdmin = _group.admins?.contains(memberId) ?? (memberId == _group.createdBy);
+                final isMemberAdmin =
+                    _group.admins?.contains(memberId) ??
+                    (memberId == _group.createdBy);
                 final isCreator = memberId == _group.createdBy;
 
                 return ListTile(
                   dense: true,
-                  onTap: () => _showMemberOptionsBottomSheet(user, isMemberAdmin),
+                  onTap: () =>
+                      _showMemberOptionsBottomSheet(user, isMemberAdmin),
                   leading: CircleAvatar(
                     radius: 16,
                     backgroundColor: avatarColorFor(user.id),
-                    backgroundImage: (user.image != null && user.image!.isNotEmpty)
+                    backgroundImage:
+                        (user.image != null && user.image!.isNotEmpty)
                         ? NetworkImage(user.image!)
                         : null,
                     child: (user.image == null || user.image!.isEmpty)
@@ -426,8 +478,11 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                         : null,
                   ),
                   title: Text(
-                    user.name,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                    user.username.isNotEmpty ? user.username : user.name,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   subtitle: Text(
                     user.deptName ?? user.defaultDept ?? '',
@@ -435,29 +490,43 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
                   ),
                   trailing: isCreator
                       ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.amber.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: const Text(
                             'Group Creator',
-                            style: TextStyle(fontSize: 10, color: Colors.amber, fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.amber,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         )
                       : isMemberAdmin
-                          ? Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.blue.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'Admin',
-                                style: TextStyle(fontSize: 10, color: Colors.blue, fontWeight: FontWeight.bold),
-                              ),
-                            )
-                          : null,
+                      ? Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'Admin',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.blue,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        )
+                      : null,
                 );
               },
             ),
@@ -469,11 +538,16 @@ class _GroupDetailsScreenState extends State<GroupDetailsScreen> {
             ElevatedButton.icon(
               onPressed: _confirmDeleteGroup,
               icon: const Icon(Icons.delete, size: 18, color: Colors.white),
-              label: const Text('Delete Group', style: TextStyle(color: Colors.white)),
+              label: const Text(
+                'Delete Group',
+                style: TextStyle(color: Colors.white),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
         ],

@@ -5,3 +5,5 @@ export 'rota_service.dart';
 export 'profile_service.dart';
 export 'socket_service.dart';
 export 'socket_events.dart';
+export 'user_services.dart';
+export 'user_conversion.dart';

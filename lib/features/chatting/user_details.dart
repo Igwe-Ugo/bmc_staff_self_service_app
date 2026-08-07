@@ -1,16 +1,12 @@
+import 'package:bmc_app/features/common/widget.dart';
 import 'package:flutter/material.dart';
 import '../../core/network/models/user_model.dart';
-import 'chat_ui_utils.dart';
 
 class UserDetailsScreen extends StatelessWidget {
   final UserModel user;
   final VoidCallback? onStartChat;
 
-  const UserDetailsScreen({
-    super.key,
-    required this.user,
-    this.onStartChat,
-  });
+  const UserDetailsScreen({super.key, required this.user, this.onStartChat});
 
   @override
   Widget build(BuildContext context) {
@@ -25,23 +21,19 @@ class UserDetailsScreen extends StatelessWidget {
           Center(
             child: Column(
               children: [
-                CircleAvatar(
-                  radius: 42,
-                  backgroundColor: avatarColorFor(user.id),
-                  backgroundImage: (user.image != null && user.image!.isNotEmpty)
-                      ? NetworkImage(user.image!)
-                      : null,
-                  child: (user.image == null || user.image!.isEmpty)
-                      ? Text(
-                          user.initials,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
-                ),
+                (user.image != null && user.image!.isNotEmpty)
+                    ? UserAvatar(
+                        image: user.image!,
+                        initials: user.initials,
+                        radius: 60,
+                        initialsColor: Colors.white,
+                      )
+                    : UserAvatar(
+                        image: user.image ?? '',
+                        initials: user.initials,
+                        radius: 60,
+                        initialsColor: Colors.white,
+                      ),
                 const SizedBox(height: 12),
                 Text(
                   user.name,
@@ -56,7 +48,9 @@ class UserDetailsScreen extends StatelessWidget {
                     user.clinicalRoleLabel,
                     style: TextStyle(
                       fontSize: 13,
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6),
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                        0.6,
+                      ),
                     ),
                   ),
                 ],
@@ -75,28 +69,46 @@ class UserDetailsScreen extends StatelessWidget {
               children: [
                 ListTile(
                   leading: const Icon(Icons.business, size: 20),
-                  title: const Text('Department', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  title: const Text(
+                    'Department',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                   subtitle: Text(
                     user.deptName ?? user.defaultDept ?? 'N/A',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
                   leading: const Icon(Icons.email_outlined, size: 20),
-                  title: const Text('Email Address', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  title: const Text(
+                    'Email Address',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                   subtitle: Text(
                     user.email.isNotEmpty ? user.email : 'N/A',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
                   leading: const Icon(Icons.phone_outlined, size: 20),
-                  title: const Text('Phone Number', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                  title: const Text(
+                    'Phone Number',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                   subtitle: Text(
                     user.telno ?? 'N/A',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

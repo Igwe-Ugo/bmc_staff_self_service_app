@@ -139,13 +139,11 @@ class ProfileDrawer extends StatelessWidget {
   }
 
   Widget _personalMenuItem(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      padding: const EdgeInsets.all(15),
+    return Material(
+      borderRadius: BorderRadius.circular(15),
+      color: Theme.of(context).cardColor,
       child: ListView(
+        padding: const EdgeInsets.all(15),
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(), // inside ScrollView
         children: [
@@ -202,13 +200,11 @@ class ProfileDrawer extends StatelessWidget {
   }
 
   Widget _systemMenuItems(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(15),
-      ),
-      padding: const EdgeInsets.all(15),
+    return Material(
+      borderRadius: BorderRadius.circular(15),
+      color: Theme.of(context).cardColor,
       child: ListView(
+        padding: const EdgeInsets.all(15),
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(), // inside ScrollView
         children: [

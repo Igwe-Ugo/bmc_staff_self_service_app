@@ -27,14 +27,30 @@ class UserServices {
 
       // Some backends may return a list (e.g. matching by deptId only) —
       // take the first match in that case.
+      Map<String, dynamic> record;
       if (payload is List) {
         if (payload.isEmpty) {
           throw ApiException(message: 'User not found.', statusCode: 404);
         }
-        return UserModel.fromJson(payload.first as Map<String, dynamic>);
+        record = payload.first as Map<String, dynamic>;
+      } else {
+        record = payload as Map<String, dynamic>;
       }
 
-      return UserModel.fromJson(payload as Map<String, dynamic>);
+      // Without a userId+deptId that actually resolves, this endpoint has
+      // been seen to return a bare {message, toast} acknowledgment instead
+      // of a user row — and UserModel.fromJson is defensive enough to
+      // accept that silently and build a near-empty user (every field
+      // falls back to '' / null). Fail loudly instead of handing back
+      // something that LOOKS like a valid profile but isn't.
+      if (!record.containsKey('id') && !record.containsKey('username')) {
+        throw ApiException(
+          message: 'Server did not return a user record for this request.',
+          statusCode: response.statusCode,
+        );
+      }
+
+      return UserModel.fromJson(record);
     } on DioException catch (e) {
       debugPrint('❌ GET USER ERROR: ${e.response?.data}');
       final msg =
@@ -47,7 +63,19 @@ class UserServices {
   /// { id, avatar, address, city, telno, state, country, password }
   /// Updates only the fields provided. Sends only non-null values so existing
   /// data is never accidentally overwritten with blanks.
-  Future<UserModel> updateProfile(UserProfileUpdateData data) async {
+  ///
+  /// [deptId] is passed through to the post-update GET /users/regular
+  /// re-fetch below. Without it, that GET has been observed to return a
+  /// bare {message, toast} acknowledgment instead of the user row — the
+  /// getUser() guard above now throws on that instead of returning a
+  /// near-empty UserModel, but the real fix is supplying deptId so the
+  /// re-fetch resolves properly in the first place. Pass the CURRENT
+  /// user's defaultDept from UserProvider — the person's department
+  /// doesn't change via this endpoint, so it's safe to reuse.
+  Future<UserModel> updateProfile(
+    UserProfileUpdateData data, {
+    String? deptId,
+  }) async {
     final body = data.toJson();
     if (body.length <= 1) {
       throw ApiException(message: 'No changes to save.', statusCode: null);
@@ -69,8 +97,8 @@ class UserServices {
         );
       }
 
-      // 2. Fetch fresh user data using current userId
-      return await getUser(userId: data.id);
+      // 2. Fetch fresh user data using current userId + deptId
+      return await getUser(userId: data.id, deptId: deptId);
     } on DioException catch (e) {
       debugPrint('❌ UPDATE PROFILE ERROR: ${e.response?.data}');
       final msg =

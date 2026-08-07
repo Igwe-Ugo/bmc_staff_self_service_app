@@ -100,7 +100,13 @@ class UserProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final updated = await _userServices.updateProfile(data);
+      // defaultDept comes from the CURRENT _user — it's what the working
+      // getUser() calls (fetchMe, checkAuthStatus) always supply, and the
+      // one thing this specific call was missing before.
+      final updated = await _userServices.updateProfile(
+        data,
+        deptId: _user?.defaultDept,
+      );
 
       // Merge: keep any fields the PATCH response doesn't return
       _user = UserModel.fromJson({
