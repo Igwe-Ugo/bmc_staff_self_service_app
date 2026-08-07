@@ -338,7 +338,7 @@ class _BMCHomeState extends State<BMCHome> {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
+/* class _SectionTitle extends StatelessWidget {
   final String title;
   final String badge;
   final bool isRota;
@@ -406,4 +406,4 @@ class _SectionTitle extends StatelessWidget {
       ],
     );
   }
-}
+} */

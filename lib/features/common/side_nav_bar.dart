@@ -3,10 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
-
 import '../../core/network/provider/widget.dart';
 import '../../core/network/services/widget.dart';
-import '../chatting/widget.dart';
 
 class ProfileDrawer extends StatelessWidget {
   final VoidCallback onClose;

@@ -4,7 +4,6 @@ import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
 import '../../core/network/models/widget.dart';
 import '../../core/network/provider/widget.dart';
-import '../../core/network/services/widget.dart';
 import '../common/widget.dart';
 import 'widget.dart'; // CreateGroupModal
 
@@ -540,69 +539,6 @@ class _MessagesListScreenState extends State<MessagesListScreen>
             ),
           ],
         ),
-      ),
-    );
-  }
-
- /*  Widget _buildCreateGroupButton(PresenceProvider presence) {
-    return ElevatedButton.icon(
-      onPressed: () => _openCreateGroupModal(presence),
-      icon: const Icon(Iconsax.add, size: 18, color: Colors.white),
-      label: const Text(
-        'Create New Group',
-        style: TextStyle(
-          fontSize: 14,
-          fontFamily: 'Lexend',
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Theme.of(context).primaryColor,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  } */
-
-  // ── Trigger Modal Helper ─────────────────────────────────────────────────
-
-  void _openCreateGroupModal(PresenceProvider presence) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return CreateGroupModal(
-          availableUsers: presence.allUsers,
-          onCreateGroup: (groupName, description, selectedMemberIds) {
-            // selectedMemberIds are usernames — SocketService.createGroup
-            // expects the same identity space as everywhere else on the
-            // socket layer (see the naming note in socket_models.dart).
-            SocketService.instance.createGroup(
-              name: groupName,
-              description: description.isEmpty ? null : description,
-              members: selectedMemberIds,
-            );
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Group "$groupName" created!')),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildActionIcon({required IconData icon, required bool filled}) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: filled ? const Color(0xFF007AFF) : const Color(0xFFE5E5EA),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        icon,
-        size: 16,
-        color: filled ? Colors.white : const Color(0xFF8E8E93),
       ),
     );
   }
