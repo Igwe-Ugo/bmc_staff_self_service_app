@@ -48,6 +48,17 @@ class AuthProvider extends ChangeNotifier {
       // ✅ Seed UserProvider directly from the login response
       userProvider.setUserFromLogin(response.user);
 
+      // The login response only carries a SUBSET of the profile (id,
+      // username, name, email, privileges) — rank, profession, gender,
+      // department, phone, address, and country only come from a full
+      // GET /users/regular, which is what fetchMe() does. checkAuthStatus()
+      // (the warm-start path) already calls this; without it here too, a
+      // freshly logged-in user's Profile screen shows blank/missing fields
+      // until something else (e.g. a profile save) happens to trigger a
+      // full fetch as a side effect. id/defaultDept are already set from
+      // setUserFromLogin above, so fetchMe() can use them with no args.
+      await userProvider.fetchMe();
+
       // USERNAME, not response.user.id — the socket mesh's identity space is
       // the login username (uuid is REST-only). See socket_models.dart for
       // the full naming note; getting this backwards means messages are

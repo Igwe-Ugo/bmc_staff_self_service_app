@@ -47,6 +47,15 @@ class ProfileProvider extends ChangeNotifier {
 
   // ── Init ──────────────────────────────────────────────────────────────────
   Future<void> init() async {
+    // Refetch the full profile every time this screen opens, rather than
+    // trusting whatever UserProvider already has. A fresh login only seeds
+    // a SUBSET of fields (id/username/name/email/privileges) — the rest
+    // (rank/profession/gender/department/phone/address/country) needs a
+    // real GET /users/regular. This is defensive: AuthProvider.login() now
+    // does that fetch too, but this screen shouldn't silently depend on
+    // every caller getting that right — and it also picks up anything
+    // changed server-side since login (e.g. a department reassignment).
+    await userProvider.fetchMe();
     _populateFromUser();
 
     if (!_initialised) {
@@ -96,6 +105,19 @@ class ProfileProvider extends ChangeNotifier {
       hasChanges = true;
       notifyListeners();
     }
+  }
+
+  // ── Add this to ProfileProvider ──────────────────────────────────────────────
+  String get selectedCountryIso2 {
+    final match = _allCountries.firstWhere(
+      (c) => c.name.toLowerCase() == country.toLowerCase(),
+      orElse: () => const Country(
+        name: '',
+        iso2: 'NG',
+        states: [],
+      ), // Default to NG or your preferred fallback
+    );
+    return match.iso2.isNotEmpty ? match.iso2 : 'NG';
   }
 
   // ── Fetch once — countries + all their states come back together ────────

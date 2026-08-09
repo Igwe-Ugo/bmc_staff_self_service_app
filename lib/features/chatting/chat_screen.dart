@@ -4,6 +4,7 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter/material.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 import '../../core/network/models/widget.dart';
 import '../../core/network/provider/widget.dart';
@@ -452,9 +453,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     config: Config(
                       height: 250,
                       checkPlatformCompatibility: true,
-                      skinToneConfig: const SkinToneConfig(
-                        rememberSkinTone: true,
-                      ),
+                      skinToneConfig: SkinToneConfig(rememberSkinTone: true),
                       categoryViewConfig: CategoryViewConfig(
                         iconColorSelected: Theme.of(context).primaryColor,
                         indicatorColor: Theme.of(context).primaryColor,
@@ -477,12 +476,16 @@ class _ChatScreenState extends State<ChatScreen> {
                         ).scaffoldBackgroundColor,
                       ),
                       searchViewConfig: SearchViewConfig(
+                        hintTextStyle: TextStyle(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black,
+                        ),
                         buttonIconColor:
                             Theme.of(context).brightness == Brightness.dark
                             ? Colors.white
                             : Colors.black,
-                        backgroundColor:
-                            ThemeData.light().scaffoldBackgroundColor,
+                        backgroundColor: Theme.of(context).cardColor,
                       ),
                       emojiViewConfig: EmojiViewConfig(
                         backgroundColor: Theme.of(context).cardColor,
@@ -531,11 +534,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   : Colors.black.withOpacity(0.05),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Center(
+            child: Center(
               child: SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: LoadingAnimationWidget.staggeredDotsWave(
+                  color: Colors.white,
+                  size: 19,
+                ),
               ),
             ),
           );

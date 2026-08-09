@@ -39,6 +39,7 @@ dependencies:
   emoji_picker_flutter: ^4.5.3
   file_picker: ^11.0.3
   url_launcher: ^6.3.2
+  intl_phone_number_input: ^0.7.5
 
 flutter_launcher_icons:
   android: "launcher_icon"
