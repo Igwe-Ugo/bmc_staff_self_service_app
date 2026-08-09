@@ -143,30 +143,40 @@ String? _urgencyTo(MessageUrgency u) => switch (u) {
 
 class MessageAttachment {
   final String name;
-  final String type;
+  final String type; // MIME type, e.g. 'image/jpeg'
   final int size;
 
-  /// base64-encoded bytes. Attachments travel inline over the socket, so keep
-  /// them small — every byte crosses the Redis adapter to every server node.
-  final String data;
+  /// Reference into the external document store — NOT the bytes. Attachments
+  /// used to travel inline as base64 over the socket; they now live in cloud
+  /// storage and the message only carries this key. Fetch the actual bytes
+  /// via AttachmentService.download(this). See MESSAGING_ATTACHMENTS.md.
+  final String documentKey;
 
   const MessageAttachment({
     required this.name,
     required this.type,
     required this.size,
-    required this.data,
+    required this.documentKey,
   });
+
+  /// server.ts only relays `file` on a message when `file?.documentKey` is
+  /// present — an attachment sent with an empty key produces NO error
+  /// anywhere, the message just silently arrives with no file at all. This
+  /// is what the assert in ChatMessage.outbound() below checks.
+  bool get isValid => documentKey.isNotEmpty;
+
+  bool get isImage => type.startsWith('image/');
 
   factory MessageAttachment.fromJson(Map<String, dynamic> json) =>
       MessageAttachment(
         name: json['name'] as String? ?? 'file',
         type: json['type'] as String? ?? 'application/octet-stream',
         size: (json['size'] as num?)?.toInt() ?? 0,
-        data: json['data'] as String? ?? '',
+        documentKey: json['documentKey'] as String? ?? '',
       );
 
   Map<String, dynamic> toJson() =>
-      {'name': name, 'type': type, 'size': size, 'data': data};
+      {'name': name, 'type': type, 'size': size, 'documentKey': documentKey};
 }
 
 class MessageReply {
@@ -292,6 +302,16 @@ class ChatMessage {
       'isGroup: true requires a groupId. The server checks `isGroup && groupId` '
       'and otherwise falls through to the 1-on-1 branch, delivering the message '
       'to a room named by the groupId that nobody has joined.',
+    );
+    assert(
+      file == null || file.isValid,
+      'MessageAttachment.documentKey is empty. The server only relays `file` '
+      'when documentKey is present — an invalid attachment produces no error '
+      'anywhere, the message just silently arrives without it. Upload via '
+      'AttachmentService first and pass the returned documentKey — this '
+      'assert is debug-only, so ChatProvider.sendWithAttachment must also '
+      'refuse to send when the upload itself throws (release builds don\'t '
+      'get this assert to save them).',
     );
     final payload = <String, dynamic>{'content': content, 'to': to};
     if (isGroup) {

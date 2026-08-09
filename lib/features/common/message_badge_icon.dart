@@ -14,8 +14,6 @@ class MessageBadgeIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     // watching total unread messages from chatprovider
     final unreadCount = context.watch<ChatProvider>().totalUnread;
-    ;
-    ;
     return InkWell(
       onTap: () {
         GoRouter.of(

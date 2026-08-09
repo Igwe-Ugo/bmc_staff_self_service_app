@@ -12,6 +12,11 @@ class ApiEndpoints {
     defaultValue: '',
   );
 
+   static const String bmcWebUrl = String.fromEnvironment(
+    'BMC_WEB_URL',
+    defaultValue: '',
+  );
+
   static const String apiKey = String.fromEnvironment(
     'API_KEY',
     defaultValue: '',
@@ -74,6 +79,10 @@ class ApiEndpoints {
   static const String usersRegular = '/users/regular';
   static const String updateProfile = '/users/profile';
   static const String worldCountries = '/system-apis/world-countries';
+
+  // ── Messaging (Attachments) ───────────────────────────────────────────────────────────────
+  static const String uploadDocument = '/corporate-documents/upload';
+  static const String messagingAttachment = '/messaging/attachment';  
 
   static String fill(String path, Map<String, String> params) {
     var result = path;

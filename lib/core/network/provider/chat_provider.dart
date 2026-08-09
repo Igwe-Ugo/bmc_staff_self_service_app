@@ -60,6 +60,10 @@ class ChatProvider extends ChangeNotifier {
   set me(String username) => _me = username;
   String get me => _me;
 
+  
+  bool _isUploading = false;
+  bool get isUploading => _isUploading;
+
   final Map<String, Conversation> _conversations = {};
   final Map<String, ChatGroup> _groups = {};
 
@@ -255,6 +259,52 @@ class ChatProvider extends ChangeNotifier {
       convo.lastActivity = convo.messages.isEmpty ? null : convo.messages.last.time;
     }
     notifyListeners();
+  }
+
+  /// Uploads bytes via AttachmentService, then sends only if that succeeds.
+  /// Throws AttachmentException (propagated from the upload) if it fails —
+  /// callers must catch this and must NOT assume the message was sent.
+  /// This is what keeps a message from silently arriving with no file: the
+  /// send() call below never happens unless upload() actually returned a
+  /// valid documentKey.
+  Future<void> sendWithAttachment({
+    required String to,
+    required String content,
+    required Uint8List bytes,
+    required String fileName,
+    required String mimeType,
+    bool isGroup = false,
+    MessageUrgency urgency = MessageUrgency.normal,
+    MessageReply? replyTo,
+    void Function(int sent, int total)? onProgress,
+  }) async {
+    _isUploading = true;
+    notifyListeners();
+    try {
+      final documentKey = await AttachmentService.instance.upload(
+        bytes: bytes,
+        fileName: fileName,
+        mimeType: mimeType,
+        onProgress: onProgress,
+      );
+
+      send(
+        to: to,
+        content: content,
+        isGroup: isGroup,
+        urgency: urgency,
+        replyTo: replyTo,
+        file: MessageAttachment(
+          name: fileName,
+          type: mimeType,
+          size: bytes.length,
+          documentKey: documentKey,
+        ),
+      );
+    } finally {
+      _isUploading = false;
+      notifyListeners();
+    }
   }
 
   void _onMessage(ChatMessage message) {

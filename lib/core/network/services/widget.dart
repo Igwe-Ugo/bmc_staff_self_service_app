@@ -7,3 +7,4 @@ export 'socket_service.dart';
 export 'socket_events.dart';
 export 'user_services.dart';
 export 'user_conversion.dart';
+export 'attachment_service.dart';

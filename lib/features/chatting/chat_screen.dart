@@ -1,5 +1,5 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' as foundation;
@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/network/models/widget.dart';
 import '../../core/network/provider/widget.dart';
+import '../../core/network/services/widget.dart';
 import '../common/widget.dart';
 import 'widget.dart';
 
@@ -147,16 +148,6 @@ class _ChatScreenState extends State<ChatScreen> {
       _openGroupDetails();
       return;
     }
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => FractionallySizedBox(
-        heightFactor: 0.7,
-        child: _PeerDetailsSheet(peer: widget.peer!),
-      ),
-    );
   }
 
   /// GroupDetailsScreen wants a ready-made Map<String, UserModel>, not
@@ -218,50 +209,101 @@ class _ChatScreenState extends State<ChatScreen> {
   // Inside _ChatScreenState:
 
   Future<void> _pickAndSendFile() async {
-    // 1. Pick file from device storage
-    final result = await FilePicker.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
-      withData: true, // Loads bytes into memory for base64 encoding
-    );
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.any,
+        allowMultiple: false,
+        withData: true, // loads bytes into memory for upload
+      );
 
-    if (result == null || result.files.isEmpty) return;
+      if (result == null || result.files.isEmpty) return; // user cancelled
 
-    final file = result.files.first;
+      final file = result.files.first;
 
-    // 2. Encode file bytes to base64 string
-    String? base64Data;
-    if (file.bytes != null) {
-      base64Data = base64Encode(file.bytes!);
-    } else if (file.path != null) {
-      final fileBytes = await File(file.path!).readAsBytes();
-      base64Data = base64Encode(fileBytes);
+      Uint8List? bytes = file.bytes;
+      if (bytes == null && file.path != null) {
+        bytes = await File(file.path!).readAsBytes();
+      }
+      if (bytes == null) {
+        if (!mounted) return;
+        showMessage(
+          'Could not read that file.',
+          context,
+          status: MessageStatus.error,
+        );
+        return;
+      }
+
+      // Refused client-side, before the upload starts — matches the doc's
+      // verification checklist item #8.
+      if (bytes.length > AttachmentService.maxUploadBytes) {
+        if (!mounted) return;
+        showMessage(
+          'Files must be 5 MB or smaller.',
+          context,
+          status: MessageStatus.error,
+        );
+        return;
+      }
+
+      final mimeType = _mimeTypeFor(file.extension);
+      final text = _messageController.text.trim();
+
+      // ChatProvider.sendWithAttachment uploads first and only sends if
+      // that succeeds — see MESSAGING_ATTACHMENTS.md §1: a message sent
+      // with an invalid/missing documentKey is accepted and delivered with
+      // the file silently stripped, no error anywhere.
+      await _chatProvider.sendWithAttachment(
+        to: widget.conversationKey,
+        isGroup: widget.isGroup,
+        content: text.isNotEmpty ? text : 'Sent an attachment: ${file.name}',
+        urgency: _pendingUrgency ?? MessageUrgency.normal,
+        replyTo: _pendingReplyTo,
+        bytes: bytes,
+        fileName: file.name,
+        mimeType: mimeType,
+      );
+
+      _messageController.clear();
+      _clearPendingReply();
+    } on AttachmentException catch (e) {
+      // Upload failed — nothing was sent, so the draft text and the picked
+      // file are still exactly where the user left them.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not send attachment: ${e.message}')),
+      );
+    } catch (e, st) {
+      debugPrint('❌ _pickAndSendFile failed: $e\n$st');
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not send attachment: $e')));
     }
+  }
 
-    if (base64Data == null) return;
-
-    // 3. Construct the MessageAttachment object
-    final attachment = MessageAttachment(
-      name: file.name,
-      type: file.extension ?? 'bin',
-      size: file.size,
-      data: base64Data,
-    );
-
-    // 4. Send message via ChatProvider
-    _chatProvider.send(
-      to: widget.conversationKey,
-      content: _messageController.text.trim().isNotEmpty
-          ? _messageController.text.trim()
-          : 'Sent an attachment: ${file.name}',
-      isGroup: widget.isGroup,
-      urgency: _pendingUrgency ?? MessageUrgency.normal,
-      replyTo: _pendingReplyTo,
-      file: attachment, // Pass attachment here
-    );
-
-    _messageController.clear();
-    _clearPendingReply();
+  /// file_picker gives an extension, not a MIME type. This covers the
+  /// common cases; swap for the `mime` package if you need broader
+  /// coverage later.
+  String _mimeTypeFor(String? extension) {
+    switch (extension?.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'gif':
+        return 'image/gif';
+      case 'webp':
+        return 'image/webp';
+      case 'pdf':
+        return 'application/pdf';
+      case 'doc':
+      case 'docx':
+        return 'application/msword';
+      default:
+        return 'application/octet-stream';
+    }
   }
 
   @override
@@ -468,46 +510,138 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildBubbleAttachment(MessageAttachment attachment, bool isMe) {
+    if (!attachment.isValid) {
+      // Empty documentKey — shouldn't happen post-fix (the assert in
+      // outbound() catches it in debug), but the assert is debug-only, so
+      // guard release builds too rather than crash on a null download key.
+      return _attachmentPlaceholder('Attachment unavailable', isMe);
+    }
+
+    return FutureBuilder<Uint8List>(
+      future: AttachmentService.instance.download(attachment),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            width: 160,
+            height: 90,
+            decoration: BoxDecoration(
+              color: isMe
+                  ? Colors.white.withOpacity(0.1)
+                  : Colors.black.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+
+        final error = snapshot.error;
+        if (error is AttachmentException) {
+          // 'gone' is the expected end state after 7 days — style it
+          // muted, not as a failure. See MESSAGING_ATTACHMENTS.md §2/§6.
+          return _attachmentPlaceholder(
+            error.message,
+            isMe,
+            muted: error.kind == AttachmentFailure.gone,
+          );
+        }
+        if (snapshot.hasError) {
+          return _attachmentPlaceholder('Could not load attachment', isMe);
+        }
+
+        final bytes = snapshot.data!;
+
+        if (attachment.isImage) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+            child: Image.memory(bytes, fit: BoxFit.cover),
+          );
+        }
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isMe
+                ? Colors.white.withOpacity(0.15)
+                : Colors.black.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.insert_drive_file,
+                size: 20,
+                color: isMe ? Colors.white : const Color(0xFF6C47FF),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      attachment.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isMe ? Colors.white : Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${(attachment.size / 1024).toStringAsFixed(1)} KB • ${attachment.type}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: isMe ? Colors.white70 : Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _attachmentPlaceholder(String label, bool isMe, {bool muted = false}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.all(8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
         color: isMe
-            ? Colors.white.withOpacity(0.15)
-            : Colors.black.withOpacity(0.05),
+            ? Colors.white.withOpacity(0.1)
+            : Colors.black.withOpacity(0.04),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.insert_drive_file,
-            size: 20,
-            color: isMe ? Colors.white : const Color(0xFF6C47FF),
+            muted ? Icons.history_toggle_off : Icons.error_outline,
+            size: 16,
+            color: muted ? Colors.grey : Colors.redAccent,
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  attachment.name,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: isMe ? Colors.white : Colors.black87,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  '${(attachment.size / 1024).toStringAsFixed(1)} KB • ${attachment.type.toUpperCase()}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: isMe ? Colors.white70 : Colors.black54,
-                  ),
-                ),
-              ],
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: isMe ? Colors.white60 : Colors.black54,
+              ),
             ),
           ),
         ],
@@ -827,6 +961,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputBar() {
+    final isUploading = context.watch<ChatProvider>().isUploading;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -837,13 +973,22 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       child: Row(
         children: [
-          // TODO: wire to a file/image picker (e.g. file_picker or
-          // image_picker), base64-encode the bytes, and build a
-          // MessageAttachment(name, type, size, data) to pass into
-          // ChatProvider.send(file: ...).
           GestureDetector(
-            onTap: _pickAndSendFile,
-            child: Icon(Icons.attach_file, color: Colors.white38, size: 20),
+            onTap: isUploading ? null : _pickAndSendFile,
+            child: isUploading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white38,
+                    ),
+                  )
+                : const Icon(
+                    Icons.attach_file,
+                    color: Colors.white38,
+                    size: 20,
+                  ),
           ),
           const SizedBox(width: 8),
           GestureDetector(
@@ -888,68 +1033,6 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               child: const Icon(Icons.send, color: Colors.white, size: 16),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Bottom-sheet wrapper around UserDetailsScreen for a 1-on-1 peer.
-///
-/// UserDetailsScreen itself has no Scaffold/AppBar (it's a plain scrollable
-/// Container), which is exactly what makes it embeddable here — that's not
-/// true of GroupDetailsScreen, which is why groups get a full page push
-/// instead. No onStartChat is passed: we're already inside this exact
-/// conversation, so the "Send Message" button would be redundant — passing
-/// null keeps UserDetailsScreen from rendering it at all.
-class _PeerDetailsSheet extends StatelessWidget {
-  final SocketUser peer;
-
-  const _PeerDetailsSheet({required this.peer});
-
-  UserModel _toFallbackUserModel(SocketUser user) {
-    final displayName = user.username.isNotEmpty ? user.username : user.userId;
-    return UserModel(
-      id: user.userId,
-      username: user.userId,
-      name: displayName,
-      email: '',
-      image: user.avatar,
-      initials: initialsFor(displayName),
-      privileges: const [],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Same staff directory GroupDetailsScreen uses — see the TODO on
-    // _openDetails() above if this getter name doesn't match your actual
-    // UserProvider.
-    // SocketUser -> UserModel (instant fallback, no network call)
-    final fallback = _toFallbackUserModel(peer);
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 10),
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade400,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: fallback == null
-                ? const Center(child: Text('Could not load this profile.'))
-                : UserDetailsScreen(user: fallback),
           ),
         ],
       ),

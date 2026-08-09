@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../core/network/api_client/widget.dart';
 import '../../core/network/provider/widget.dart';
 import '../../core/network/services/widget.dart';
 
@@ -10,6 +12,18 @@ class ProfileDrawer extends StatelessWidget {
   final VoidCallback onClose;
 
   const ProfileDrawer({super.key, required this.onClose});
+
+  Future<void> _openWebpage(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+
+    if (!await launchUrl(
+      url,
+      mode: LaunchMode
+          .externalApplication, // Forces opening in the external default browser
+    )) {
+      throw Exception('Could not launch $urlString');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -283,6 +297,9 @@ class ProfileDrawer extends StatelessWidget {
 
           const SizedBox(height: 14),
           ListTile(
+            onTap: () => _openWebpage(
+              ApiEndpoints.bmcWebUrl,
+            ), // Open BMC website in default browser
             leading: const Icon(Icons.language),
             trailing: const Icon(Iconsax.arrow_right_3, size: 15),
             title: const Text(
@@ -293,7 +310,6 @@ class ProfileDrawer extends StatelessWidget {
                 fontSize: 14,
               ),
             ),
-            onTap: () {},
           ),
         ],
       ),
