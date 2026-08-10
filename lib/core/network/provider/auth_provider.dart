@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import '../api_client/widget.dart';
 import '../models/widget.dart';
 import '../../../core/errors/api_exceptions.dart';
+import '../../../core/network/provider/widget.dart';
 import '../services/widget.dart';
-import 'widget.dart';
 
 enum AuthState { idle, loading, success, error }
 
@@ -34,6 +34,7 @@ class AuthProvider extends ChangeNotifier {
     UserProvider userProvider,
     PresenceProvider presenceProvider,
     ChatProvider chatProvider,
+    DocumentProvider documentProvider,
   ) async {
     _state = AuthState.loading;
     _errorTitle = null;
@@ -58,6 +59,15 @@ class AuthProvider extends ChangeNotifier {
       // full fetch as a side effect. id/defaultDept are already set from
       // setUserFromLogin above, so fetchMe() can use them with no args.
       await userProvider.fetchMe();
+
+      // Fire-and-forget, same pattern as ProfileService.preload() in
+      // login_screen.dart — warms the Documents screen's list before the
+      // user ever opens it, rather than gating the login spinner on it.
+      // personnelId (not id) is refId — see documents.dart.
+      final personnelId = userProvider.user?.personnelId;
+      if (personnelId != null && personnelId.isNotEmpty) {
+        documentProvider.loadDocuments(personnelId);
+      }
 
       // USERNAME, not response.user.id — the socket mesh's identity space is
       // the login username (uuid is REST-only). See socket_models.dart for
@@ -141,6 +151,7 @@ class AuthProvider extends ChangeNotifier {
     UserProvider userProvider,
     PresenceProvider presenceProvider,
     ChatProvider chatProvider,
+    DocumentProvider documentProvider,
   ) async {
     final hasSession = await SecureStorage.instance.hasValidSession();
 
@@ -155,6 +166,11 @@ class AuthProvider extends ChangeNotifier {
       await userProvider.fetchMe();
       _state = AuthState.success;
       debugPrint('✅ User ID from login. userId = ${userProvider.user?.id}');
+
+      final personnelId = userProvider.user?.personnelId;
+      if (personnelId != null && personnelId.isNotEmpty) {
+        documentProvider.loadDocuments(personnelId);
+      }
 
       final username = userProvider.user?.username;
       if (username != null && username.isNotEmpty) {

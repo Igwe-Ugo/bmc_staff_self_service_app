@@ -6,15 +6,17 @@ import 'core/network/api_client/widget.dart';
 import 'core/network/interceptors/auth_refresh.dart';
 import 'core/storage/secure_storage.dart';
 import 'features/common/widget.dart';
+// AuthProvider, UserProvider, ChatProvider, PresenceProvider, and
+// DocumentProvider are all consolidated in this one barrel — see
+// documents.dart and chat_screen.dart, which both import DocumentProvider /
+// ChatProvider from here rather than from core/socket directly. The old
+// separate core/socket/chat_provider.dart and
+// core/socket/presence_provider.dart imports that used to be here were
+// stale duplicates of what this line already provides.
 import '../../core/network/provider/widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // MUST precede configure() below
-
-  FlutterError.onError = (FlutterErrorDetails details) {
-    FlutterError.dumpErrorToConsole(details, forceReport: true);
-  };
-  
   ApiEndpoints.validateEnv(); // validating environment variables at startup
   BMCRouter(); // 👈 triggers _internal() which sets router
 
@@ -110,6 +112,7 @@ class _BMCStaffSelfServiceState extends State<BMCStaffSelfService> {
         ChangeNotifierProvider(create: (_) => RotaProvider()),
         ChangeNotifierProvider(create: (_) => PresenceProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
+        ChangeNotifierProvider(create: (_) => DocumentProvider()),
       ],
       child: Consumer<DarkThemeProvider>(
         builder: (context, themeData, child) {

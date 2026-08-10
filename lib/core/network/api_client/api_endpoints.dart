@@ -82,7 +82,20 @@ class ApiEndpoints {
 
   // ── Messaging (Attachments) ───────────────────────────────────────────────────────────────
   static const String uploadDocument = '/corporate-documents/upload';
-  static const String messagingAttachment = '/messaging/attachment';  
+  static const String messagingAttachment = '/messaging/attachment'; 
+
+  // Uploading Documents
+  //
+  // uploadCorporateDocument used to be '/corporate-documents/upload/' — the
+  // trailing slash caused Next.js to 308-redirect every request to the
+  // no-slash form (its default trailingSlash:false canonicalization), and
+  // Dio doesn't reliably re-POST a body across that redirect, so the
+  // request just failed. It's now the exact same route as uploadDocument
+  // above, so reuse that constant instead of keeping two strings that can
+  // drift apart again — this is the fix, not a workaround.
+  static const String uploadCorporateDocument = uploadDocument;
+  static const String getCorporateDocuments = '/corporate-documents/list';
+  static const String readCorporateDocument = '/corporate-documents/view';
 
   static String fill(String path, Map<String, String> params) {
     var result = path;

@@ -297,9 +297,9 @@ class ProfileDrawer extends StatelessWidget {
 
           const SizedBox(height: 14),
           ListTile(
-            onTap: () => _openWebpage(
+           /*  onTap: () => _openWebpage(
               ApiEndpoints.bmcWebUrl,
-            ), // Open BMC website in default browser
+            ), */ // Open BMC website in default browser
             leading: const Icon(Icons.language),
             trailing: const Icon(Iconsax.arrow_right_3, size: 15),
             title: const Text(

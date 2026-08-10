@@ -336,6 +336,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final userProvider = context.read<UserProvider>();
     final presenceProvider = context.read<PresenceProvider>();
     final chatProvider = context.read<ChatProvider>();
+    final documentProvider = context.read<DocumentProvider>();
     ProfileService.preload();
     final success = await authProvider.login(
       username,
@@ -343,6 +344,7 @@ class _LoginScreenState extends State<LoginScreen> {
       userProvider,
       presenceProvider,
       chatProvider,
+      documentProvider,
     );
 
     if (success) {
