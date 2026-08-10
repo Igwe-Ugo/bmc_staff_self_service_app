@@ -1,7 +1,7 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../../core/network/models/widget.dart';
 import '../../core/network/services/widget.dart';
 
@@ -17,7 +17,7 @@ class DocumentViewerScreen extends StatefulWidget {
 class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   final DocumentService _service = DocumentService();
   bool _isLoading = true;
-  File? _localFile;
+  Uint8List? _bytes;
   String? _errorMessage;
 
   bool get _isPdf =>
@@ -27,20 +27,30 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   @override
   void initState() {
     super.initState();
-    _loadFile();
+    _loadBytes();
   }
 
-  Future<void> _loadFile() async {
-    final file = await _service.downloadDocumentToFile(
-      widget.document.id,
-      widget.document.fileName ?? 'temp_doc',
-    );
+  Future<void> _loadBytes() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    if (mounted) {
+    try {
+      // document.id is the documentKey — see DocumentModel.fromJson, which
+      // falls back through id/documentKey/_id depending on which endpoint
+      // produced the record.
+      final bytes = await _service.downloadDocumentBytes(widget.document.id);
+      if (!mounted) return;
       setState(() {
-        _localFile = file;
+        _bytes = bytes;
         _isLoading = false;
-        if (file == null) _errorMessage = 'Failed to load document content.';
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.toString();
+        _isLoading = false;
       });
     }
   }
@@ -57,21 +67,47 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
       body: _isLoading
           ? Center(
               child: LoadingAnimationWidget.staggeredDotsWave(
-                color: Colors.white,
-                size: 20,
+                color: Theme.of(context).primaryColor,
+                size: 40,
               ),
             )
           : _errorMessage != null
-          ? Center(child: Text(_errorMessage!))
-          : _isPdf
-          ? PDFView(
-              filePath: _localFile!.path,
-              enableSwipe: true,
-              swipeHorizontal: false,
-              autoSpacing: true,
-              pageFling: true,
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.redAccent,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontFamily: 'Lexend', fontSize: 13),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton(onPressed: _loadBytes, child: const Text('Retry')),
+                  ],
+                ),
+              ),
             )
-          : Center(child: InteractiveViewer(child: Image.file(_localFile!))),
+          : _isPdf
+          ? SfPdfViewer.memory(
+              _bytes!,
+              // Loading indicator during page rendering (separate from the
+              // initial byte-fetch spinner above — this covers Syncfusion's
+              // own internal page-render time on large PDFs).
+              canShowPaginationDialog: true,
+            )
+          : InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4,
+              child: Center(child: Image.memory(_bytes!)),
+            ),
     );
   }
 }

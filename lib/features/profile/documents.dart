@@ -22,6 +22,12 @@ class _DocumentsState extends State<Documents> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // refId is the personnelId, NOT the REST id — this previously read
+      // user?.id, which meant the very first load of this screen fetched
+      // under the wrong identity. The upload button below already used
+      // personnelId correctly, which is why a freshly-uploaded doc would
+      // "fix" the list (its own post-upload refresh uses the right id) even
+      // though the initial load never did.
       final personnelId = context.read<UserProvider>().user?.personnelId ?? '';
       if (personnelId.isNotEmpty) {
         context.read<DocumentProvider>().loadDocuments(personnelId);
@@ -75,7 +81,10 @@ class _DocumentsState extends State<Documents> {
                     hintText: 'Search document',
                     prefixIcon: const Icon(Icons.search, color: Colors.grey),
                     filled: true,
-                    hintStyle: const TextStyle(fontFamily: 'Lexend'),
+                    hintStyle: const TextStyle(
+                      fontFamily: 'Lexend',
+                      fontSize: 12,
+                    ),
                     fillColor: Theme.of(context).cardColor,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(30),
@@ -93,8 +102,8 @@ class _DocumentsState extends State<Documents> {
                   child: Text(
                     'My Documents',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
                       fontFamily: 'Lexend',
                     ),
                   ),
@@ -107,6 +116,9 @@ class _DocumentsState extends State<Documents> {
                         color: Colors.white,
                         size: 50,
                       )
+                    // provider.errorMessage would previously just sit there
+                    // unused while the list showed "No documents found." —
+                    // identical to what a genuinely empty list looks like.
                     : provider.errorMessage != null &&
                           provider.documents.isEmpty
                     ? Center(
@@ -160,7 +172,7 @@ class _DocumentsState extends State<Documents> {
           bottomNavigationBar: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             child: SizedBox(
-              height: 52,
+              height: 50,
               child: ElevatedButton.icon(
                 onPressed: provider.isUploading
                     ? null
@@ -211,7 +223,7 @@ class _DocumentsState extends State<Documents> {
                 label: Text(
                   provider.isUploading ? 'Uploading...' : 'Upload PDF/Image',
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                     fontFamily: 'Lexend',
@@ -219,7 +231,7 @@ class _DocumentsState extends State<Documents> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
@@ -234,7 +246,7 @@ class _DocumentsState extends State<Documents> {
 
   Widget _buildDocumentCard(DocumentModel doc) {
     return GestureDetector(
-      onTap: () => GoRouter.of(context).pushReplacement(
+      onTap: () => GoRouter.of(context).go(
         '${BMCRouter.homePath}/${BMCRouter.documentsPath}/${BMCRouter.documentViewerPath}',
         extra: doc,
       ),
@@ -255,8 +267,8 @@ class _DocumentsState extends State<Documents> {
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 color: Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(10),
@@ -264,10 +276,10 @@ class _DocumentsState extends State<Documents> {
               child: Icon(
                 Iconsax.document_text,
                 color: Theme.of(context).primaryColor,
-                size: 28,
+                size: 25,
               ),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -276,7 +288,7 @@ class _DocumentsState extends State<Documents> {
                     doc.title ?? doc.fileName ?? 'Document',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 15,
+                      fontSize: 13,
                       fontFamily: 'Lexend',
                     ),
                   ),
@@ -300,7 +312,7 @@ class _DocumentsState extends State<Documents> {
                 doc.status ?? 'Uploaded',
                 style: const TextStyle(
                   color: Color(0xFF22C55E),
-                  fontSize: 12,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                 ),
               ),

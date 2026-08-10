@@ -128,7 +128,7 @@ class AvailabilityProvider extends ChangeNotifier {
 
 // Also add this for convenience
   bool get isWindowOpenForMonth {
-    if (!hasWindow) return false;
+    if (!hasWindow) return false; // <== This may be the problem with the windows issues.
     final currentMonthKey = "${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}";
     return isWindowOpen && windowMonthKey == currentMonthKey;
   }

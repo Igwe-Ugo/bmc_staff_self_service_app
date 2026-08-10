@@ -1,8 +1,7 @@
-import 'dart:io';
-
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:bmc_app/core/errors/api_exceptions.dart';
 import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
 import '../api_client/widget.dart';
 import '../models/document_model.dart';
 
@@ -47,6 +46,52 @@ class DocumentService {
     }
   }
 
+  /// Fetches the raw file bytes for viewing, NOT a URL.
+  ///
+  /// getViewUrl() above assumes /corporate-documents/view returns
+  /// JSON like {data: {url: ...}}. That's unconfirmed and, going by the
+  /// sibling /messaging/attachment route (documented in
+  /// MESSAGING_ATTACHMENTS.md, confirmed working with a real 200 earlier
+  /// in this conversation), quite possibly wrong — that route returns raw
+  /// bytes directly, Content-Type: application/octet-stream, no JSON
+  /// wrapper at all. This method treats /corporate-documents/view the same
+  /// way. If it 404s or errors unexpectedly, that's the first thing to
+  /// check — you may need to fall back to getViewUrl() + a second fetch on
+  /// whatever URL it returns instead.
+  Future<Uint8List> downloadDocumentBytes(String documentKey) async {
+    try {
+      final response = await _dio.get(
+        ApiEndpoints.readCorporateDocument,
+        queryParameters: {'documentKey': documentKey},
+        options: Options(
+          responseType: ResponseType.bytes,
+          receiveTimeout: const Duration(seconds: 45),
+        ),
+      );
+      return Uint8List.fromList(response.data as List<int>);
+    } on DioException catch (e) {
+      // Error bodies arrive as bytes too, even though responseType is
+      // fixed to bytes for the success path — same gotcha as
+      // AttachmentService.download().
+      String? message;
+      final raw = e.response?.data;
+      if (raw is List<int>) {
+        try {
+          final decoded = jsonDecode(utf8.decode(raw));
+          message = decoded is Map ? decoded['message']?.toString() : null;
+        } catch (_) {
+          // Not JSON — leave message null.
+        }
+      } else {
+        message = _extractMessage(raw);
+      }
+      throw ApiException(
+        message: message ?? 'Failed to load document content.',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
   Future<String?> getViewUrl(String documentKey) async {
     try {
       final response = await _dio.get(
@@ -65,28 +110,6 @@ class DocumentService {
       );
     }
   }
-
-  Future<File?> downloadDocumentToFile(String documentKey, String fileName) async {
-  try {
-    // 1. Fetch the view URL using your existing endpoint
-    final viewUrl = await getViewUrl(documentKey);
-    if (viewUrl == null || viewUrl.isEmpty) return null;
-
-    // 2. Download the bytes
-    final response = await _dio.get<List<int>>(
-      viewUrl,
-      options: Options(responseType: ResponseType.bytes),
-    );
-
-    // 3. Save to local temporary directory for flutter_pdfview
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$fileName');
-    await file.writeAsBytes(response.data!);
-    return file;
-  } catch (e) {
-    return null;
-  }
-}
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 

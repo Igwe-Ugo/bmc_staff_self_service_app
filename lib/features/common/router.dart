@@ -105,17 +105,20 @@ class BMCRouter {
                     path: documentsPath,
                     builder: (context, state) => Documents(),
                     routes: [
-                      GoRoute(path: documentViewerPath, builder: (context, state) {
-                        final extra = state.extra;
-                        return extra is DocumentModel
-                            ? DocumentViewerScreen(document: extra)
-                            : const Scaffold(
-                                body: Center(
-                                  child: Text('No document provided.'),
-                                ),
-                              );
-                      }),
-                    ]
+                      GoRoute(
+                        path: documentViewerPath,
+                        builder: (context, state) {
+                          final extra = state.extra;
+                          return extra is DocumentModel
+                              ? DocumentViewerScreen(document: extra)
+                              : const Scaffold(
+                                  body: Center(
+                                    child: Text('No document provided.'),
+                                  ),
+                                );
+                        },
+                      ),
+                    ],
                   ),
                   GoRoute(
                     path: notificationsPath,
@@ -128,8 +131,10 @@ class BMCRouter {
                       GoRoute(
                         path: chatPath,
                         builder: (context, state) {
-                         final extra = state.extra;
-                        return extra is ChatGroup ? ChatScreen(group: extra) : ChatScreen(peer: extra as SocketUser);
+                          final extra = state.extra;
+                          return extra is ChatGroup
+                              ? ChatScreen(group: extra)
+                              : ChatScreen(peer: extra as SocketUser);
                         },
                       ),
                     ],

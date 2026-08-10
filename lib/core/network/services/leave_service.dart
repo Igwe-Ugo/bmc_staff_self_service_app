@@ -36,7 +36,7 @@ class LeaveService {
       if (year   != null) params['year']   = year.toString();
 
       final response = await _dio.get(
-        ApiEndpoints.leaveRequests,
+        ApiEndpoints.leaveMyRequests,
         queryParameters: params.isNotEmpty ? params : null,
       );
       debugPrint('📡 MY LEAVE REQUESTS: ${response.statusCode}');
