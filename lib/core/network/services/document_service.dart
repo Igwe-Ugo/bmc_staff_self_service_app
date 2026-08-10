@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:bmc_app/core/errors/api_exceptions.dart';
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 import '../api_client/widget.dart';
 import '../models/document_model.dart';
 
@@ -62,6 +65,28 @@ class DocumentService {
       );
     }
   }
+
+  Future<File?> downloadDocumentToFile(String documentKey, String fileName) async {
+  try {
+    // 1. Fetch the view URL using your existing endpoint
+    final viewUrl = await getViewUrl(documentKey);
+    if (viewUrl == null || viewUrl.isEmpty) return null;
+
+    // 2. Download the bytes
+    final response = await _dio.get<List<int>>(
+      viewUrl,
+      options: Options(responseType: ResponseType.bytes),
+    );
+
+    // 3. Save to local temporary directory for flutter_pdfview
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/$fileName');
+    await file.writeAsBytes(response.data!);
+    return file;
+  } catch (e) {
+    return null;
+  }
+}
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 

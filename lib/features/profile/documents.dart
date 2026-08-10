@@ -1,10 +1,12 @@
 import 'package:bmc_app/core/network/provider/widget.dart';
 import 'package:bmc_app/features/common/show_message.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 import '../../core/network/models/widget.dart';
+import '../common/router.dart';
 
 class Documents extends StatefulWidget {
   const Documents({super.key});
@@ -105,7 +107,8 @@ class _DocumentsState extends State<Documents> {
                         color: Colors.white,
                         size: 50,
                       )
-                    : provider.errorMessage != null && provider.documents.isEmpty
+                    : provider.errorMessage != null &&
+                          provider.documents.isEmpty
                     ? Center(
                         child: Padding(
                           padding: const EdgeInsets.all(24),
@@ -230,74 +233,80 @@ class _DocumentsState extends State<Documents> {
   }
 
   Widget _buildDocumentCard(DocumentModel doc) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => GoRouter.of(context).pushReplacement(
+        '${BMCRouter.homePath}/${BMCRouter.documentsPath}/${BMCRouter.documentViewerPath}',
+        extra: doc,
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(10),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            child: Icon(
-              Iconsax.document_text,
-              color: Theme.of(context).primaryColor,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  doc.title ?? doc.fileName ?? 'Document',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
-                    fontFamily: 'Lexend',
-                  ),
-                ),
-                if (doc.expiryDate != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Expires: ${doc.expiryDate}',
-                    style: const TextStyle(fontSize: 13, color: Colors.grey),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF22C55E).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              doc.status ?? 'Uploaded',
-              style: const TextStyle(
-                color: Color(0xFF22C55E),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Iconsax.document_text,
+                color: Theme.of(context).primaryColor,
+                size: 28,
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    doc.title ?? doc.fileName ?? 'Document',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      fontFamily: 'Lexend',
+                    ),
+                  ),
+                  if (doc.expiryDate != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      'Expires: ${doc.expiryDate}',
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFF22C55E).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                doc.status ?? 'Uploaded',
+                style: const TextStyle(
+                  color: Color(0xFF22C55E),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

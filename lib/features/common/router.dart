@@ -52,6 +52,7 @@ class BMCRouter {
   static const String profilePath = 'profile';
   static const String statsPath = 'stats';
   static const String documentsPath = 'documents';
+  static const String documentViewerPath = 'document_viewer';
 
   // availability
   static const String availabilityPath = '/availability';
@@ -103,6 +104,18 @@ class BMCRouter {
                   GoRoute(
                     path: documentsPath,
                     builder: (context, state) => Documents(),
+                    routes: [
+                      GoRoute(path: documentViewerPath, builder: (context, state) {
+                        final extra = state.extra;
+                        return extra is DocumentModel
+                            ? DocumentViewerScreen(document: extra)
+                            : const Scaffold(
+                                body: Center(
+                                  child: Text('No document provided.'),
+                                ),
+                              );
+                      }),
+                    ]
                   ),
                   GoRoute(
                     path: notificationsPath,
