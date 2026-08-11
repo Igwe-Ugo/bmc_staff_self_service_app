@@ -23,6 +23,7 @@ class _StatsScreenState extends State<StatsScreen> {
     super.initState();
     // Ensure data is loaded for the current month
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AvailabilityProvider>().changeMonth(_currentMonth);
       final rotaProvider = context.read<RotaProvider>();
       rotaProvider.loadShiftsForMonth(context, _currentMonth);
       final leaveProvider = context.read<LeaveProvider>();
@@ -121,71 +122,46 @@ class _StatsScreenState extends State<StatsScreen> {
   // ── AVAILABILITY STATS ───────────────────────────────────────────────────
   Widget _buildAvailabilityStats(BuildContext context) {
     final provider = context.watch<AvailabilityProvider>();
-    final data = provider.chartData;
 
-    // Get current month's data
-    final monthData = data.map((key, value) {
-      // Filter only current month data
-      final filtered = value.entries.where((entry) {
-        final date = DateTime(
-          _currentMonth.year,
-          _currentMonth.month,
-          entry.key,
-        );
-        return date.month == _currentMonth.month &&
-            date.year == _currentMonth.year;
-      }).toList();
-      return MapEntry(key, filtered);
-    });
+    // Filter slots belonging strictly to the displayed current month
+    final currentMonthSlots = provider.slots.where((slot) {
+      return slot.date.year == _currentMonth.year &&
+          slot.date.month == _currentMonth.month;
+    }).toList();
+
+    // Count slots by status
+    int countStatus(HrAvailabilityStatus status) {
+      return currentMonthSlots.where((s) => s.availability == status).length;
+    }
 
     final stats = [
       StatData(
         label: 'Available',
         shortLabel: 'Avail',
-        value:
-            monthData[HrAvailabilityStatus.available]?.fold(
-              0,
-              (sum, entry) => sum! + entry.value,
-            ) ??
-            0,
+        value: countStatus(HrAvailabilityStatus.available),
         color: HrAvailabilityStatus.available.color,
-        count: monthData[HrAvailabilityStatus.available]?.length ?? 0,
+        count: countStatus(HrAvailabilityStatus.available),
       ),
       StatData(
         label: 'Unavailable',
         shortLabel: 'Unavail',
-        value:
-            monthData[HrAvailabilityStatus.unavailable]?.fold(
-              0,
-              (sum, entry) => sum! + entry.value,
-            ) ??
-            0,
+        value: countStatus(HrAvailabilityStatus.unavailable),
         color: HrAvailabilityStatus.unavailable.color,
-        count: monthData[HrAvailabilityStatus.unavailable]?.length ?? 0,
+        count: countStatus(HrAvailabilityStatus.unavailable),
       ),
       StatData(
         label: 'Preferred',
         shortLabel: 'Pref',
-        value:
-            monthData[HrAvailabilityStatus.preferred]?.fold(
-              0,
-              (sum, entry) => sum! + entry.value,
-            ) ??
-            0,
+        value: countStatus(HrAvailabilityStatus.preferred),
         color: HrAvailabilityStatus.preferred.color,
-        count: monthData[HrAvailabilityStatus.preferred]?.length ?? 0,
+        count: countStatus(HrAvailabilityStatus.preferred),
       ),
       StatData(
         label: 'Tentative',
         shortLabel: 'Tent',
-        value:
-            monthData[HrAvailabilityStatus.tentative]?.fold(
-              0,
-              (sum, entry) => sum! + entry.value,
-            ) ??
-            0,
+        value: countStatus(HrAvailabilityStatus.tentative),
         color: HrAvailabilityStatus.tentative.color,
-        count: monthData[HrAvailabilityStatus.tentative]?.length ?? 0,
+        count: countStatus(HrAvailabilityStatus.tentative),
       ),
     ];
 
