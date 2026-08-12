@@ -10,42 +10,43 @@ class UserProvider extends ChangeNotifier {
   final UserServices _userServices = UserServices();
 
   UserModel? _user;
-  UserState  _state        = UserState.idle;
-  String?    _errorMessage;
-  bool       _updating     = false; // separate flag for profile-update spinner
+  UserState _state = UserState.idle;
+  String? _errorMessage;
+  bool _updating = false; // separate flag for profile-update spinner
 
   // ── Getters ───────────────────────────────────────────────────────────────
-  UserModel? get user          => _user;
-  UserState  get state         => _state;
-  String?    get errorMessage  => _errorMessage;
-  bool       get isLoading     => _state == UserState.loading;
-  bool       get isUpdating    => _updating;
-  bool       get hasUser       => _user != null;
-  bool       get hasAvatar     => _user?.image != null && _user!.image!.isNotEmpty;
+  UserModel? get user => _user;
+  UserState get state => _state;
+  String? get errorMessage => _errorMessage;
+  bool get isLoading => _state == UserState.loading;
+  bool get isUpdating => _updating;
+  bool get hasUser => _user != null;
+  bool get hasAvatar => _user?.image != null && _user!.image!.isNotEmpty;
 
-  String  get displayName  => _user?.name     ?? '';
-  String  get initials     => _user?.initials ?? '';
-  String  get email        => _user?.email    ?? '';
-  String? get avatar       => _user?.image;
-  String  get defaultDept  => _user?.defaultDept ?? '';
+  String get displayName => _user?.name ?? '';
+  String get initials => _user?.initials ?? '';
+  String get email => _user?.email ?? '';
+  String? get avatar => _user?.image;
+  String get defaultDept => _user?.defaultDept ?? '';
 
   // Extended profile getters
-  String get address    => _user?.address    ?? '';
-  String get city       => _user?.city       ?? '';
-  String get stateName  => _user?.state      ?? '';   // 'state' clashes with State<T>
-  String get country    => _user?.country    ?? '';
-  String get telno      => _user?.telno      ?? '';
-  String get gender     => _user?.gender     ?? '';
-  String get rank       => _user?.rank       ?? '';
+  String get address => _user?.address ?? '';
+  String get city => _user?.city ?? '';
+  String get stateName => _user?.state ?? ''; // 'state' clashes with State<T>
+  String get country => _user?.country ?? '';
+  String get telno => _user?.telno ?? '';
+  String get gender => _user?.gender ?? '';
+  String get rank => _user?.rank ?? '';
   String get profession => _user?.clinicalRoleLabel ?? '';
-  String get deptName   => _user?.deptName   ?? '';
-  bool   get isActiveUser => _user?.isActive ?? _user?.active ?? false;
+  String get deptName => _user?.deptName ?? '';
+  bool get isActiveUser => _user?.isActive ?? _user?.active ?? false;
 
-  bool hasPrivilege(String privilege) => _user?.hasPrivilege(privilege) ?? false;
+  bool hasPrivilege(String privilege) =>
+      _user?.hasPrivilege(privilege) ?? false;
 
   // ── Set from Login ────────────────────────────────────────────────────────
   void setUserFromLogin(UserModel user) {
-    _user  = user;
+    _user = user;
     _state = UserState.success;
     notifyListeners();
     debugPrint('✅ User set from login. personnelId = ${user.personnelId}');
@@ -63,10 +64,12 @@ class UserProvider extends ChangeNotifier {
       _user = UserModel.fromJson(fresh);
     } else {
       _user = UserModel.fromJson({
-        ..._user!.toJson(),  // preserve existing (especially personnelId)
-        ...fresh,            // override with refreshed data
+        ..._user!.toJson(), // preserve existing (especially personnelId)
+        ...fresh, // override with refreshed data
       });
-      debugPrint('✅ User merged from refresh. personnelId = ${_user?.personnelId}');
+      debugPrint(
+        '✅ User merged from refresh. personnelId = ${_user?.personnelId}',
+      );
     }
 
     _state = UserState.success;
@@ -77,10 +80,23 @@ class UserProvider extends ChangeNotifier {
   Future<void> fetchMe({String? userId, String? deptId}) async {
     _setState(UserState.loading);
     try {
-      _user = await _userServices.getUser(
+      final fetched = await _userServices.getUser(
         userId: userId ?? _user?.id,
         deptId: deptId ?? _user?.defaultDept,
       );
+
+      // GET /users/regular does not appear to return `privileges` — that
+      // field only ever arrives via the login response / JWT. Without this
+      // guard, fetchMe() (called right after login, and on every warm
+      // start via checkAuthStatus) silently overwrites `_user` wholesale,
+      // and UserModel.fromJson defaults an absent `privileges` key to []
+      // — wiping real privileges the instant this runs. That's what caused
+      // telemedicine (and any other privilege-gated feature) to
+      // disappear: correct right after login, gone the moment this fires.
+      _user = fetched.privileges.isNotEmpty
+          ? fetched
+          : fetched.copyWith(privileges: _user?.privileges ?? const []);
+
       _setState(UserState.success);
     } on ApiException catch (e) {
       _errorMessage = e.message;
@@ -95,7 +111,7 @@ class UserProvider extends ChangeNotifier {
   /// Returns `true` on success, `false` on failure.
   /// Uses a separate `_updating` flag so the rest of the UI is unaffected.
   Future<bool> updateProfile(UserProfileUpdateData data) async {
-    _updating     = true;
+    _updating = true;
     _errorMessage = null;
     notifyListeners();
 
@@ -118,16 +134,15 @@ class UserProvider extends ChangeNotifier {
       notifyListeners();
       debugPrint('✅ Profile updated successfully');
       return true;
-
     } on ApiException catch (e) {
       _errorMessage = e.message;
-      _updating     = false;
+      _updating = false;
       notifyListeners();
       debugPrint('❌ Profile update failed: ${e.message}');
       return false;
     } catch (e) {
       _errorMessage = 'An unexpected error occurred.';
-      _updating     = false;
+      _updating = false;
       notifyListeners();
       return false;
     }
@@ -135,10 +150,10 @@ class UserProvider extends ChangeNotifier {
 
   // ── Clear (logout) ────────────────────────────────────────────────────────
   void clear() {
-    _user         = null;
-    _state        = UserState.idle;
+    _user = null;
+    _state = UserState.idle;
     _errorMessage = null;
-    _updating     = false;
+    _updating = false;
     notifyListeners();
   }
 

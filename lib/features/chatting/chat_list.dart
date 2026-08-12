@@ -200,11 +200,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
               fontSize: 11,
               fontFamily: 'Lexend',
             ),
-            prefixIcon: Icon(
-              Iconsax.search_normal,
-              color: Color(0xFFAEAEB2),
-              size: 20,
-            ),
+            prefixIcon: Icon(Icons.search, size: 18),
             border: InputBorder.none,
             contentPadding: EdgeInsets.symmetric(vertical: 10),
           ),

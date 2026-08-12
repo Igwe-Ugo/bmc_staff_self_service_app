@@ -113,6 +113,11 @@ class _BMCStaffSelfServiceState extends State<BMCStaffSelfService> {
         ChangeNotifierProvider(create: (_) => PresenceProvider()),
         ChangeNotifierProvider(create: (_) => ChatProvider()),
         ChangeNotifierProvider(create: (_) => DocumentProvider()),
+        ChangeNotifierProvider(
+          create: (_) => TeleMedicineProvider(
+            service: TeleMedicineService(), // Pass the service
+          ),
+        ),
       ],
       child: Consumer<DarkThemeProvider>(
         builder: (context, themeData, child) {

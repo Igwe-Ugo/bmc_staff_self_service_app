@@ -1,8 +1,12 @@
 import 'package:bmc_app/core/network/provider/widget.dart';
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
 import '../../core/network/models/widget.dart';
+import '../chatting/widget.dart';
+import '../common/widget.dart';
 
 class BookingVisitsScreen extends StatefulWidget {
   const BookingVisitsScreen({super.key});
@@ -32,31 +36,35 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final darkBg = const Color(0xFF1E1E2C);
-    final cardBg = const Color(0xFF27273A);
-
     return Scaffold(
-      backgroundColor: darkBg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: darkBg,
         elevation: 0,
         title: const Text(
-          'Appointments',
-          style: TextStyle(color: Colors.white, fontSize: 18),
+          'TeleMedicine',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Lexend',
+          ),
         ),
       ),
       body: Consumer<TeleMedicineProvider>(
-        builder: (context, provider, child) {
-          if (provider.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: Colors.white),
+        builder: (context, teleMedProvider, child) {
+          if (teleMedProvider.isLoading) {
+            return Center(
+              child: LoadingAnimationWidget.staggeredDotsWave(
+                color: Theme.of(context).primaryColor,
+                size: 40,
+              ),
             );
           }
 
-          if (provider.errorMessage != null) {
+          if (teleMedProvider.errorMessage != null) {
+            print(teleMedProvider.errorMessage!);
             return Center(
               child: Text(
-                provider.errorMessage!,
+                teleMedProvider.errorMessage!,
                 style: const TextStyle(color: Colors.redAccent),
               ),
             );
@@ -68,19 +76,20 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: Container(
-                  height: 45,
+                  height: 40,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF14141F),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.white12),
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE5E5EA)),
                   ),
                   child: TextField(
-                    onChanged: provider.updateSearchQuery,
-                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    onChanged: teleMedProvider.updateSearchQuery,
+                    style: const TextStyle(fontSize: 13),
                     decoration: const InputDecoration(
-                      hintText: 'Filter by patient name, MRN, slot, or location...',
-                      hintStyle: TextStyle(color: Colors.grey, fontSize: 12),
-                      prefixIcon: Icon(Icons.search, color: Colors.grey, size: 18),
+                      hintText:
+                          'Filter by patient name, MRN, slot, or location...',
+                      hintStyle: TextStyle(fontSize: 12),
+                      prefixIcon: Icon(Icons.search, size: 18),
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.symmetric(vertical: 10),
                     ),
@@ -93,20 +102,39 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                 margin: const EdgeInsets.symmetric(horizontal: 12.0),
                 height: 40,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF14141F),
+                  color: Theme.of(context).cardColor.withOpacity(0.6),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: TabBar(
                   controller: _tabController,
                   indicator: BoxDecoration(
-                    color: cardBg,
-                    borderRadius: BorderRadius.circular(6),
+                    color: Theme.of(context).cardColor,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
                   ),
                   indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.grey,
+                  indicatorPadding: const EdgeInsets.all(3),
+                  dividerColor: Colors.transparent,
+                  labelColor: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Colors.black,
+                  unselectedLabelColor: const Color(0xFF8E8E93),
                   labelStyle: const TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 12),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Lexend',
+                  ),
+                  unselectedLabelStyle: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                    fontFamily: 'Lexend',
+                  ),
                   tabs: [
                     Tab(
                       child: Row(
@@ -114,7 +142,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                         children: [
                           const Icon(Icons.calendar_today, size: 14),
                           const SizedBox(width: 6),
-                          Text('Today (${provider.todayVisits.length})'),
+                          Text('Today (${teleMedProvider.todayVisits.length})'),
                         ],
                       ),
                     ),
@@ -124,7 +152,9 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                         children: [
                           const Icon(Icons.calendar_month, size: 14),
                           const SizedBox(width: 6),
-                          Text('Upcoming (${provider.upcomingVisits.length})'),
+                          Text(
+                            'Upcoming (${teleMedProvider.upcomingVisits.length})',
+                          ),
                         ],
                       ),
                     ),
@@ -139,8 +169,14 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                 child: TabBarView(
                   controller: _tabController,
                   children: [
-                    _buildVisitsList(provider.todayVisits, cardBg),
-                    _buildVisitsList(provider.upcomingVisits, cardBg),
+                    _buildVisitsList(
+                      teleMedProvider.todayVisits,
+                      Theme.of(context).cardColor,
+                    ),
+                    _buildVisitsList(
+                      teleMedProvider.upcomingVisits,
+                      Theme.of(context).cardColor,
+                    ),
                   ],
                 ),
               ),
@@ -153,11 +189,21 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
 
   Widget _buildVisitsList(List<QryBookingVisits> visits, Color cardBg) {
     if (visits.isEmpty) {
-      return const Center(
-        child: Text(
-          'No records found.',
-          style: TextStyle(color: Colors.grey),
-        ),
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Iconsax.user_search, size: 40),
+          const SizedBox(height: 15),
+          Text(
+            'No records found.',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Lexend',
+            ),
+          ),
+        ],
       );
     }
 
@@ -182,7 +228,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
           decoration: BoxDecoration(
             color: cardBg,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white12),
+            border: Border.all(color: Colors.grey.withOpacity(0.5)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,16 +237,25 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
-                    radius: 18,
-                    backgroundColor: Colors.white10,
-                    backgroundImage: visit.picture != null
-                        ? NetworkImage(visit.picture!)
-                        : null,
-                    child: visit.picture == null
-                        ? const Icon(Icons.person, color: Colors.grey)
-                        : null,
-                  ),
+                  visit.picture != null
+                      ? UserAvatar(
+                          image: visit.picture!,
+                          initials: initialsFor(visit.fullname!),
+                          radius: 13,
+                          initialsColor: Colors.white,
+                        )
+                      : CircleAvatar(
+                          radius: 13,
+                          backgroundColor: avatarColorFor(visit.fullname!),
+                          child: Text(
+                            initialsFor(visit.fullname!),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -209,7 +264,6 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                         Text(
                           visit.fullname ?? 'Unknown Patient',
                           style: const TextStyle(
-                            color: Colors.white,
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                           ),
@@ -217,18 +271,17 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                         const SizedBox(height: 2),
                         Text(
                           '${visit.gender ?? ''} | ..${visit.medrecnum ?? ''}',
-                          style: const TextStyle(
-                            color: Colors.grey,
-                            fontSize: 11,
-                          ),
+                          style: const TextStyle(fontSize: 11),
                         ),
                       ],
                     ),
                   ),
                   // Status Badge
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       border: Border.all(color: Colors.orange),
                       borderRadius: BorderRadius.circular(4),
@@ -244,13 +297,12 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                   ),
                 ],
               ),
-              const Divider(color: Colors.white12, height: 16),
+              Divider(color: Colors.grey.withOpacity(0.5), height: 16),
 
               // Appointment details
               Text(
                 '${visit.specialistClinicType ?? 'Telemed Clinic'} - ${visit.slotName ?? ''} | ${visit.location ?? ''} | $startDate - $endDate',
                 style: const TextStyle(
-                  color: Colors.white,
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
                 ),
@@ -258,10 +310,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
               const SizedBox(height: 4),
               Text(
                 '${visit.type ?? 'Telemedicine'} | ${visit.bookedByName ?? ''} | $bookedDateStr',
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 10,
-                ),
+                style: const TextStyle(fontSize: 10),
               ),
               const SizedBox(height: 10),
 
@@ -292,9 +341,8 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
       child: Container(
         padding: const EdgeInsets.all(6),
         decoration: BoxDecoration(
-          color: const Color(0xFF14141F),
           borderRadius: BorderRadius.circular(4),
-          border: Border.all(color: Colors.white12),
+          border: Border.all(color: Colors.grey.withOpacity(0.5)),
         ),
         child: Icon(icon, color: Colors.grey, size: 16),
       ),

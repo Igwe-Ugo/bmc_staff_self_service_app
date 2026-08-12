@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../core/network/provider/widget.dart';
 import 'widget.dart';
 
 enum NavStyle { floating, stationary }
@@ -25,26 +27,86 @@ class BMCAppNavBar extends StatefulWidget {
 
 class _BMCAppNavBarState extends State<BMCAppNavBar> {
   static final _navItems = [
-    _NavItem(onIconName: 'assets/icons/home_on.svg', offIconName: 'assets/icons/home.svg', label: 'Home'),
-    _NavItem(onIconName: 'assets/icons/calendar-add_on.svg', offIconName: 'assets/icons/calendar-add.svg', label: 'Availability'),
-    _NavItem(onIconName: 'assets/icons/share_on.svg', offIconName: 'assets/icons/share.svg', label: 'Rota'),
-    _NavItem(onIconName: 'assets/icons/brifecase-timer_on.svg', offIconName: 'assets/icons/brifecase-timer.svg', label: 'Leave'),
+    _NavItem(
+      onIconName: 'assets/icons/home_on.svg',
+      offIconName: 'assets/icons/home.svg',
+      label: 'Home',
+      isTelemedicine: false,
+    ),
+    _NavItem(
+      onIconName: 'assets/icons/calendar-add_on.svg',
+      offIconName: 'assets/icons/calendar-add.svg',
+      label: 'Availability',
+      isTelemedicine: false,
+    ),
+    _NavItem(
+      onIconName: 'assets/icons/share_on.svg',
+      offIconName: 'assets/icons/share.svg',
+      label: 'Rota',
+      isTelemedicine: false,
+    ),
+    _NavItem(
+      onIconName: 'assets/icons/brifecase-timer_on.svg',
+      offIconName: 'assets/icons/brifecase-timer.svg',
+      label: 'Leave',
+      isTelemedicine: false,
+    ),
+    _NavItem(
+      onIconName: 'assets/icons/telemedicine.svg',
+      offIconName: 'assets/icons/telemedicine_on.svg',
+      label: 'TeleMed',
+      isTelemedicine: true,
+    ),
   ];
 
-  int _shellIndexToUiIndex(int shellIndex) => shellIndex;
+  int _getUiIndexFromShellIndex(int shellIndex, List<_NavItem> visibleItems) {
+    if (shellIndex >= _navItems.length) return 0;
+    final item = _navItems[shellIndex];
+    final index = visibleItems.indexOf(item);
+    return index != -1 ? index : 0;
+  }
 
-  void _onItemTapped(int uiIndex) {
-    final shellIndex = uiIndex;
+  void _onItemTapped(int uiIndex, List<_NavItem> visibleItems) {
+    final selectedItem = visibleItems[uiIndex];
+    final actualShellIndex = _navItems.indexOf(selectedItem);
+
     widget.navigationShell.goBranch(
-      shellIndex,
-      initialLocation: shellIndex == widget.navigationShell.currentIndex,
+      actualShellIndex,
+      initialLocation: actualShellIndex == widget.navigationShell.currentIndex,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final selectedUiIndex =
-    _shellIndexToUiIndex(widget.navigationShell.currentIndex);
+    final userProvider = context.watch<UserProvider>();
+    final user = userProvider.user;
+
+    // Check telemedicine privilege
+    bool hasTelemedicine = false;
+    if (user != null) {
+      hasTelemedicine = user.privileges.any((p) {
+        final lower = p.toLowerCase();
+        return lower.contains('operate~telemedicine') ||
+            lower.contains('operate~telemed') ||
+            lower == 'operate~telemedicine' ||
+            lower == 'operate~telemed';
+      });
+    }
+
+    // Print to console for debugging
+    debugPrint('🔑 User Privileges: ${user?.privileges}');
+    debugPrint('🩺 Has Telemedicine: $hasTelemedicine');
+
+    final visibleItems = _navItems.where((item) {
+      if (item.isTelemedicine) return hasTelemedicine;
+      return true;
+    }).toList();
+
+    final currentShellIndex = widget.navigationShell.currentIndex;
+    final selectedUiIndex = _getUiIndexFromShellIndex(
+      currentShellIndex,
+      visibleItems,
+    );
 
     return ValueListenableBuilder<bool>(
       valueListenable: navBarVisible,
@@ -52,38 +114,52 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
         return Scaffold(
           extendBody: true,
           body: widget.navigationShell,
-          bottomNavigationBar: _isNavVisible==true ? _buildNavBar(context, selectedUiIndex) : null,
+          bottomNavigationBar: _isNavVisible == true
+              ? _buildNavBar(
+                  context,
+                  visibleItems,
+                  selectedUiIndex,
+                  hasTelemedicine,
+                  (index) => _onItemTapped(index, visibleItems),
+                )
+              : null,
         );
-      }
+      },
     );
   }
 
-  Widget _buildNavBar(BuildContext context, int selectedUiIndex) {
+  Widget _buildNavBar(
+    BuildContext context,
+    List<_NavItem> items,
+    int selectedUiIndex,
+    bool hasTelemedicine,
+    Function(int) onTap,
+  ) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPadding + 5),
+      padding: EdgeInsets.fromLTRB(8, 8, 8, bottomPadding + 5),
       child: Material(
-        elevation: 10, // 🔥 REAL elevation
+        elevation: 10,
         borderRadius: BorderRadius.circular(50),
         shadowColor: Colors.black.withOpacity(0.5),
         child: Container(
           height: 70,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(50),
-              border: Border.all(
-                color: Theme.of(context).primaryColor, // Set your desired color here
-                width: 1.0,          // Set the thickness of the border
-              ),
+            border: Border.all(
+              color: Theme.of(context).primaryColor,
+              width: 1.0,
+            ),
             color: Theme.of(context).scaffoldBackgroundColor,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(_navItems.length, (index) {
+            children: List.generate(items.length, (index) {
               return _NavTile(
-                item: _navItems[index],
+                item: items[index],
                 isActive: index == selectedUiIndex,
-                onTap: () => _onItemTapped(index),
+                onTap: () => onTap(index), // ✅ Fixed: call onTap with index
               );
             }),
           ),
@@ -112,7 +188,7 @@ class _NavTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: onTap, // ✅ Fixed: use the callback directly
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
@@ -125,16 +201,14 @@ class _NavTile extends StatelessWidget {
           color: isActive ? _activeColor : Colors.transparent,
           borderRadius: BorderRadius.circular(50),
         ),
-        child: Column(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Menu item uses a slightly larger icon, others are standard
             SvgPicture.asset(
               isActive ? item.onIconName : item.offIconName,
               height: 25,
               width: 25,
             ),
-            // Animate label in/out for active state (non-menu items only)
             if (isActive) ...[
               const SizedBox(width: 6),
               Text(
@@ -159,5 +233,28 @@ class _NavItem {
   final String offIconName;
   final String onIconName;
   final String label;
-  const _NavItem({required this.offIconName, required this.onIconName, required this.label});
+  final bool isTelemedicine;
+
+  const _NavItem({
+    required this.offIconName,
+    required this.onIconName,
+    required this.label,
+    this.isTelemedicine = false,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is _NavItem &&
+          offIconName == other.offIconName &&
+          onIconName == other.onIconName &&
+          label == other.label &&
+          isTelemedicine == other.isTelemedicine;
+
+  @override
+  int get hashCode =>
+      offIconName.hashCode ^
+      onIconName.hashCode ^
+      label.hashCode ^
+      isTelemedicine.hashCode;
 }

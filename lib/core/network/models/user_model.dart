@@ -218,6 +218,17 @@ class UserModel {
 
   bool hasPrivilege(String privilege) => privileges.contains(privilege);
 
+  bool get isTelemedicineUser => _hasOperateDepartment('telemedicine');
+
+  bool _hasOperateDepartment(String department) {
+    return privileges.any((p) {
+      final parts = p.split('~');
+      if (parts.length != 2) return false;
+      return parts[0].trim().toLowerCase() == 'operate' &&
+          parts[1].trim().toLowerCase() == department.toLowerCase();
+    });
+  }
+
   /// Human-friendly clinical role label derived from the boolean role flags.
   String get clinicalRoleLabel {
     if (isDoc == true) return 'Doctor';

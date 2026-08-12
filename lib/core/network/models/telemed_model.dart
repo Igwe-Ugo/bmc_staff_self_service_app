@@ -16,10 +16,10 @@ class TelemedRecording {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'url': url,
-        'recordedAt': recordedAt?.toIso8601String(),
-      };
+    'id': id,
+    'url': url,
+    'recordedAt': recordedAt?.toIso8601String(),
+  };
 }
 
 class PatientCompleteness {
@@ -42,10 +42,10 @@ class PatientCompleteness {
   }
 
   Map<String, dynamic> toJson() => {
-        'isComplete': isComplete,
-        'missingCount': missingCount,
-        'missingFields': missingFields,
-      };
+    'isComplete': isComplete,
+    'missingCount': missingCount,
+    'missingFields': missingFields,
+  };
 }
 
 class QryBookingVisits {
@@ -210,9 +210,31 @@ class QryBookingVisits {
   });
 
   factory QryBookingVisits.fromJson(Map<String, dynamic> json) {
+    num? _parseNum(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value;
+      if (value is String) return num.tryParse(value);
+      return null;
+    }
+
+    double? _parseDouble(dynamic value) {
+      if (value == null) return null;
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value);
+      return null;
+    }
+
+    int? _parseInt(dynamic value) {
+      if (value == null) return null;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value);
+      return null;
+    }
+
     return QryBookingVisits(
-      id: json['id'],
-      medrecnum: json['medrecnum'],
+      id: json['id'] as String?,
+      medrecnum: _parseInt(json['medrecnum']),
       appmtDay: json['appmtDay'],
       appmtStartDate: json['appmtStartDate'] != null
           ? DateTime.tryParse(json['appmtStartDate'])
@@ -225,14 +247,16 @@ class QryBookingVisits {
       firstOrFollowUp: json['firstOrFollowUp'],
       patType: json['patType'],
       location: json['location'],
-      bookingPaid: json['bookingPaid'],
       slotName: json['slotName'],
       checkedIn: json['checkedIn'],
       acl: json['acl'],
       type: json['type'],
-      owedGlobal: (json['owedGlobal'] as num?)?.toDouble(),
-      owedBooking: (json['owedBooking'] as num?)?.toDouble(),
-      owedIOU: (json['owedIOU'] as num?)?.toDouble(),
+      owedGlobal: _parseDouble(json['owedGlobal']),
+      owedBooking: _parseDouble(json['owedBooking']),
+      owedIOU: _parseDouble(json['owedIOU']),
+      bookingPaid: _parseInt(json['bookingPaid']),
+      isTelemed: _parseInt(json['isTelemed']),
+      telemedType: _parseInt(json['telemedType']),
       walletId: json['walletId'],
       fullname: json['fullname'],
       gender: json['gender'],
@@ -252,8 +276,6 @@ class QryBookingVisits {
           ? DateTime.tryParse(json['bookedDate'])
           : null,
       bookedByName: json['bookedByName'],
-      isTelemed: json['isTelemed'],
-      telemedType: json['telemedType'],
       status: json['status'],
       deptId: json['deptId'],
       sectionId: json['sectionId'],
@@ -270,8 +292,8 @@ class QryBookingVisits {
       hasRecordings: json['hasRecordings'],
       recordings: json['recordings'] != null
           ? (json['recordings'] as List)
-              .map((e) => TelemedRecording.fromJson(e))
-              .toList()
+                .map((e) => TelemedRecording.fromJson(e))
+                .toList()
           : null,
       roomReady: json['roomReady'],
       patientReady: json['patientReady'],
