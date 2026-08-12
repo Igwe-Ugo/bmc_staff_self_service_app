@@ -275,7 +275,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ///LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
-                  height: 50,
+                  height: 60,
                   child: ElevatedButton(
                     onPressed: _isLoading == true ? null : _login,
                     style: ElevatedButton.styleFrom(
@@ -295,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: TextStyle(
                               color: Colors.white,
                               fontFamily: 'Lexend',
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
                           ),

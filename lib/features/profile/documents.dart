@@ -288,7 +288,7 @@ class _DocumentsState extends State<Documents> {
                     doc.title ?? doc.fileName ?? 'Document',
                     style: const TextStyle(
                       fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                      fontSize: 12,
                       fontFamily: 'Lexend',
                     ),
                   ),

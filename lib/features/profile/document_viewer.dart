@@ -59,6 +59,11 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back, size: 15),
+        ),
         title: Text(
           widget.document.title ?? 'Document Viewer',
           style: const TextStyle(fontFamily: 'Lexend', fontSize: 16),
@@ -87,10 +92,16 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                     Text(
                       _errorMessage!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontFamily: 'Lexend', fontSize: 13),
+                      style: const TextStyle(
+                        fontFamily: 'Lexend',
+                        fontSize: 13,
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    TextButton(onPressed: _loadBytes, child: const Text('Retry')),
+                    TextButton(
+                      onPressed: _loadBytes,
+                      child: const Text('Retry'),
+                    ),
                   ],
                 ),
               ),

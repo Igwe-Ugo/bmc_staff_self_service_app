@@ -349,58 +349,63 @@ class _ProfileState extends State<Profile> {
                           _fieldLabel('Phone Number'),
                           const SizedBox(height: 8),
 
-                          InternationalPhoneNumberInput(
-                            key: ValueKey(
-                              p.selectedCountryIso2,
-                            ), // Forces rebuild when user selects a different country
-                            onInputChanged: (PhoneNumber number) {
-                              p.phoneCtrl.text = number.phoneNumber ?? '';
-                            },
-                            initialValue: PhoneNumber(
-                              isoCode: p.selectedCountryIso2,
-                              phoneNumber: p.phoneCtrl.text,
-                            ),
-                            selectorConfig: const SelectorConfig(
-                              leadingPadding: 0,
-                              selectorType: PhoneInputSelectorType.DROPDOWN,
-                              // disabled: true, // Prevents user from opening/changing the country flag dropdown
-                              setSelectorButtonAsPrefixIcon: true,
-                            ),
-                            ignoreBlank: false,
-                            autoValidateMode: AutovalidateMode.disabled,
-                            textFieldController: p.phoneCtrl,
-                            formatInput: true,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              signed: true,
-                              decimal: true,
-                            ),
-                            inputDecoration: InputDecoration(
-                              hintText: '800 000 0000',
-                              hintStyle: TextStyle(
-                                color: Colors.grey.shade400,
-                                fontSize: 13,
-                                fontFamily: 'Lexend',
+                          IgnorePointer(
+                            ignoring: true,
+                            child: InternationalPhoneNumberInput(
+                              key: ValueKey(
+                                p.selectedCountryIso2,
+                              ), // Forces rebuild when user selects a different country
+                              onInputChanged: (PhoneNumber number) {
+                                p.phoneCtrl.text = number.phoneNumber ?? '';
+                              },
+                              initialValue: PhoneNumber(
+                                isoCode: p.selectedCountryIso2,
+                                phoneNumber: p.phoneCtrl.text,
                               ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 15,
+                              selectorConfig: const SelectorConfig(
+                                leadingPadding: 10,
+                                selectorType:
+                                    PhoneInputSelectorType.BOTTOM_SHEET,
+                                // disabled: true, // Prevents user from opening/changing the country flag dropdown
+                                setSelectorButtonAsPrefixIcon: true,
                               ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(6),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+                              ignoreBlank: false,
+                              autoValidateMode: AutovalidateMode.disabled,
+                              textFieldController: p.phoneCtrl,
+                              formatInput: true,
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    signed: true,
+                                    decimal: true,
+                                  ),
+                              inputDecoration: InputDecoration(
+                                hintText: '800 000 0000',
+                                hintStyle: TextStyle(
+                                  color: Colors.grey.shade400,
+                                  fontSize: 13,
+                                  fontFamily: 'Lexend',
                                 ),
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(6),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 15,
                                 ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(6),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).primaryColor,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(6),
+                                  borderSide: BorderSide(
+                                    color: Theme.of(context).primaryColor,
+                                  ),
                                 ),
                               ),
                             ),

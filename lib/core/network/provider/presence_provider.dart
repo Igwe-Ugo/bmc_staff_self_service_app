@@ -12,7 +12,7 @@ import '../services/widget.dart';
 
 class PresenceProvider extends ChangeNotifier {
   PresenceProvider({SocketService? service})
-      : _service = service ?? SocketService.instance {
+    : _service = service ?? SocketService.instance {
     _subs.addAll([
       _service.onStatus.listen(_onStatus),
       _service.onRoster.listen(_onRoster),
@@ -49,7 +49,9 @@ class PresenceProvider extends ChangeNotifier {
   /// Everyone except the signed-in user.
   List<SocketUser> get allUsers {
     final list = _users.values.where((u) => u.userId != _me).toList();
-    list.sort((a, b) => a.username.toLowerCase().compareTo(b.username.toLowerCase()));
+    list.sort(
+      (a, b) => a.username.toLowerCase().compareTo(b.username.toLowerCase()),
+    );
     return list;
   }
 
@@ -92,19 +94,67 @@ class PresenceProvider extends ChangeNotifier {
   }
 
   void _onUserSignedIn(SocketUser user) {
+    // Compare this against the PresenceEvent log below for the SAME userId
+    // when that surface later signs out. If a user's dnd/presence here shows
+    // both `online` and `mobile` true after signing into web while already
+    // on mobile, but the later sign-out event never arrives (no matching
+    // 📡 PresenceEvent line at all) for that userId, the gap is server-side
+    // — it isn't broadcasting the web sign-out. If the event DOES arrive but
+    // with a location that doesn't match, that's the client-side bug we
+    // already log for in _onPresenceChange.
+    debugPrint(
+      '📡 UserSignedIn: userId=${user.userId} presence=${user.presence}',
+    );
     _users[user.userId] = user;
     notifyListeners();
   }
 
   void _onPresenceChange(PresenceEvent event) {
+    // Unconditional — fires on every presence event, not just ones that
+    // already look wrong. This is what will actually tell us whether the
+    // web sign-out bug is a bad `presence` payload from the server, or an
+    // unmatched `location` string on the client's fallback path. Remove
+    // once this is diagnosed — it's noisy in a busy roster.
+    debugPrint(
+      '📡 PresenceEvent: userId=${event.userId} location="${event.location}" '
+      'presence=${event.presence}',
+    );
+
     final existing = _users[event.userId];
-    if (existing == null) return;
+    if (existing == null) {
+      // A presence event for a user not yet in the roster — most likely a
+      // race between this event and the initial roster sync. Silently
+      // dropping it (as before) means that user's badge can go stale until
+      // the next full resync. Logging it at least makes the race visible
+      // instead of invisible.
+      debugPrint(
+        '⚠️ PresenceProvider: presence-change for unknown user '
+        '${event.userId} — dropped.',
+      );
+      return;
+    }
+
+    if (event.presence == null &&
+        event.location != 'online' &&
+        event.location != 'local' &&
+        event.location != 'mobile') {
+      // copyWithSurface silently no-ops on any string outside these three —
+      // if the server ever sends a different casing, a typo, or a new
+      // surface name, every flag stays exactly as it was with no signal
+      // that anything went wrong.
+      debugPrint(
+        '⚠️ PresenceProvider: unrecognized location "${event.location}" for '
+        '${event.userId} — no flag was updated. Expected exactly "online", '
+        '"local", or "mobile".',
+      );
+    }
 
     // Prefer the authoritative post-event flags. Older payloads omit them, in
     // which case flip only the surface named by `location` — the other
     // surfaces stay as they were, which is the whole point of the three-flag
     // model (signing out of mobile must not clear a live web session).
-    final next = event.presence ??
+    final next =
+        event.presence ??
         existing.presence.copyWithSurface(event.location, false);
 
     _users[event.userId] = existing.copyWith(

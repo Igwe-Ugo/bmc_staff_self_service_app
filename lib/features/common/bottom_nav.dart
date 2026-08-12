@@ -25,26 +25,10 @@ class BMCAppNavBar extends StatefulWidget {
 
 class _BMCAppNavBarState extends State<BMCAppNavBar> {
   static final _navItems = [
-    _NavItem(
-      onIconName: 'assets/icons/home_on.svg',
-      offIconName: 'assets/icons/home.svg',
-      label: 'Home',
-    ),
-    _NavItem(
-      onIconName: 'assets/icons/calendar-add_on.svg',
-      offIconName: 'assets/icons/calendar-add.svg',
-      label: 'Availability',
-    ),
-    _NavItem(
-      onIconName: 'assets/icons/share_on.svg',
-      offIconName: 'assets/icons/share.svg',
-      label: 'Rota',
-    ),
-    _NavItem(
-      onIconName: 'assets/icons/brifecase-timer_on.svg',
-      offIconName: 'assets/icons/brifecase-timer.svg',
-      label: 'Leave',
-    ),
+    _NavItem(onIconName: 'assets/icons/home_on.svg', offIconName: 'assets/icons/home.svg', label: 'Home'),
+    _NavItem(onIconName: 'assets/icons/calendar-add_on.svg', offIconName: 'assets/icons/calendar-add.svg', label: 'Availability'),
+    _NavItem(onIconName: 'assets/icons/share_on.svg', offIconName: 'assets/icons/share.svg', label: 'Rota'),
+    _NavItem(onIconName: 'assets/icons/brifecase-timer_on.svg', offIconName: 'assets/icons/brifecase-timer.svg', label: 'Leave'),
   ];
 
   int _shellIndexToUiIndex(int shellIndex) => shellIndex;
@@ -59,9 +43,8 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedUiIndex = _shellIndexToUiIndex(
-      widget.navigationShell.currentIndex,
-    );
+    final selectedUiIndex =
+    _shellIndexToUiIndex(widget.navigationShell.currentIndex);
 
     return ValueListenableBuilder<bool>(
       valueListenable: navBarVisible,
@@ -69,30 +52,29 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
         return Scaffold(
           extendBody: true,
           body: widget.navigationShell,
-          bottomNavigationBar: _isNavVisible == true
-              ? _buildNavBar(context, selectedUiIndex)
-              : null,
+          bottomNavigationBar: _isNavVisible==true ? _buildNavBar(context, selectedUiIndex) : null,
         );
-      },
+      }
     );
   }
 
   Widget _buildNavBar(BuildContext context, int selectedUiIndex) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Padding(
-      padding: EdgeInsets.all(0),
+      padding: EdgeInsets.fromLTRB(16, 8, 16, bottomPadding + 5),
       child: Material(
-        elevation: 0,
+        elevation: 10, // 🔥 REAL elevation
         borderRadius: BorderRadius.circular(50),
         shadowColor: Colors.black.withOpacity(0.5),
         child: Container(
           height: 70,
           decoration: BoxDecoration(
-            border: Border.all(
-              color: Theme.of(
-                context,
-              ).primaryColor, // Set your desired color here
-              width: 1.0, // Set the thickness of the border
-            ),
+            borderRadius: BorderRadius.circular(50),
+              border: Border.all(
+                color: Theme.of(context).primaryColor, // Set your desired color here
+                width: 1.0,          // Set the thickness of the border
+              ),
             color: Theme.of(context).scaffoldBackgroundColor,
           ),
           child: Row(
@@ -153,18 +135,17 @@ class _NavTile extends StatelessWidget {
               width: 25,
             ),
             // Animate label in/out for active state (non-menu items only)
-            const SizedBox(width: 6),
-            Text(
-              item.label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
-                letterSpacing: 0.1,
-                color: isActive
-                    ? Theme.of(context).primaryColor
-                    : Theme.of(context).textTheme.bodySmall!.color,
+            if (isActive) ...[
+              const SizedBox(width: 6),
+              Text(
+                item.label,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                  letterSpacing: 0.1,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -178,9 +159,5 @@ class _NavItem {
   final String offIconName;
   final String onIconName;
   final String label;
-  const _NavItem({
-    required this.offIconName,
-    required this.onIconName,
-    required this.label,
-  });
+  const _NavItem({required this.offIconName, required this.onIconName, required this.label});
 }

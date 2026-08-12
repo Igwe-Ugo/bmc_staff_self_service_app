@@ -4,13 +4,10 @@ import '../../core/network/models/widget.dart';
 
 class PresenceStatusBadge extends StatelessWidget {
   final PresenceFlags presence;
-  final bool
-  hasNotifications; // Set true if there are unread/pending notifications
 
   const PresenceStatusBadge({
     super.key,
     required this.presence,
-    this.hasNotifications = false,
   });
 
   @override
@@ -21,7 +18,7 @@ class PresenceStatusBadge extends StatelessWidget {
         // 1. Online / Cloud / Notification indicator
         _buildCircleIcon(
           icon: Iconsax.cloud,
-          isActive: presence.online || hasNotifications,
+          isActive: presence.online,
           activeColor: const Color(0xFF3B82F6), // Blue
         ),
         const SizedBox(width: 4),

@@ -262,6 +262,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
   ) {
     final convo = chat.conversation(user.userId);
     final hasUnread = (convo?.unread ?? 0) > 0;
+    final unReadCount = convo?.unread;
     final subtitle = convo?.lastMessage?.content ?? 'No messages yet';
     final online = presence.isReachable(user.userId);
 
@@ -322,15 +323,26 @@ class _MessagesListScreenState extends State<MessagesListScreen>
                 ),
                 if (hasUnread)
                   Positioned(
-                    bottom: 0,
                     right: 0,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF007AFF),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
+                    bottom: 0,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.blue,
+                      radius: 7,
+                      child: Container(
+                        padding: const EdgeInsets.all(1),
+                        constraints: const BoxConstraints(
+                          minWidth: 7,
+                          minHeight: 7,
+                        ),
+                        child: Text(
+                          unReadCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 7,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                     ),
                   ),
@@ -371,14 +383,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
             ),
 
             // Action icons
-            Row(
-              children: [
-                PresenceStatusBadge(
-                  presence: user.presence,
-                  hasNotifications: hasUnread,
-                ),
-              ],
-            ),
+            Row(children: [PresenceStatusBadge(presence: user.presence)]),
           ],
         ),
       ),
@@ -429,7 +434,7 @@ class _MessagesListScreenState extends State<MessagesListScreen>
                 color: Color(0xFF8E8E93),
               ),
             ),
-           /*  const SizedBox(height: 24),
+            /*  const SizedBox(height: 24),
             _buildCreateGroupButton(presence), */
           ],
         ),
