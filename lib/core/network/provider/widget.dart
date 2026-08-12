@@ -7,3 +7,4 @@ export 'profile_provider.dart';
 export 'chat_provider.dart';
 export 'presence_provider.dart';
 export 'document_provider.dart';
+export 'telemed_provider.dart';

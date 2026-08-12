@@ -6,13 +6,13 @@ class ApiEndpoints {
     'API_BASE_URL',
     defaultValue: '',
   );
-   
+
   static const String socketUrl = String.fromEnvironment(
     'APP_SERVER_BASE_URL',
     defaultValue: '',
   );
 
-   static const String bmcWebUrl = String.fromEnvironment(
+  static const String bmcWebUrl = String.fromEnvironment(
     'BMC_WEB_URL',
     defaultValue: '',
   );
@@ -30,7 +30,7 @@ class ApiEndpoints {
   // The header name your backend expects
   static const String apiKeyHeader = 'x-api-key';
 
-  /// Call this method at app startup (e.g., in lib/main.dart) to ensure 
+  /// Call this method at app startup (e.g., in lib/main.dart) to ensure
   /// required build variables are provided before making network calls.
   static void validateEnv() {
     assert(
@@ -82,7 +82,7 @@ class ApiEndpoints {
 
   // ── Messaging (Attachments) ───────────────────────────────────────────────────────────────
   static const String uploadDocument = '/corporate-documents/upload';
-  static const String messagingAttachment = '/messaging/attachment'; 
+  static const String messagingAttachment = '/messaging/attachment';
 
   // Uploading Documents
   //
@@ -96,6 +96,11 @@ class ApiEndpoints {
   static const String uploadCorporateDocument = uploadDocument;
   static const String getCorporateDocuments = '/corporate-documents/list';
   static const String readCorporateDocument = '/corporate-documents/view';
+
+  // ── Telemedicine ───────────────────────────────────────────────────────────────
+  static const String teleMedUrl = '/patients/booking-visits/telemedicine';
+  static const String teleMedProviders = '$teleMedUrl/providers';
+  static const String teleMedGuests = '$teleMedUrl/guests';
 
   static String fill(String path, Map<String, String> params) {
     var result = path;

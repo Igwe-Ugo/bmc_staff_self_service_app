@@ -72,6 +72,10 @@ class _ProfileState extends State<Profile> {
       child: Consumer2<ProfileProvider, UserProvider>(
         builder: (context, p, userProvider, _) {
           final user = userProvider.user;
+          final mainTelephone = p.phoneCtrl.text.split('+234');
+          final labelTelephone = mainTelephone.length > 1
+              ? mainTelephone[1]
+              : p.phoneCtrl.text;
 
           return Scaffold(
             appBar: AppBar(
@@ -349,63 +353,57 @@ class _ProfileState extends State<Profile> {
                           _fieldLabel('Phone Number'),
                           const SizedBox(height: 8),
 
-                          IgnorePointer(
-                            ignoring: true,
-                            child: InternationalPhoneNumberInput(
-                              key: ValueKey(
-                                p.selectedCountryIso2,
-                              ), // Forces rebuild when user selects a different country
-                              onInputChanged: (PhoneNumber number) {
-                                p.phoneCtrl.text = number.phoneNumber ?? '';
-                              },
-                              initialValue: PhoneNumber(
-                                isoCode: p.selectedCountryIso2,
-                                phoneNumber: p.phoneCtrl.text,
+                          InternationalPhoneNumberInput(
+                            key: ValueKey(
+                              p.selectedCountryIso2,
+                            ), // Forces rebuild when user selects a different country
+                            onInputChanged: (PhoneNumber number) {
+                              p.phoneCtrl.text = number.phoneNumber ?? '';
+                            },
+                            initialValue: PhoneNumber(
+                              isoCode: p.selectedCountryIso2,
+                              phoneNumber: p.phoneCtrl.text,
+                            ),
+                            selectorConfig: const SelectorConfig(
+                              leadingPadding: 10,
+                              selectorType: PhoneInputSelectorType.BOTTOM_SHEET,
+                              setSelectorButtonAsPrefixIcon: true,
+                            ),
+                            ignoreBlank: false,
+                            autoValidateMode: AutovalidateMode.disabled,
+                            textFieldController: p.phoneCtrl,
+                            formatInput: true,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              signed: true,
+                              decimal: true,
+                            ),
+                            inputDecoration: InputDecoration(
+                              hintText: '800 000 0000',
+                              hintStyle: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 13,
+                                fontFamily: 'Lexend',
                               ),
-                              selectorConfig: const SelectorConfig(
-                                leadingPadding: 10,
-                                selectorType:
-                                    PhoneInputSelectorType.BOTTOM_SHEET,
-                                // disabled: true, // Prevents user from opening/changing the country flag dropdown
-                                setSelectorButtonAsPrefixIcon: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 15,
                               ),
-                              ignoreBlank: false,
-                              autoValidateMode: AutovalidateMode.disabled,
-                              textFieldController: p.phoneCtrl,
-                              formatInput: true,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    signed: true,
-                                    decimal: true,
-                                  ),
-                              inputDecoration: InputDecoration(
-                                hintText: '800 000 0000',
-                                hintStyle: TextStyle(
-                                  color: Colors.grey.shade400,
-                                  fontSize: 13,
-                                  fontFamily: 'Lexend',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(6),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 15,
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(6),
+                                borderSide: BorderSide(
+                                  color: Colors.grey.shade300,
                                 ),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade300,
-                                  ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                  borderSide: BorderSide(
-                                    color: Theme.of(context).primaryColor,
-                                  ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(6),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).primaryColor,
                                 ),
                               ),
                             ),
