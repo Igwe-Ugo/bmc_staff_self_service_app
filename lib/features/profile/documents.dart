@@ -116,9 +116,6 @@ class _DocumentsState extends State<Documents> {
                         color: Colors.white,
                         size: 50,
                       )
-                    // provider.errorMessage would previously just sit there
-                    // unused while the list showed "No documents found." —
-                    // identical to what a genuinely empty list looks like.
                     : provider.errorMessage != null &&
                           provider.documents.isEmpty
                     ? Center(
@@ -153,11 +150,19 @@ class _DocumentsState extends State<Documents> {
                         ),
                       )
                     : filteredDocs.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No documents found.',
-                          style: TextStyle(fontFamily: 'Lexend'),
-                        ),
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Iconsax.document_text, size: 50),
+                          const SizedBox(height: 10),
+                          Text(
+                            'No documents found.',
+                            style: TextStyle(
+                              fontFamily: 'Lexend',
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -196,13 +201,6 @@ class _DocumentsState extends State<Documents> {
                             status: MessageStatus.success,
                           );
                         } else if (provider.errorMessage != null) {
-                          // Previously: nothing happened here at all on
-                          // failure — a picker error, an oversized file, or
-                          // an upload failure all looked identical to
-                          // "tapped the button, nothing occurred."
-                          print(
-                            'Document upload failed: ${provider.errorMessage}',
-                          );
                           showMessage(
                             provider.errorMessage!,
                             context,
@@ -252,7 +250,7 @@ class _DocumentsState extends State<Documents> {
       ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(16),

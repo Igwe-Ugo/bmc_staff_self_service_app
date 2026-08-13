@@ -138,7 +138,7 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(8, 8, 8, bottomPadding + 5),
+      padding: EdgeInsets.fromLTRB(5, 8, 5, bottomPadding + 5),
       child: Material(
         elevation: 10,
         borderRadius: BorderRadius.circular(50),

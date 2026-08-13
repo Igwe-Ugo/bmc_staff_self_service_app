@@ -72,10 +72,6 @@ class _ProfileState extends State<Profile> {
       child: Consumer2<ProfileProvider, UserProvider>(
         builder: (context, p, userProvider, _) {
           final user = userProvider.user;
-          final mainTelephone = p.phoneCtrl.text.split('+234');
-          final labelTelephone = mainTelephone.length > 1
-              ? mainTelephone[1]
-              : p.phoneCtrl.text;
 
           return Scaffold(
             appBar: AppBar(
@@ -353,60 +349,108 @@ class _ProfileState extends State<Profile> {
                           _fieldLabel('Phone Number'),
                           const SizedBox(height: 8),
 
-                          InternationalPhoneNumberInput(
-                            key: ValueKey(
-                              p.selectedCountryIso2,
-                            ), // Forces rebuild when user selects a different country
-                            onInputChanged: (PhoneNumber number) {
-                              p.phoneCtrl.text = number.phoneNumber ?? '';
-                            },
-                            initialValue: PhoneNumber(
-                              isoCode: p.selectedCountryIso2,
-                              phoneNumber: p.phoneCtrl.text,
-                            ),
-                            selectorConfig: const SelectorConfig(
-                              leadingPadding: 10,
-                              selectorType: PhoneInputSelectorType.BOTTOM_SHEET,
-                              setSelectorButtonAsPrefixIcon: true,
-                            ),
-                            ignoreBlank: false,
-                            autoValidateMode: AutovalidateMode.disabled,
-                            textFieldController: p.phoneCtrl,
-                            formatInput: true,
-                            keyboardType: const TextInputType.numberWithOptions(
-                              signed: true,
-                              decimal: true,
-                            ),
-                            inputDecoration: InputDecoration(
-                              hintText: '800 000 0000',
-                              hintStyle: TextStyle(
-                                color: Colors.grey.shade400,
-                                fontSize: 13,
-                                fontFamily: 'Lexend',
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 15,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(6),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+                          Stack(
+                            children: [
+                              InternationalPhoneNumberInput(
+                                key: ValueKey(
+                                  p.selectedCountryIso2,
+                                ), // Forces rebuild when user selects a different country
+                                onInputChanged: (PhoneNumber number) {
+                                  // Store the NATIONAL number only — strip
+                                  // whichever dial code actually applies
+                                  // (number.dialCode), not a hardcoded
+                                  // country. number.phoneNumber comes back
+                                  // as the full international form
+                                  // (e.g. "+2348012345678"); this leaves
+                                  // just "8012345678".
+                                  final full = number.phoneNumber ?? '';
+                                  final dialCode = number.dialCode ?? '';
+                                  p.phoneCtrl.text =
+                                      dialCode.isNotEmpty &&
+                                          full.startsWith(dialCode)
+                                      ? full.substring(dialCode.length)
+                                      : full;
+                                },
+                                initialValue: PhoneNumber(
+                                  isoCode: p.selectedCountryIso2,
+                                  phoneNumber: p.phoneCtrl.text,
+                                ),
+                                selectorConfig: const SelectorConfig(
+                                  leadingPadding: 10,
+                                  selectorType:
+                                      PhoneInputSelectorType.BOTTOM_SHEET,
+                                  setSelectorButtonAsPrefixIcon: true,
+                                ),
+                                ignoreBlank: false,
+                                autoValidateMode: AutovalidateMode.disabled,
+                                textFieldController: p.phoneCtrl,
+                                formatInput: true,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      signed: true,
+                                      decimal: true,
+                                    ),
+                                inputDecoration: InputDecoration(
+                                  hintText: '800 000 0000',
+                                  hintStyle: TextStyle(
+                                    color: Colors.grey.shade400,
+                                    fontSize: 13,
+                                    fontFamily: 'Lexend',
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 15,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    borderSide: BorderSide(
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                  ),
                                 ),
                               ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(6),
-                                borderSide: BorderSide(
-                                  color: Colors.grey.shade300,
+
+                              // Invisible tap-blocker over the selector
+                              // button only. There is no first-class way to
+                              // disable JUST the selector while leaving the
+                              // number field editable — isEnabled: false
+                              // disables the whole widget for
+                              // BOTTOM_SHEET/DIALOG selector types
+                              // (confirmed open bug:
+                              // natintosh/intl_phone_number_input#143).
+                              // This absorbs taps in that zone before they
+                              // reach the package's own selector, so only
+                              // the Country dropdown elsewhere in this form
+                              // can change which flag/dial-code shows here.
+                              //
+                              // 70px is an estimate matching leadingPadding
+                              // (10) + a flag/emoji (~24) + a short dial
+                              // code like "+234" at 13px Lexend — widen or
+                              // narrow this if it doesn't line up exactly
+                              // against your actual rendered selector.
+                              Positioned(
+                                left: 0,
+                                top: 0,
+                                bottom: 0,
+                                width: 70,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTap: () {}, // swallow the tap — intentional no-op
                                 ),
                               ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(6),
-                                borderSide: BorderSide(
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                              ),
-                            ),
+                            ],
                           ),
                           const SizedBox(height: 18),
                         ],
