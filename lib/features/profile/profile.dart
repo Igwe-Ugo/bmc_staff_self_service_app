@@ -377,10 +377,10 @@ class _ProfileState extends State<Profile> {
                                 ),
                                 selectorConfig: const SelectorConfig(
                                   leadingPadding: 10,
-                                  selectorType:
-                                      PhoneInputSelectorType.BOTTOM_SHEET,
+                                  selectorType: PhoneInputSelectorType.DROPDOWN,
                                   setSelectorButtonAsPrefixIcon: true,
                                 ),
+
                                 ignoreBlank: false,
                                 autoValidateMode: AutovalidateMode.disabled,
                                 textFieldController: p.phoneCtrl,
@@ -421,25 +421,6 @@ class _ProfileState extends State<Profile> {
                                   ),
                                 ),
                               ),
-
-                              // Invisible tap-blocker over the selector
-                              // button only. There is no first-class way to
-                              // disable JUST the selector while leaving the
-                              // number field editable — isEnabled: false
-                              // disables the whole widget for
-                              // BOTTOM_SHEET/DIALOG selector types
-                              // (confirmed open bug:
-                              // natintosh/intl_phone_number_input#143).
-                              // This absorbs taps in that zone before they
-                              // reach the package's own selector, so only
-                              // the Country dropdown elsewhere in this form
-                              // can change which flag/dial-code shows here.
-                              //
-                              // 70px is an estimate matching leadingPadding
-                              // (10) + a flag/emoji (~24) + a short dial
-                              // code like "+234" at 13px Lexend — widen or
-                              // narrow this if it doesn't line up exactly
-                              // against your actual rendered selector.
                               Positioned(
                                 left: 0,
                                 top: 0,
@@ -447,7 +428,8 @@ class _ProfileState extends State<Profile> {
                                 width: 70,
                                 child: GestureDetector(
                                   behavior: HitTestBehavior.opaque,
-                                  onTap: () {}, // swallow the tap — intentional no-op
+                                  onTap:
+                                      () {}, // swallow the tap — intentional no-op
                                 ),
                               ),
                             ],
