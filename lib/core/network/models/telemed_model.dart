@@ -210,13 +210,6 @@ class QryBookingVisits {
   });
 
   factory QryBookingVisits.fromJson(Map<String, dynamic> json) {
-    num? _parseNum(dynamic value) {
-      if (value == null) return null;
-      if (value is num) return value;
-      if (value is String) return num.tryParse(value);
-      return null;
-    }
-
     double? _parseDouble(dynamic value) {
       if (value == null) return null;
       if (value is num) return value.toDouble();

@@ -10,6 +10,8 @@
 // (`send-users-list` carries a `messages` array per user), so there is no
 // separate history fetch — seeding from the roster IS the offline backlog.
 
+// ignore_for_file: unnecessary_getters_setters
+
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 
