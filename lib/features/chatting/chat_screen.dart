@@ -137,29 +137,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  // ── Group / peer details navigation ─────────────────────────────────────
-  void _openDetails() {
-    if (widget.isGroup) {
-      _openGroupDetails();
-      return;
-    }
-  }
-
-  Future<void> _openGroupDetails() async {
-    final group = widget.group!;
-    final userLookup = await MemberDirectory.instance.getMany(group.members);
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => GroupDetailsScreen(
-          group: group,
-          currentUserId: _chatProvider.me,
-          userLookup: userLookup,
-        ),
-      ),
-    );
-  }
-
   Future<void> _pickAndSendFile() async {
     try {
       final result = await FilePicker.pickFiles(
@@ -354,21 +331,6 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-       actions: [  widget.isGroup ?
-         // Only shown for group details...
-          GestureDetector(
-            onTap: _openDetails,
-            child: Container(
-              width: 25,
-              height: 25,
-              decoration: const BoxDecoration(
-                color: Colors.white12,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.info_outline, size: 27),
-            ),
-          ) : SizedBox.shrink(),
-        ] ,
       ),
       body: Container(
         decoration: const BoxDecoration(

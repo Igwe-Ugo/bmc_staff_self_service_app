@@ -338,6 +338,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final chatProvider = context.read<ChatProvider>();
     final documentProvider = context.read<DocumentProvider>();
     ProfileService.preload();
+    final teleMedProvider = context.read<TeleMedicineProvider>();
     final success = await authProvider.login(
       username,
       password,
@@ -345,6 +346,7 @@ class _LoginScreenState extends State<LoginScreen> {
       presenceProvider,
       chatProvider,
       documentProvider,
+      teleMedProvider,
     );
 
     if (success) {

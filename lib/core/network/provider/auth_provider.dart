@@ -35,6 +35,7 @@ class AuthProvider extends ChangeNotifier {
     PresenceProvider presenceProvider,
     ChatProvider chatProvider,
     DocumentProvider documentProvider,
+    TeleMedicineProvider teleMedProvider,
   ) async {
     _state = AuthState.loading;
     _errorTitle = null;
@@ -68,6 +69,7 @@ class AuthProvider extends ChangeNotifier {
       if (personnelId != null && personnelId.isNotEmpty) {
         documentProvider.loadDocuments(personnelId);
       }
+      teleMedProvider.loadVisits();
 
       // USERNAME, not response.user.id — the socket mesh's identity space is
       // the login username (uuid is REST-only). See socket_models.dart for
@@ -80,7 +82,6 @@ class AuthProvider extends ChangeNotifier {
       _state = AuthState.success;
       notifyListeners();
       return true;
-
     } on ApiException catch (e) {
       _state = AuthState.error;
       _errorStatusCode = e.statusCode;
@@ -119,7 +120,6 @@ class AuthProvider extends ChangeNotifier {
 
       notifyListeners();
       return false;
-
     } catch (_) {
       _state = AuthState.error;
       _errorTitle = 'Oops!';
@@ -152,6 +152,7 @@ class AuthProvider extends ChangeNotifier {
     PresenceProvider presenceProvider,
     ChatProvider chatProvider,
     DocumentProvider documentProvider,
+    TeleMedicineProvider teleMedProvider,
   ) async {
     final hasSession = await SecureStorage.instance.hasValidSession();
 
@@ -171,6 +172,7 @@ class AuthProvider extends ChangeNotifier {
       if (personnelId != null && personnelId.isNotEmpty) {
         documentProvider.loadDocuments(personnelId);
       }
+      teleMedProvider.loadVisits();
 
       final username = userProvider.user?.username;
       if (username != null && username.isNotEmpty) {
