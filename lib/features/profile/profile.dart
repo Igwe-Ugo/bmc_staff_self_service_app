@@ -1,13 +1,13 @@
 // ─── profile.dart ─────────────────────────────────────────────────────────────
-import 'package:bmc_app/core/network/provider/widget.dart';
-import 'package:bmc_app/features/common/show_message.dart';
-import 'package:bmc_app/features/common/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
+
+import '../../core/network/provider/widget.dart';
+import '../common/widget.dart';
+import 'widget.dart';
 
 class Profile extends StatefulWidget {
   const Profile({super.key});
@@ -349,90 +349,9 @@ class _ProfileState extends State<Profile> {
                           _fieldLabel('Phone Number'),
                           const SizedBox(height: 8),
 
-                          Stack(
-                            children: [
-                              InternationalPhoneNumberInput(
-                                key: ValueKey(
-                                  p.selectedCountryIso2,
-                                ), // Forces rebuild when user selects a different country
-                                onInputChanged: (PhoneNumber number) {
-                                  // Store the NATIONAL number only — strip
-                                  // whichever dial code actually applies
-                                  // (number.dialCode), not a hardcoded
-                                  // country. number.phoneNumber comes back
-                                  // as the full international form
-                                  // (e.g. "+2348012345678"); this leaves
-                                  // just "8012345678".
-                                  final full = number.phoneNumber ?? '';
-                                  final dialCode = number.dialCode ?? '';
-                                  p.phoneCtrl.text =
-                                      dialCode.isNotEmpty &&
-                                          full.startsWith(dialCode)
-                                      ? full.substring(dialCode.length)
-                                      : full;
-                                },
-                                initialValue: PhoneNumber(
-                                  isoCode: p.selectedCountryIso2,
-                                  phoneNumber: p.phoneCtrl.text,
-                                ),
-                                selectorConfig: const SelectorConfig(
-                                  leadingPadding: 10,
-                                  selectorType: PhoneInputSelectorType.DROPDOWN,
-                                  setSelectorButtonAsPrefixIcon: true,
-                                ),
-
-                                ignoreBlank: false,
-                                autoValidateMode: AutovalidateMode.disabled,
-                                textFieldController: p.phoneCtrl,
-                                formatInput: true,
-                                keyboardType:
-                                    const TextInputType.numberWithOptions(
-                                      signed: true,
-                                      decimal: true,
-                                    ),
-                                inputDecoration: InputDecoration(
-                                  hintText: '800 000 0000',
-                                  hintStyle: TextStyle(
-                                    color: Colors.grey.shade400,
-                                    fontSize: 13,
-                                    fontFamily: 'Lexend',
-                                  ),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 15,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(
-                                      color: Colors.grey.shade300,
-                                    ),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(6),
-                                    borderSide: BorderSide(
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                left: 0,
-                                top: 0,
-                                bottom: 0,
-                                width: 70,
-                                child: GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTap:
-                                      () {}, // swallow the tap — intentional no-op
-                                ),
-                              ),
-                            ],
+                          CustomPhoneInput(
+                            controller: p.phoneCtrl,
+                            countryIso2: p.selectedCountryIso2,
                           ),
                           const SizedBox(height: 18),
                         ],
