@@ -138,12 +138,6 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // ── Group / peer details navigation ─────────────────────────────────────
-  //
-  // Groups get a full screen (GroupDetailsScreen already has its own AppBar,
-  // admin actions, etc.). Individuals get a bottom sheet, since we're
-  // already inside the conversation with them — a full page switch would be
-  // a bigger interruption than the info warrants.
-
   void _openDetails() {
     if (widget.isGroup) {
       _openGroupDetails();
@@ -151,24 +145,9 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  /// GroupDetailsScreen wants a ready-made Map<String, UserModel>, not
-  /// per-item futures — so unlike the 1-on-1 sheet (which resolves lazily
-  /// inside its own FutureBuilder), this resolves the whole group's members
-  /// up front behind a brief loading dialog.
   Future<void> _openGroupDetails() async {
     final group = widget.group!;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(child: CircularProgressIndicator()),
-    );
-
     final userLookup = await MemberDirectory.instance.getMany(group.members);
-
-    if (!mounted) return;
-    Navigator.pop(context); // close the loading dialog
-
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -176,38 +155,10 @@ class _ChatScreenState extends State<ChatScreen> {
           group: group,
           currentUserId: _chatProvider.me,
           userLookup: userLookup,
-          // TODO: GroupDetailsScreen also wants a directory of ALL app
-          // users (for "Add Member"), not just this group's current
-          // members. UserProvider only tracks the logged-in user, and
-          // UserServices only exposes per-user lookups by id — there's no
-          // "list every user" endpoint visible from what I have. Until
-          // that's confirmed/added, "Add Member" has nothing to show.
-          availableUsers: const [],
-          onStartPrivateChat: _startPrivateChatFromDetails,
         ),
       ),
     );
   }
-
-  /// Passed into GroupDetailsScreen as onStartPrivateChat. By the time this
-  /// fires, GroupDetailsScreen has already popped itself (see its own
-  /// _showMemberDialog), so this lands back on whichever screen opened the
-  /// group and pushes a fresh 1-on-1 ChatScreen on top of it.
-  void _startPrivateChatFromDetails(UserModel user) {
-    final peer = context.read<PresenceProvider>().user(user.id);
-    if (peer == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${user.name} is not reachable right now.')),
-      );
-      return;
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => ChatScreen(peer: peer)),
-    );
-  }
-
-  // Inside _ChatScreenState:
 
   Future<void> _pickAndSendFile() async {
     try {
@@ -342,75 +293,69 @@ class _ChatScreenState extends State<ChatScreen> {
           },
           icon: const Icon(Icons.arrow_back, size: 18),
         ),
-        title: GestureDetector(
-          onTap: _openDetails,
-          behavior: HitTestBehavior.opaque,
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: avatarColorFor(currentId),
-                child: avatarUrl != null
-                    ? UserAvatar(
-                        image: avatarUrl,
-                        initials: initials,
-                        radius: 17,
-                        initialsColor: Colors.white,
-                      )
-                    : CircleAvatar(
-                        radius: 13,
-                        backgroundColor: avatarColorFor(currentId),
-                        child: Text(
-                          initials,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
+        title: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: avatarColorFor(currentId),
+              child: avatarUrl != null
+                  ? UserAvatar(
+                      image: avatarUrl,
+                      initials: initials,
+                      radius: 17,
+                      initialsColor: Colors.white,
+                    )
+                  : CircleAvatar(
+                      radius: 13,
+                      backgroundColor: avatarColorFor(currentId),
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      isPeerTyping
-                          ? 'typing…'
-                          : (widget.isGroup
-                                ? '${widget.group!.members.length} members'
-                                : (online ? 'Online' : 'Offline')),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isPeerTyping
-                            ? Theme.of(context).primaryColor
-                            : (online
-                                  ? const Color(0xFF34C759)
-                                  : Colors.grey.shade500),
-                        fontWeight: isPeerTyping
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isPeerTyping
+                        ? 'typing…'
+                        : (widget.isGroup
+                              ? '${widget.group!.members.length} members'
+                              : (online ? 'Online' : 'Offline')),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isPeerTyping
+                          ? Theme.of(context).primaryColor
+                          : (online
+                                ? const Color(0xFF34C759)
+                                : Colors.grey.shade500),
+                      fontWeight: isPeerTyping
+                          ? FontWeight.w600
+                          : FontWeight.normal,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        actions: [
-          // Shown for BOTH groups and 1-on-1s now — previously this only
-          // existed for groups, so peers had no way to reach their details
-          // at all. _openDetails() branches internally on widget.isGroup.
+       actions: [  widget.isGroup ?
+         // Only shown for group details...
           GestureDetector(
             onTap: _openDetails,
             child: Container(
@@ -422,9 +367,8 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               child: const Icon(Icons.info_outline, size: 27),
             ),
-          ),
-          const SizedBox(width: 8),
-        ],
+          ) : SizedBox.shrink(),
+        ] ,
       ),
       body: Container(
         decoration: const BoxDecoration(

@@ -10,16 +10,12 @@ class GroupDetailsScreen extends StatefulWidget {
   final String currentUserId;
   final Map<String, UserModel>
   userLookup; // Map of userId/username to UserModel
-  final List<UserModel> availableUsers; // All app users for adding members
-  final Function(UserModel user)? onStartPrivateChat;
 
   const GroupDetailsScreen({
     super.key,
     required this.group,
     required this.currentUserId,
     required this.userLookup,
-    required this.availableUsers,
-    this.onStartPrivateChat,
   });
 
   @override
