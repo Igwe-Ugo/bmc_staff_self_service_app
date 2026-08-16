@@ -19,6 +19,18 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
+  int _calculateAge(DateTime dob) {
+    final now = DateTime.now();
+    int age = now.year - dob.year;
+
+    // verify proper age when birthday not reached
+    if (now.month < dob.month ||
+        (now.month == dob.month && now.day < dob.day)) {
+      age--;
+    }
+    return age;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -70,117 +82,122 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
             );
           }
 
-          return Column(
-            children: [
-              // Search Input
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Container(
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFE5E5EA)),
-                  ),
-                  child: TextField(
-                    onChanged: teleMedProvider.updateSearchQuery,
-                    style: const TextStyle(fontSize: 13),
-                    decoration: const InputDecoration(
-                      hintText:
-                          'Filter by patient name, MRN, slot, or location...',
-                      hintStyle: TextStyle(fontSize: 12),
-                      prefixIcon: Icon(Icons.search, size: 18),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 10),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 70.0),
+            child: Column(
+              children: [
+                // Search Input
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE5E5EA)),
+                    ),
+                    child: TextField(
+                      onChanged: teleMedProvider.updateSearchQuery,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: const InputDecoration(
+                        hintText:
+                            'Filter by patient name, MRN, slot, or location...',
+                        hintStyle: TextStyle(fontSize: 12),
+                        prefixIcon: Icon(Icons.search, size: 18),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 10),
+                      ),
                     ),
                   ),
                 ),
-              ),
 
-              // Tab Bar (Today and Upcoming only)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12.0),
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    color: Theme.of(context).cardColor,
+                // Tab Bar (Today and Upcoming only)
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 12.0),
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).cardColor.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 1),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicator: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(8),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicatorPadding: const EdgeInsets.all(3),
+                    dividerColor: Colors.transparent,
+                    labelColor: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                    unselectedLabelColor: const Color(0xFF8E8E93),
+                    labelStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Lexend',
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      fontFamily: 'Lexend',
+                    ),
+                    tabs: [
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.calendar_today, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Today (${teleMedProvider.todayVisits.length})',
+                            ),
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.calendar_month, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Upcoming (${teleMedProvider.upcomingVisits.length})',
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  indicatorPadding: const EdgeInsets.all(3),
-                  dividerColor: Colors.transparent,
-                  labelColor: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white
-                      : Colors.black,
-                  unselectedLabelColor: const Color(0xFF8E8E93),
-                  labelStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Lexend',
-                  ),
-                  unselectedLabelStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                    fontFamily: 'Lexend',
-                  ),
-                  tabs: [
-                    Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.calendar_today, size: 14),
-                          const SizedBox(width: 6),
-                          Text('Today (${teleMedProvider.todayVisits.length})'),
-                        ],
-                      ),
-                    ),
-                    Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.calendar_month, size: 14),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Upcoming (${teleMedProvider.upcomingVisits.length})',
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
                 ),
-              ),
 
-              const SizedBox(height: 12),
+                const SizedBox(height: 12),
 
-              // List Views
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildVisitsList(
-                      teleMedProvider.todayVisits,
-                      Theme.of(context).cardColor,
-                    ),
-                    _buildVisitsList(
-                      teleMedProvider.upcomingVisits,
-                      Theme.of(context).cardColor,
-                    ),
-                  ],
+                // List Views
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildVisitsList(
+                        teleMedProvider.todayVisits,
+                        Theme.of(context).cardColor,
+                      ),
+                      _buildVisitsList(
+                        teleMedProvider.upcomingVisits,
+                        Theme.of(context).cardColor,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
@@ -212,12 +229,6 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
       itemCount: visits.length,
       itemBuilder: (context, index) {
         final visit = visits[index];
-        final startDate = visit.appmtStartDate != null
-            ? DateFormat('EEE MMM d, yyyy: HH:mm').format(visit.appmtStartDate!)
-            : '';
-        final endDate = visit.appmtEndDate != null
-            ? DateFormat('HH:mm').format(visit.appmtEndDate!)
-            : '';
         final bookedDateStr = visit.bookedDate != null
             ? DateFormat('dd-MMM-yyyy hh:mm a').format(visit.bookedDate!)
             : '';
@@ -270,7 +281,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${visit.gender ?? ''} | ..${visit.medrecnum ?? ''}',
+                          '${_calculateAge(visit.dob!)} yrs | ${visit.gender ?? ''} | ...${(visit.medrecnum).toString().substring(6)}',
                           style: const TextStyle(fontSize: 11),
                         ),
                       ],
@@ -301,7 +312,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
 
               // Appointment details
               Text(
-                '${visit.specialistClinicType ?? 'Telemed Clinic'} - ${visit.slotName ?? ''} | ${visit.location ?? ''} | $startDate - $endDate',
+                '${visit.slotName}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 12,

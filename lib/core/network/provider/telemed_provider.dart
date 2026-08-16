@@ -52,10 +52,11 @@ class TeleMedicineProvider extends ChangeNotifier {
 
   List<QryBookingVisits> get upcomingVisits {
     final now = DateTime.now();
+    final startOfTomorrow = DateTime(now.year, now.month, now.day + 1);
     return _applyFilter(
       _visits.where((v) {
         if (v.appmtStartDate == null) return false;
-        return v.appmtStartDate!.isAfter(now);
+        return v.appmtStartDate!.isAfter(startOfTomorrow);
       }).toList(),
     );
   }

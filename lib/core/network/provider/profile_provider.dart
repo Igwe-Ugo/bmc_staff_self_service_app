@@ -6,6 +6,7 @@ import 'package:bmc_app/core/network/provider/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../../features/profile/widget.dart';
 import '../models/widget.dart';
 import '../services/widget.dart';
 
@@ -202,45 +203,50 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
-  Future<bool> save() async {
-    final userId = userProvider.user?.id;
-    if (userId == null || userId.isEmpty) return false;
-    if (passwordError != null) return false;
+Future<bool> save() async {
+  final userId = userProvider.user?.id;
+  if (userId == null || userId.isEmpty) return false;
+  if (passwordError != null) return false;
 
-    final data = UserProfileUpdateData(
-      id: userId,
-      avatar: _base64Avatar,
-      removeAvatar: _avatarRemoved,
-      address: addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
-      city: cityCtrl.text.trim().isEmpty ? null : cityCtrl.text.trim(),
-      telno: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
-      state: state.isEmpty ? null : state,
-      country: country.isEmpty ? null : country,
-      password: passCtrl.text.trim().isEmpty ? null : passCtrl.text.trim(),
-    );
+  final formattedPhone = phoneCtrl.text.trim().isEmpty
+      ? null
+      : preparePhoneForBackend(
+          rawInputNumber: phoneCtrl.text.trim(),
+          countryIso2: selectedCountryIso2,
+        );
 
-    final success = await userProvider.updateProfile(data);
-    if (success) {
-      // 1. Re-populate form state directly from the newly updated userProvider model
-      _populateFromUser();
+  final data = UserProfileUpdateData(
+    id: userId,
+    avatar: _base64Avatar,
+    removeAvatar: _avatarRemoved,
+    address: addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
+    city: cityCtrl.text.trim().isEmpty ? null : cityCtrl.text.trim(),
+    telno: formattedPhone, // 👈 Send formatted E.164 number to backend
+    state: state.isEmpty ? null : state,
+    country: country.isEmpty ? null : country,
+    password: passCtrl.text.trim().isEmpty ? null : passCtrl.text.trim(),
+  );
 
-      // 2. Clear volatile fields & reset state
-      hasChanges = false;
-      imageFile = null;
-      _base64Avatar = null;
-      _avatarRemoved = false;
+  final success = await userProvider.updateProfile(data);
+  if (success) {
+    _populateFromUser();
 
-      _removeListeners();
-      passCtrl.clear();
-      confirmCtrl.clear();
-      _attachListeners();
+    hasChanges = false;
+    imageFile = null;
+    _base64Avatar = null;
+    _avatarRemoved = false;
 
-      if (country.isNotEmpty) _applyStatesForCountry(country);
+    _removeListeners();
+    passCtrl.clear();
+    confirmCtrl.clear();
+    _attachListeners();
 
-      notifyListeners();
-    }
-    return success;
+    if (country.isNotEmpty) _applyStatesForCountry(country);
+
+    notifyListeners();
   }
+  return success;
+}
 
   void cancel() {
     _populateFromUser();

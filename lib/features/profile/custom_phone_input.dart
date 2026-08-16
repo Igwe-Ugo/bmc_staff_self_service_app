@@ -21,7 +21,7 @@ class CustomPhoneInput extends StatefulWidget {
 
 class _CustomPhoneInputState extends State<CustomPhoneInput> {
   String? _warningMessage;
- 
+
   @override
   void initState() {
     super.initState();
@@ -30,6 +30,20 @@ class _CustomPhoneInputState extends State<CustomPhoneInput> {
 
     // 2. Add listener to detect manually typed dial codes
     widget.controller.addListener(_onTextChanged);
+  }
+
+  @override
+  void didUpdateWidget(covariant CustomPhoneInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // re-strip dial code if country changed or comtroller instance changed
+    if (oldWidget.countryIso2 != widget.countryIso2 ||
+        oldWidget.controller != widget.controller) {
+      if (oldWidget.controller != widget.controller) {
+        oldWidget.controller.removeListener(_onTextChanged);
+        widget.controller.addListener(_onTextChanged);
+      }
+      _stripInitialDialCode();
+    }
   }
 
   @override
