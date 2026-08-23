@@ -1,3 +1,6 @@
+// lib/features/providers/tele_medicine_provider.dart
+
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/widget.dart';
 import '../services/widget.dart';
@@ -10,12 +13,30 @@ class TeleMedicineProvider extends ChangeNotifier {
   String? _errorMessage;
   String _searchQuery = '';
 
+  StreamSubscription? _socketSubscription;
+
   TeleMedicineProvider({required TeleMedicineService service})
-    : _service = service;
+      : _service = service;
 
   List<QryBookingVisits> get visits => _visits;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+
+  @override
+  void dispose() {
+    _socketSubscription?.cancel();
+    super.dispose();
+  }
+
+  /// Listens to WebSocket events and refetches visits when real-time updates occur
+  void listenToSocketEvents(Stream<dynamic> socketStream) {
+    _socketSubscription?.cancel();
+    _socketSubscription = socketStream.listen((event) {
+      if (event is Map<String, dynamic> && event['type'] == 'VISIT_UPDATE') {
+        loadVisits(); // Refetch visits to ensure all model properties are synced
+      }
+    });
+  }
 
   Future<void> loadVisits() async {
     _isLoading = true;
@@ -29,6 +50,33 @@ class TeleMedicineProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  /// Toggle consultant ready status and reload visits from API
+  Future<bool> toggleConsultantReady(String visitId, bool consultantReady) async {
+    try {
+      await _service.setConsultantReady(
+        visitId: visitId,
+        consultantReady: !consultantReady,
+      );
+      await loadVisits(); // Reload list directly without needing copyWith
+      return true;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Get link and join call
+  Future<String?> joinTelemedicineRoom(String visitId, String userId) async {
+    try {
+      return await _service.getTelemedicineLink(visitId: visitId, userId: userId);
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return null;
     }
   }
 
@@ -56,7 +104,8 @@ class TeleMedicineProvider extends ChangeNotifier {
     return _applyFilter(
       _visits.where((v) {
         if (v.appmtStartDate == null) return false;
-        return v.appmtStartDate!.isAfter(startOfTomorrow);
+        return v.appmtStartDate!.isAtSameMomentAs(startOfTomorrow) ||
+            v.appmtStartDate!.isAfter(startOfTomorrow);
       }).toList(),
     );
   }

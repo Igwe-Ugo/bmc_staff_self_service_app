@@ -203,15 +203,15 @@ class _BMCHomeState extends State<BMCHome> {
                   "${_getGreeting()}, ",
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 Text(
                   userProvider.displayName,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 15,
+                    fontSize: 13,
                     fontWeight: FontWeight.w300,
                   ),
                 ),

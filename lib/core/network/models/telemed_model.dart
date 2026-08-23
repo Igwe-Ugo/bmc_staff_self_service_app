@@ -237,11 +237,11 @@ class QryBookingVisits {
           : null,
       billableId: json['billableId'],
       fstBillableId: json['fstBillableId'],
-      firstOrFollowUp: json['firstOrFollowUp'],
+      firstOrFollowUp: _parseInt(json['firstOrFollowUp']),
       patType: json['patType'],
       location: json['location'],
       slotName: json['slotName'],
-      checkedIn: json['checkedIn'],
+      checkedIn: _parseInt(json['checkedIn']),
       acl: json['acl'],
       type: json['type'],
       owedGlobal: _parseDouble(json['owedGlobal']),
@@ -255,11 +255,11 @@ class QryBookingVisits {
       gender: json['gender'],
       picture: json['picture'],
       dob: json['dob'] != null ? DateTime.tryParse(json['dob']) : null,
-      protectPatient: json['protectPatient'],
-      isLegacy: json['isLegacy'],
+      protectPatient: _parseInt(json['protectPatient']),
+      isLegacy: _parseInt(json['isLegacy']),
       requestId: json['requestId'],
       requestStatus: json['requestStatus'],
-      fundingRequested: json['fundingRequested'],
+      fundingRequested: _parseInt(json['fundingRequested']),
       variability: (json['variability'] as num?)?.toDouble(),
       recipients: json['recipients'],
       sentAt: json['sentAt'] != null ? DateTime.tryParse(json['sentAt']) : null,
@@ -274,25 +274,25 @@ class QryBookingVisits {
       sectionId: json['sectionId'],
       facilityId: json['facilityId'],
       facilityName: json['facilityName'],
-      callStarted: json['callStarted'],
+      callStarted: _parseInt(json['callStarted']),
       callStartTime: json['callStartTime'] != null
           ? DateTime.tryParse(json['callStartTime'])
           : null,
-      callEnded: json['callEnded'],
+      callEnded: _parseInt(json['callEnded']),
       callEndTime: json['callEndTime'] != null
           ? DateTime.tryParse(json['callEndTime'])
           : null,
-      hasRecordings: json['hasRecordings'],
+      hasRecordings: _parseInt(json['hasRecordings']),
       recordings: json['recordings'] != null
           ? (json['recordings'] as List)
                 .map((e) => TelemedRecording.fromJson(e))
                 .toList()
           : null,
-      roomReady: json['roomReady'],
-      patientReady: json['patientReady'],
+      roomReady: _parseInt(json['roomReady']),
+      patientReady: _parseInt(json['patientReady']),
       telemedProviderId: json['telemedProviderId'],
       consultationId: json['consultationId'],
-      consultantReady: json['consultantReady'],
+      consultantReady: _parseInt(json['consultantReady']),
       patientCalledIn: json['patientCalledIn'],
       patientCalledInTime: json['patientCalledInTime'] != null
           ? DateTime.tryParse(json['patientCalledInTime'])
@@ -304,8 +304,8 @@ class QryBookingVisits {
       completedAt: json['completedAt'] != null
           ? DateTime.tryParse(json['completedAt'])
           : null,
-      triageCompleted: json['triageCompleted'],
-      triageBypassed: json['triageBypassed'],
+      triageCompleted: _parseInt(json['triageCompleted']),
+      triageBypassed: _parseInt(json['triageBypassed']),
       triageBypassReason: json['triageBypassReason'],
       triageBypassBy: json['triageBypassBy'],
       telemedProviderName: json['telemedProviderName'],

@@ -101,6 +101,8 @@ class ApiEndpoints {
   static const String teleMedUrl = '/patients/booking-visits/telemedicine';
   static const String teleMedProviders = '$teleMedUrl/providers';
   static const String teleMedGuests = '$teleMedUrl/guests';
+  static const String consultantReady = '/patients/visits/consultant-ready';
+  static const String telemedicineGetLink = '$teleMedUrl/get-link';
 
   static String fill(String path, Map<String, String> params) {
     var result = path;

@@ -1,44 +1,120 @@
+// lib/features/services/tele_medicine_service.dart
+
 import 'package:dio/dio.dart';
+import '../../../core/errors/api_exceptions.dart';
 import '../api_client/widget.dart';
 import '../models/widget.dart';
-
-// tele_medicine_service.dart
 
 class TeleMedicineService {
   final Dio _dio = ApiClient.instance.dio;
 
-  TeleMedicineService();
-
   Future<List<QryBookingVisits>> fetchBookingVisits() async {
     try {
       final response = await _dio.get(ApiEndpoints.teleMedProviders);
+      final rawData = response.data;
+      List<dynamic> listData = [];
 
-      if (response.statusCode == 200) {
-        final rawData = response.data;
+      if (rawData is Map<String, dynamic>) {
+        listData = (rawData['data'] is List)
+            ? rawData['data'] as List<dynamic>
+            : [];
+      } else if (rawData is List<dynamic>) {
+        listData = rawData;
+      }
 
-        List<dynamic> listData = [];
+      return listData
+          .map(
+            (json) => QryBookingVisits.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException(
+        message:
+            _extractMessage(e.response?.data) ??
+            'Failed to load booking visits.',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
 
-        if (rawData is Map<String, dynamic>) {
-          // Extract array from 'data' key or fallback to empty list
-          listData = (rawData['data'] is List)
-              ? rawData['data'] as List<dynamic>
-              : [];
-        } else if (rawData is List<dynamic>) {
-          listData = rawData;
-        }
+  // PATCH /api/patients/visits/consultant-ready
+  Future<void> setConsultantReady({
+    required String visitId,
+    required bool consultantReady,
+  }) async {
+    try {
+      await _dio.patch(
+        ApiEndpoints.consultantReady,
+        data: {'visitId': visitId, 'consultantReady': consultantReady},
+      );
+    } on DioException catch (e) {
+      print(e.response?.data);
+      throw ApiException(
+        message:
+            _extractMessage(e.response?.data) ??
+            'Failed to set consultant status.',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
 
-        return listData
-            .map(
-              (json) => QryBookingVisits.fromJson(json as Map<String, dynamic>),
-            )
-            .toList();
-      } else {
-        throw Exception(
-          'Failed to load booking visits: ${response.statusCode}',
+  // POST /api/patients/booking-visits/telemedicine/get-link (Consultant)
+  Future<String> getTelemedicineLink({
+    required String visitId,
+    required String userId,
+  }) async {
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.telemedicineGetLink,
+        data: {
+          'data': {'visitId': visitId, 'userId': userId},
+        },
+      );
+
+      final joinLink = response.data?['data']?['joinLink']?.toString();
+      if (joinLink == null || joinLink.isEmpty) {
+        throw const ApiException(
+          message: 'Server did not return a valid join link.',
         );
       }
-    } catch (e) {
-      throw Exception('Error fetching booking visits: $e');
+      return joinLink;
+    } on DioException catch (e) {
+      throw ApiException(
+        message:
+            _extractMessage(e.response?.data) ?? 'Failed to fetch join link.',
+        statusCode: e.response?.statusCode,
+      );
     }
+  }
+
+  // POST /api/patients/booking-visits/telemedicine/get-link (Guest/Patient)
+  Future<String> getTelemedicineLinkForGuest({required String visitId}) async {
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.telemedicineGetLink,
+        data: {
+          'data': {'visitId': visitId},
+        },
+      );
+
+      final joinLink = response.data?['data']?['joinLink']?.toString();
+      if (joinLink == null || joinLink.isEmpty) {
+        throw const ApiException(message: 'Server did not return a join link.');
+      }
+      return joinLink;
+    } on DioException catch (e) {
+      throw ApiException(
+        message:
+            _extractMessage(e.response?.data) ?? 'Failed to fetch guest link.',
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
+  String? _extractMessage(dynamic data) {
+    if (data is Map) {
+      return data['message']?.toString() ?? data['error']?.toString();
+    }
+    return null;
   }
 }
