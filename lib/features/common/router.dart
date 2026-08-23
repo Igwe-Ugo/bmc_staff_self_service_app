@@ -10,7 +10,7 @@ import '../leave/widget.dart';
 import '../on_boarding/widget.dart';
 import '../profile/widget.dart';
 import '../rota/widget.dart';
-import '../telemedicine/booked_visit.dart';
+import '../telemedicine/widget.dart';
 import 'widget.dart';
 
 class BMCRouter {
@@ -68,6 +68,7 @@ class BMCRouter {
 
   //telemedicine
   static const String telemedPath = '/telemedicine';
+  static const String guestTelemedPath = 'guest_telemed';
 
   BMCRouter._internal() {
     final routes = <RouteBase>[
@@ -186,6 +187,12 @@ class BMCRouter {
               GoRoute(
                 path: telemedPath,
                 builder: (context, state) => BookingVisitsScreen(),
+                routes: [
+                  GoRoute(
+                    path: guestTelemedPath,
+                    builder: (context, state) => TelemedGuestScreen()
+                  )
+                ]
               ),
             ],
           ),

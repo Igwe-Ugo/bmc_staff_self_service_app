@@ -1,7 +1,6 @@
 // lib/features/screens/booking_visits_screen.dart
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
@@ -11,18 +10,17 @@ import '../chatting/widget.dart';
 import '../common/widget.dart';
 import 'widget.dart';
 
-class BookingVisitsScreen extends StatefulWidget {
-  const BookingVisitsScreen({super.key});
+class TelemedGuestScreen extends StatefulWidget {
+  const TelemedGuestScreen({super.key});
 
   @override
-  State<BookingVisitsScreen> createState() => _BookingVisitsScreenState();
+  State<TelemedGuestScreen> createState() => _TelemedGuestScreenState();
 }
 
-class _BookingVisitsScreenState extends State<BookingVisitsScreen>
+class _TelemedGuestScreenState extends State<TelemedGuestScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final Set<String> _joiningVisitIds = {};
-  final Set<String> _togglingReadyIds = {};
 
   int _calculateAge(DateTime dob) {
     final now = DateTime.now();
@@ -58,44 +56,34 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
-        title: const Text(
-          'TeleMedicine Guest',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            fontFamily: 'Lexend',
-          ),
-        ),
-        actions: [
-          // guest Switch
-          GestureDetector(
-            onTap: () => GoRouter.of(
-              context,
-            ).go('${BMCRouter.telemedPath}/${BMCRouter.guestTelemedPath}'),
-            child: Container(
-              margin: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-                color: Colors.green,
-              ),
-              padding: EdgeInsets.all(10),
-              child: Row(
-                children: [
-                  Icon(Iconsax.user_tag, size: 18, color: Colors.white),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Guest Mode',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
+        title: Row(
+          children: [
+            const Text(
+              'TeleMedicine',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Lexend',
               ),
             ),
-          ),
-        ],
+            Container(
+              margin: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(10)),
+                border: Border.all(color: Colors.green),
+              ),
+              padding: EdgeInsets.all(10),
+              child: Text(
+                'Guest',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       body: Consumer<TeleMedicineProvider>(
         builder: (context, teleMedProvider, child) {
@@ -274,10 +262,8 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
         final mrnStr = visit.medrecnum?.toString() ?? '';
         final mrnTail = mrnStr.length > 6 ? mrnStr.substring(6) : mrnStr;
 
-        final isCheckedIn = visit.checkedIn == 1;
         final canJoin =
             (visit.triageCompleted == 1 || visit.triageBypassed == 1) & isReady;
-        final isToggling = _togglingReadyIds.contains(visit.id);
         final isJoining = _joiningVisitIds.contains(visit.id);
 
         return Container(
@@ -375,41 +361,6 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      // Mark as Ready — gated purely on patient check-in
-                      _actionIconButton(
-                        isToggling,
-                        isReady
-                            ? Icons.check_circle
-                            : Icons.check_circle_outline,
-                        color: isCheckedIn
-                            ? (isReady
-                                  ? const Color.fromRGBO(76, 175, 80, 1)
-                                  : const Color(0xFF2196F3))
-                            : Colors.grey,
-                        onTap: (isCheckedIn && !isToggling && visit.id != null)
-                            ? () => _showConfirmReadyDialog(() async {
-                                setState(
-                                  () => _togglingReadyIds.add(visit.id!),
-                                );
-                                try {
-                                  await context
-                                      .read<TeleMedicineProvider>()
-                                      .toggleConsultantReady(
-                                        visit.id!,
-                                        isReady,
-                                      );
-                                } finally {
-                                  if (mounted) {
-                                    setState(
-                                      () => _togglingReadyIds.remove(visit.id!),
-                                    );
-                                  }
-                                }
-                              })
-                            : null,
-                      ),
-                      const SizedBox(width: 6),
-
                       // Join Call — gated purely on triage completion/bypass
                       _actionIconButton(
                         isJoining,
@@ -427,86 +378,6 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  void _showConfirmReadyDialog(VoidCallback? onConfirm) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).cardColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Are you sure you're ready to start the telemedicine session?",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Lexend',
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Confirm your intention!",
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  fontFamily: 'Lexend',
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            GestureDetector(
-              onTap: () => Navigator.pop(ctx),
-              child: Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  border: BoxBorder.all(color: Colors.grey),
-                ),
-                child: const Text(
-                  'Cancel',
-                  style: TextStyle(
-                    fontFamily: 'Lexend',
-                    fontWeight: FontWeight.w200,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ),
-            //if (!slot.isLocked && canSchedule)
-            GestureDetector(
-              onTap: () {
-                Navigator.pop(ctx);
-                onConfirm?.call();
-              },
-              child: Container(
-                padding: EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Color.fromARGB(255, 107, 20, 11),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'Mark as Ready',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w200,
-                    fontFamily: 'Lexend',
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-            ),
-          ],
         );
       },
     );
@@ -569,7 +440,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
           : Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(4),
                 border: Border.all(color: color.withOpacity(0.5)),
               ),
               child: Icon(icon, color: color, size: 16),

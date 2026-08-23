@@ -4,6 +4,7 @@ import '../../core/network/models/widget.dart';
 
 class TeleMedIndicator extends StatelessWidget {
   final QryBookingVisits visits;
+  final double spacing = 5;
   const TeleMedIndicator({super.key, required this.visits});
 
   @override
@@ -18,7 +19,7 @@ class TeleMedIndicator extends StatelessWidget {
                     : Colors.green
               : Colors.redAccent,
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: spacing),
         _buildIndicatorIcon(
           icon: Icons.pending_outlined,
           activeColor: visits.checkedIn == 1
@@ -27,12 +28,12 @@ class TeleMedIndicator extends StatelessWidget {
                     : Colors.orange
               : Colors.grey,
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: spacing),
         _buildIndicatorIcon(
           icon: Icons.house_outlined,
           activeColor: Colors.green,
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: spacing),
         _buildIndicatorIcon(
           icon: Icons.video_call_outlined,
           activeColor: visits.callStarted == 1
