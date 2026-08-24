@@ -252,7 +252,7 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
       itemCount: visits.length,
       itemBuilder: (context, index) {
         final visit = visits[index];
-        final isReady = (visit.consultantReady ?? 0) == 1;
+        final isReady = (visit.consultantReady ?? false) == true;
 
         final slot = visit.slotName?.trim() ?? '';
         final location = visit.location?.trim() ?? '';

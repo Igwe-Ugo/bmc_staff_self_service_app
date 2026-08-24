@@ -264,7 +264,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
       itemCount: visits.length,
       itemBuilder: (context, index) {
         final visit = visits[index];
-        final isReady = (visit.consultantReady ?? 0) == 1;
+        final isReady = (visit.consultantReady ?? false) == true;
 
         final slot = visit.slotName?.trim() ?? '';
         final location = visit.location?.trim() ?? '';
@@ -392,12 +392,20 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                                   () => _togglingReadyIds.add(visit.id!),
                                 );
                                 try {
-                                  await context
-                                      .read<TeleMedicineProvider>()
-                                      .toggleConsultantReady(
-                                        visit.id!,
-                                        isReady,
-                                      );
+                                  final provider = context
+                                      .read<TeleMedicineProvider>();
+                                  final success = await provider
+                                      .toggleConsultantReady(visit);
+
+                                  if (!mounted) return;
+                                  if (!success &&
+                                      provider.errorMessage != null) {
+                                    showMessage(
+                                      provider.errorMessage!,
+                                      context,
+                                      status: MessageStatus.error,
+                                    );
+                                  }
                                 } finally {
                                   if (mounted) {
                                     setState(
@@ -561,19 +569,27 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(4),
-      child: isJoining
-          ? LoadingAnimationWidget.staggeredDotsWave(
-              color: Colors.white,
-              size: 16,
-            )
-          : Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: color.withOpacity(0.5)),
-              ),
-              child: Icon(icon, color: color, size: 16),
-            ),
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isJoining
+                ? Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white
+                      : Theme.of(context).primaryColor
+                : color.withOpacity(0.5),
+          ),
+        ),
+        child: isJoining
+            ? LoadingAnimationWidget.staggeredDotsWave(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white
+                    : Theme.of(context).primaryColor,
+                size: 16,
+              )
+            : Icon(icon, color: color, size: 16),
+      ),
     );
   }
 }

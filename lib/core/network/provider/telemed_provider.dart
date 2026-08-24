@@ -16,7 +16,7 @@ class TeleMedicineProvider extends ChangeNotifier {
   StreamSubscription? _socketSubscription;
 
   TeleMedicineProvider({required TeleMedicineService service})
-      : _service = service;
+    : _service = service;
 
   List<QryBookingVisits> get visits => _visits;
   bool get isLoading => _isLoading;
@@ -54,12 +54,13 @@ class TeleMedicineProvider extends ChangeNotifier {
   }
 
   /// Toggle consultant ready status and reload visits from API
-  Future<bool> toggleConsultantReady(String visitId, bool consultantReady) async {
+  Future<bool> toggleConsultantReady(QryBookingVisits data) async {
+    final markReady = QryBookingVisits(
+      visitId: data.visitId,
+      consultantReady: data.consultantReady == 1 ? true : false,
+    );
     try {
-      await _service.setConsultantReady(
-        visitId: visitId,
-        consultantReady: !consultantReady,
-      );
+      await _service.setConsultantReady(data: markReady);
       await loadVisits(); // Reload list directly without needing copyWith
       return true;
     } catch (e) {
@@ -72,7 +73,10 @@ class TeleMedicineProvider extends ChangeNotifier {
   /// Get link and join call
   Future<String?> joinTelemedicineRoom(String visitId, String userId) async {
     try {
-      return await _service.getTelemedicineLink(visitId: visitId, userId: userId);
+      return await _service.getTelemedicineLink(
+        visitId: visitId,
+        userId: userId,
+      );
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();

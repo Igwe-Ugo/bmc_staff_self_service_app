@@ -39,13 +39,17 @@ class TeleMedicineService {
 
   // PATCH /api/patients/visits/consultant-ready
   Future<void> setConsultantReady({
-    required String visitId,
-    required bool consultantReady,
+    required QryBookingVisits data,
   }) async {
+    final body = data.toJson();
+    if (body.length <= 1) {
+      throw ApiException(message: 'No changes to save.', statusCode: null);
+    }
+
     try {
       await _dio.patch(
         ApiEndpoints.consultantReady,
-        data: {'visitId': visitId, 'consultantReady': consultantReady},
+        data: {'data': body},
       );
     } on DioException catch (e) {
       print(e.response?.data);

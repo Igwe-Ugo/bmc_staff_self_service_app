@@ -201,7 +201,7 @@ class _NavTile extends StatelessWidget {
           color: isActive ? _activeColor : Colors.transparent,
           borderRadius: BorderRadius.circular(50),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             SvgPicture.asset(

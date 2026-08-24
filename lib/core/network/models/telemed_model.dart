@@ -101,7 +101,7 @@ class QryBookingVisits {
   final int? patientReady;
   final String? telemedProviderId;
   final String? consultationId;
-  final int? consultantReady;
+  final bool? consultantReady;
   final int? patientCalledIn;
   final DateTime? patientCalledInTime;
   final String? telemedServiceUserId;
@@ -210,6 +210,14 @@ class QryBookingVisits {
   });
 
   factory QryBookingVisits.fromJson(Map<String, dynamic> json) {
+    bool? _parseBool(dynamic value) {
+      if (value == null) return null;
+      if (value is bool) return value;
+      if (value is num) return value == 1;
+      if (value is String) return value == '1' || value.toLowerCase() == 'true';
+      return null;
+    }
+
     double? _parseDouble(dynamic value) {
       if (value == null) return null;
       if (value is num) return value.toDouble();
@@ -292,7 +300,7 @@ class QryBookingVisits {
       patientReady: _parseInt(json['patientReady']),
       telemedProviderId: json['telemedProviderId'],
       consultationId: json['consultationId'],
-      consultantReady: _parseInt(json['consultantReady']),
+      consultantReady: _parseBool(json['consultantReady']),
       patientCalledIn: json['patientCalledIn'],
       patientCalledInTime: json['patientCalledInTime'] != null
           ? DateTime.tryParse(json['patientCalledInTime'])
@@ -326,4 +334,85 @@ class QryBookingVisits {
           : null,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'medrecnum': medrecnum,
+    'appmtDay': appmtDay,
+    'appmtStartDate': appmtStartDate?.toIso8601String(),
+    'appmtEndDate': appmtEndDate?.toIso8601String(),
+    'billableId': billableId,
+    'fstBillableId': fstBillableId,
+    'firstOrFollowUp': firstOrFollowUp,
+    'patType': patType,
+    'location': location,
+    'bookingPaid': bookingPaid,
+    'slotName': slotName,
+    'checkedIn': checkedIn,
+    'acl': acl,
+    'type': type,
+    'owedGlobal': owedGlobal,
+    'owedBooking': owedBooking,
+    'owedIOU': owedIOU,
+    'walletId': walletId,
+    'fullname': fullname,
+    'gender': gender,
+    'picture': picture,
+    'dob': dob?.toIso8601String(),
+    'protectPatient': protectPatient,
+    'isLegacy': isLegacy,
+    'requestId': requestId,
+    'requestStatus': requestStatus,
+    'fundingRequested': fundingRequested,
+    'variability': variability,
+    'recipients': recipients,
+    'sentAt': sentAt?.toIso8601String(),
+    'reqAmount': reqAmount,
+    'reqByName': reqByName,
+    'bookedDate': bookedDate?.toIso8601String(),
+    'bookedByName': bookedByName,
+    'isTelemed': isTelemed,
+    'telemedType': telemedType,
+    'status': status,
+    'deptId': deptId,
+    'sectionId': sectionId,
+    'facilityId': facilityId,
+    'facilityName': facilityName,
+    'callStarted': callStarted,
+    'callStartTime': callStartTime?.toIso8601String(),
+    'callEnded': callEnded,
+    'callEndTime': callEndTime?.toIso8601String(),
+    'hasRecordings': hasRecordings,
+    'recordings': recordings?.map((r) => r.toJson()).toList(),
+    'roomReady': roomReady,
+    'patientReady': patientReady,
+    'telemedProviderId': telemedProviderId,
+    'consultationId': consultationId,
+    'consultantReady': consultantReady,
+    'patientCalledIn': patientCalledIn,
+    'patientCalledInTime': patientCalledInTime?.toIso8601String(),
+    'telemedServiceUserId': telemedServiceUserId,
+    'telemedServiceOwnerId': telemedServiceOwnerId,
+    'visitId': visitId,
+    'consultationCompleted': consultationCompleted,
+    'completedAt': completedAt?.toIso8601String(),
+    'triageCompleted': triageCompleted,
+    'triageBypassed': triageBypassed,
+    'triageBypassReason': triageBypassReason,
+    'triageBypassBy': triageBypassBy,
+    'telemedProviderName': telemedProviderName,
+    'specialistClinicType': specialistClinicType,
+    'arrivalBy': arrivalBy,
+    'vitalsBy': vitalsBy,
+    'triageBy': triageBy,
+    'treatmentBy': treatmentBy,
+    'outcomeBy': outcomeBy,
+    'finalOutcome': finalOutcome,
+    'arrivalByName': arrivalByName,
+    'vitalsByName': vitalsByName,
+    'triageByName': triageByName,
+    'treatmentByName': treatmentByName,
+    'outcomeByName': outcomeByName,
+    'completeness': completeness?.toJson(),
+  };
 }
