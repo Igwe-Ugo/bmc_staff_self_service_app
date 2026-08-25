@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import '../../../core/errors/api_exceptions.dart';
 import '../api_client/widget.dart';
 import '../models/widget.dart';
+import 'package:flutter/material.dart';
 
 class TeleMedicineService {
   final Dio _dio = ApiClient.instance.dio;
@@ -38,21 +39,31 @@ class TeleMedicineService {
   }
 
   // PATCH /api/patients/visits/consultant-ready
-  Future<void> setConsultantReady({
-    required QryBookingVisits data,
-  }) async {
+  Future<void> setConsultantReady({required QryBookingVisits data}) async {
     final body = data.toJson();
     if (body.length <= 1) {
       throw ApiException(message: 'No changes to save.', statusCode: null);
     }
 
+    debugPrint('[setConsultantReady] → PATCH ${ApiEndpoints.consultantReady}');
+    debugPrint(
+      '[setConsultantReady] → visitId: ${body['visitId']}, consultantReady: ${body['consultantReady']}',
+    );
+
     try {
-      await _dio.patch(
+      final response = await _dio.patch(
         ApiEndpoints.consultantReady,
-        data: {'data': body},
+        data: body,
       );
+
+      debugPrint('[setConsultantReady] ✓ status: ${response.statusCode}');
+      debugPrint('[setConsultantReady] ✓ response: ${response.data}');
+      debugPrint('📡 PATCH : ${response.statusCode}');
     } on DioException catch (e) {
-      print(e.response?.data);
+      debugPrint('[setConsultantReady] ✗ status: ${e.response?.statusCode}');
+      debugPrint('[setConsultantReady] ✗ response: ${e.response?.data}');
+      debugPrint('[setConsultantReady] ✗ uri: ${e.requestOptions.uri}');
+
       throw ApiException(
         message:
             _extractMessage(e.response?.data) ??
@@ -64,15 +75,13 @@ class TeleMedicineService {
 
   // POST /api/patients/booking-visits/telemedicine/get-link (Consultant)
   Future<String> getTelemedicineLink({
-    required String visitId,
-    required String userId,
+    required QryBookingVisits joinCall,
   }) async {
+    final _joinCall = joinCall.toJson();
     try {
       final response = await _dio.post(
         ApiEndpoints.telemedicineGetLink,
-        data: {
-          'data': {'visitId': visitId, 'userId': userId},
-        },
+        data: _joinCall,
       );
 
       final joinLink = response.data?['data']?['joinLink']?.toString();

@@ -23,7 +23,7 @@ class TeleMedIndicator extends StatelessWidget {
         _buildIndicatorIcon(
           icon: Icons.pending_outlined,
           activeColor: visits.checkedIn == 1
-              ? visits.patientReady == 1
+              ? visits.patientCalledIn == 1
                     ? Colors.green
                     : Colors.orange
               : Colors.grey,

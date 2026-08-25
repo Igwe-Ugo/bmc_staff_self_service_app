@@ -55,13 +55,14 @@ class TeleMedicineProvider extends ChangeNotifier {
 
   /// Toggle consultant ready status and reload visits from API
   Future<bool> toggleConsultantReady(QryBookingVisits data) async {
+    final currentlyReady = data.consultantReady == 1;
     final markReady = QryBookingVisits(
       visitId: data.visitId,
-      consultantReady: data.consultantReady == 1 ? true : false,
+      consultantReady: !currentlyReady,
     );
     try {
       await _service.setConsultantReady(data: markReady);
-      await loadVisits(); // Reload list directly without needing copyWith
+      await loadVisits();
       return true;
     } catch (e) {
       _errorMessage = e.toString();
@@ -72,11 +73,12 @@ class TeleMedicineProvider extends ChangeNotifier {
 
   /// Get link and join call
   Future<String?> joinTelemedicineRoom(String visitId, String userId) async {
+    final joinCall = QryBookingVisits(
+      id: userId,
+      visitId: visitId,
+    );
     try {
-      return await _service.getTelemedicineLink(
-        visitId: visitId,
-        userId: userId,
-      );
+      return await _service.getTelemedicineLink(joinCall: joinCall);
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();
