@@ -75,13 +75,14 @@ class TeleMedicineService {
 
   // POST /api/patients/booking-visits/telemedicine/get-link (Consultant)
   Future<String> getTelemedicineLink({
-    required QryBookingVisits joinCall,
+    required String visitId,
+    required String userId,
   }) async {
-    final _joinCall = joinCall.toJson();
+    final body = {'visitId': visitId, 'userId': userId};
     try {
       final response = await _dio.post(
         ApiEndpoints.telemedicineGetLink,
-        data: _joinCall,
+        data: {'data': body},
       );
 
       final joinLink = response.data?['data']?['joinLink']?.toString();

@@ -73,12 +73,8 @@ class TeleMedicineProvider extends ChangeNotifier {
 
   /// Get link and join call
   Future<String?> joinTelemedicineRoom(String visitId, String userId) async {
-    final joinCall = QryBookingVisits(
-      id: userId,
-      visitId: visitId,
-    );
     try {
-      return await _service.getTelemedicineLink(joinCall: joinCall);
+      return await _service.getTelemedicineLink(visitId: visitId, userId: userId);
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();
