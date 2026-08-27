@@ -10,7 +10,11 @@ class TelemedicineRoomScreen extends StatefulWidget {
   final String joinLink;
   final QryBookingVisits visits;
 
-  const TelemedicineRoomScreen({super.key, required this.joinLink, required this.visits});
+  const TelemedicineRoomScreen({
+    super.key,
+    required this.joinLink,
+    required this.visits,
+  });
 
   @override
   State<TelemedicineRoomScreen> createState() => _TelemedicineRoomScreenState();
@@ -66,11 +70,22 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final _patientDetails = widget.visits.slotName;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Consultation Room'),
-        backgroundColor: Colors.black,
-        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          onPressed: () => Navigator.pop(context),
+          icon: const Icon(Icons.arrow_back, size: 18),
+        ),
+        title: const Text(
+          'Update Profile',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Lexend',
+          ),
+        ),
       ),
       backgroundColor: Colors.black,
       body: _controller == null

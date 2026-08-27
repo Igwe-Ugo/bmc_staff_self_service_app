@@ -388,7 +388,7 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
 
     if (visit.id == null || authUser?.id == null) return;
 
-    final visitId = visit.id!;
+    final visitId = visit.visitId!;
     if (_joiningVisitIds.contains(visitId)) {
       return; // already in flight — ignore re-tap
     }
