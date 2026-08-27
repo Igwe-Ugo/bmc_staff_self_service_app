@@ -416,3 +416,12 @@ class QryBookingVisits {
     'completeness': completeness?.toJson(),
   };
 }
+
+class JoinTeleMedLink {
+  final String visitId;
+  final String userId;
+
+  JoinTeleMedLink({required this.visitId, required this.userId});
+
+  Map<String, String> toJson() => {'visitId': visitId, 'userId': userId};
+}

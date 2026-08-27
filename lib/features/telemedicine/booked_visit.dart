@@ -525,19 +525,20 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
 
     if (visit.id == null || authUser?.id == null) return;
 
-    final visitId = visit.id!;
+    final visitId = visit.visitId!;
     if (_joiningVisitIds.contains(visitId)) {
       return; // already in flight — ignore re-tap
     }
 
     setState(() => _joiningVisitIds.add(visitId));
+    final JoinTeleMedLink _joinTeleMedLink = JoinTeleMedLink(
+      userId: authUser!.id,
+      visitId: visitId,
+    );
 
     try {
       final provider = context.read<TeleMedicineProvider>();
-      final joinLink = await provider.joinTelemedicineRoom(
-        visitId,
-        authUser!.id,
-      );
+      final joinLink = await provider.joinTelemedicineRoom(_joinTeleMedLink);
 
       if (!context.mounted) return;
 
@@ -545,7 +546,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => TelemedicineRoomScreen(joinLink: joinLink),
+            builder: (_) => TelemedicineRoomScreen(joinLink: joinLink, visits: visit,),
           ),
         );
       } else if (provider.errorMessage != null) {

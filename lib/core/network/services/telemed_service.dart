@@ -74,23 +74,21 @@ class TeleMedicineService {
   }
 
   // POST /api/patients/booking-visits/telemedicine/get-link (Consultant)
-  Future<String> getTelemedicineLink({
-    required String visitId,
-    required String userId,
-  }) async {
-    final body = {'visitId': visitId, 'userId': userId};
+  Future<String> getTelemedicineLink({required JoinTeleMedLink data}) async {
+    final body = data.toJson();
     try {
       final response = await _dio.post(
         ApiEndpoints.telemedicineGetLink,
         data: {'data': body},
       );
 
-      final joinLink = response.data?['data']?['joinLink']?.toString();
+      final joinLink = response.data?['data']?.toString();
       if (joinLink == null || joinLink.isEmpty) {
         throw const ApiException(
           message: 'Server did not return a valid join link.',
         );
       }
+      print('response: $response');
       return joinLink;
     } on DioException catch (e) {
       throw ApiException(
@@ -111,7 +109,7 @@ class TeleMedicineService {
         },
       );
 
-      final joinLink = response.data?['data']?['joinLink']?.toString();
+      final joinLink = response.data?['data']?.toString();
       if (joinLink == null || joinLink.isEmpty) {
         throw const ApiException(message: 'Server did not return a join link.');
       }

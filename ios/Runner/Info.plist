@@ -6,6 +6,10 @@
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
     <string>BMC_Staff</string>
+    <key>NSCameraUsageDescription</key>
+    <string>BMC needs camera access so you can join video consultations.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>BMC needs microphone access so you can speak during telemedicine consultations.</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>

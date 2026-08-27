@@ -394,13 +394,14 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
     }
 
     setState(() => _joiningVisitIds.add(visitId));
+    final JoinTeleMedLink _joinTeleMedLink = JoinTeleMedLink(
+      userId: authUser!.id,
+      visitId: visitId,
+    );
 
     try {
       final provider = context.read<TeleMedicineProvider>();
-      final joinLink = await provider.joinTelemedicineRoom(
-        visitId,
-        authUser!.id,
-      );
+      final joinLink = await provider.joinTelemedicineRoom(_joinTeleMedLink);
 
       if (!context.mounted) return;
 
@@ -408,7 +409,7 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => TelemedicineRoomScreen(joinLink: joinLink),
+            builder: (_) => TelemedicineRoomScreen(joinLink: joinLink, visits: visit,),
           ),
         );
       } else if (provider.errorMessage != null) {
