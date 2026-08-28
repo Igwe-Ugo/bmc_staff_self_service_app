@@ -1,6 +1,10 @@
 // lib/features/telemedicine/telemedicine_room_screen.dart
 
+import 'dart:async';
+
 import 'package:bmc_app/core/network/models/widget.dart';
+import 'package:bmc_app/features/common/show_message.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -27,25 +31,13 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
   bool _isLoading = true;
   bool _isLive = false;
 
-  static const String _webrtcMonitorScript = '''
-    (function() {
-      if (window.__webrtcMonitorInstalled) return;
-      window.__webrtcMonitorInstalled = true;
-      var OriginalRTCPeerConnection = window.RTCPeerConnection;
-      if (!OriginalRTCPeerConnection) return;
+  // set when camera or microphone was refused at the OS level. The WebView can
+  // only pass on a permission the app itself holds, so loading the call page
+  //without these produces a room with no devices and no explanation.
+  String? _permissionError;
+  bool _permanentlyDenied = false;
 
-      window.RTCPeerConnection = function(...args) {
-        var pc = new OriginalRTCPeerConnection(...args);
-        pc.addEventListener('connectionstatechange', function() {
-          if (window.LiveStatus) {
-            window.LiveStatus.postMessage(pc.connectionState);
-          }
-        });
-        return pc;
-      };
-      window.RTCPeerConnection.prototype = OriginalRTCPeerConnection.prototype;
-    })();
-  ''';
+  Timer? _joinTimeoutTimer;
 
   @override
   void initState() {
@@ -53,11 +45,36 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
     _setupWebView();
   }
 
+  @override
+  void dispose() {
+    _joinTimeoutTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _setupWebView() async {
-    await [Permission.camera, Permission.microphone].request();
-    final camStatus = await Permission.camera.status;
-    final micStatus = await Permission.microphone.status;
+    final statuses = await [Permission.camera, Permission.microphone].request();
+    final camStatus = statuses[Permission.camera] ?? PermissionStatus.denied;
+    final micStatus =
+        statuses[Permission.microphone] ?? PermissionStatus.denied;
     debugPrint('camera: $camStatus, mic: $micStatus');
+
+    if (!camStatus.isGranted || !micStatus.isGranted) {
+      final missing = [
+        if (!camStatus.isGranted) 'Camera',
+        if (!micStatus.isGranted) 'Microphone',
+      ].join(' and ');
+      final message =
+          'BMC needs access to your $missing to join a video consultation.';
+      if (mounted) {
+        setState(() {
+          _permissionError = message;
+          _permanentlyDenied =
+              camStatus.isPermanentlyDenied || micStatus.isPermanentlyDenied;
+        });
+      }
+      showMessage(message, context, status: MessageStatus.error);
+      return;
+    }
 
     late final PlatformWebViewControllerCreationParams params;
     if (WebViewPlatform.instance is WebKitWebViewPlatform) {
@@ -73,6 +90,9 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
         WebViewController.fromPlatformCreationParams(
             params,
             onPermissionRequest: (WebViewPermissionRequest request) {
+              // Fires when the page calls getUserMedia. If this line never
+              // appears in logcat, the page never asked — the problem is on the
+              // web side, not here.
               debugPrint('WebView permission request: ${request.types}');
               request.grant();
             },
@@ -84,7 +104,7 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
             onMessageReceived: (JavaScriptMessage message) {
               debugPrint('WebRTC connectionState: ${message.message}');
               if (!mounted) return;
-              setState(() => _isLive = message.message == 'connected');
+              _handleConnectionState(message.message);
             },
           )
           ..setNavigationDelegate(
@@ -92,10 +112,30 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
               onPageFinished: (String url) {
                 if (mounted) setState(() => _isLoading = false);
               },
+              onWebResourceError: (WebResourceError error) {
+                debugPrint(
+                  'WebView Error ${error.errorCode}: ${error.description}\n${error.url}',
+                );
+                showMessage(
+                  'Something went wrong laoding the room. (${error.errorCode})',
+                  context,
+                  status: MessageStatus.error,
+                );
+              },
             ),
-          )
-          ..loadRequest(Uri.parse(widget.joinLink));
-
+          );
+    // Android-specific configuration must be applied before the page loads
+    // This is in order to leave video false, because it defaults as true.
+    if (controller.platform is AndroidWebViewController) {
+      final android = controller.platform as AndroidWebViewController;
+      await android.setMediaPlaybackRequiresUserGesture(false);
+      // attaches the chrome inspect to the WebView to read the real JS error.
+      if (kDebugMode) AndroidWebViewController.enableDebugging(true);
+    }
+    await controller.loadRequest(
+      Uri.parse(widget.joinLink),
+      headers: const {'ngrok-skip-browser-warning': 'true'},
+    );
     if (mounted) setState(() => _controller = controller);
   }
 
@@ -105,7 +145,7 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
 
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56),
+        preferredSize: const Size.fromHeight(120),
         child: Container(
           color: const Color(0xFF1B5E3C),
           child: SafeArea(
@@ -115,7 +155,14 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
               child: Row(
                 children: [
                   OutlinedButton.icon(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      showMessage(
+                        'Leaving the Consulting Room...',
+                        context,
+                        status: MessageStatus.info,
+                      );
+                      Navigator.pop(context);
+                    },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
                       side: const BorderSide(color: Colors.white54),
@@ -180,7 +227,9 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
                               Icon(
                                 Icons.circle,
                                 size: 8,
-                                color: _isLive ? Colors.greenAccent : Colors.orangeAccent,
+                                color: _isLive
+                                    ? Colors.greenAccent
+                                    : Colors.orangeAccent,
                               ),
                               SizedBox(width: 4),
                               Text(
@@ -203,7 +252,12 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
         ),
       ),
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: _controller == null
+      body: _permissionError != null
+          ? _PermissionNotice(
+              message: _permissionError!,
+              showSettings: _permanentlyDenied,
+            )
+          : _controller == null
           ? Center(
               child: LoadingAnimationWidget.staggeredDotsWave(
                 color: Colors.white,
@@ -236,6 +290,55 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
     return age;
   }
 
+  // Reacts to every RTCPeerConnection.connectionState value, not just 'connected',
+  // and starts a timeout the first time a connection attempt is detected — since
+  // that's our best proxy for "the join button was pressed."
+  void _handleConnectionState(String state) {
+    switch (state) {
+      case 'new':
+      case 'connecting':
+        setState(() => _isLive = false);
+        _joinTimeoutTimer ??= Timer(const Duration(seconds: 20), () {
+          if (!mounted || _isLive) return;
+          showMessage(
+            'Still waiting for the other party to join. You will connect automatically once they do.',
+            context,
+            status: MessageStatus.info,
+          );
+        });
+        break;
+      case 'connected':
+        _joinTimeoutTimer?.cancel();
+        _joinTimeoutTimer = null;
+        setState(() => _isLive = true);
+        showMessage('You are live', context, status: MessageStatus.success);
+      case 'disconnected':
+        setState(() => _isLive = false);
+        showMessage(
+          'Connection lost - attempting to reconnect...',
+          context,
+          status: MessageStatus.error,
+        );
+        break;
+      case 'failed':
+        _joinTimeoutTimer?.cancel();
+        _joinTimeoutTimer = null;
+        setState(() => _isLive = false);
+        showMessage(
+          'The call failed to connect. Please try again.',
+          context,
+          status: MessageStatus.error,
+        );
+        break;
+      case 'closed':
+        _joinTimeoutTimer?.cancel();
+        _joinTimeoutTimer = null;
+        setState(() => _isLive = false);
+        showMessage('The call has ended.', context, status: MessageStatus.info);
+        break;
+    }
+  }
+
   Widget _buildWebView() {
     final params = PlatformWebViewWidgetCreationParams(
       controller: _controller!.platform,
@@ -249,5 +352,53 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
       ).build(context);
     }
     return WebViewWidget(controller: _controller!);
+  }
+}
+
+class _PermissionNotice extends StatelessWidget {
+  final String message;
+  final bool showSettings;
+
+  const _PermissionNotice({required this.message, required this.showSettings});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.videocam_off,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white70
+                  : Colors.black54,
+              size: 44,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.white70
+                    : Colors.black54,
+                fontSize: 14,
+                fontFamily: 'Lexend',
+              ),
+            ),
+            if (showSettings) ...[
+              const SizedBox(height: 20),
+              // once permanently denied, the OS will not prompt again - the only route back is app settings
+              FilledButton(
+                onPressed: openAppSettings,
+                child: const Text('Open Settings'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 }
