@@ -38,6 +38,30 @@ class TeleMedicineService {
     }
   }
 
+  Future<List<QryBookingVisits>> fetchGuestVisits() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.teleMedGuests);
+      final rawData = response.data;
+      List<dynamic> listData = [];
+      if (rawData is Map<String, dynamic>) {
+        listData = (rawData['data'] is List)
+            ? rawData['data'] as List<dynamic>
+            : [];
+      } else if (rawData is List<dynamic>) {
+        listData = rawData;
+      }
+      return listData
+          .map(
+            (json) => QryBookingVisits.fromJson(json as Map<String, dynamic>),
+          )
+          .toList();
+    } on DioException catch (e) {
+      throw ApiException(
+        message: _extractMessage(e.response?.data) ?? 'Failes to load guest visits.', statusCode: e.response?.statusCode
+      );
+    }
+  }
+
   // PATCH /api/patients/visits/consultant-ready
   Future<void> setConsultantReady({required QryBookingVisits data}) async {
     final body = data.toJson();

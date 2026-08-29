@@ -54,6 +54,8 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final guestProvider = context.read<TeleMedicineProvider>().guestVisits;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -69,26 +71,38 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
         actions: [
           // guest Switch
           GestureDetector(
-            onTap: () => GoRouter.of(
-              context,
-            ).go('${BMCRouter.telemedPath}/${BMCRouter.guestTelemedPath}'),
+            onTap: guestProvider.isNotEmpty
+                ? () => GoRouter.of(
+                    context,
+                  ).go('${BMCRouter.telemedPath}/${BMCRouter.guestTelemedPath}')
+                : null,
             child: Container(
               margin: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.all(Radius.circular(10)),
-                color: Colors.green,
+                color: guestProvider.isNotEmpty
+                    ? Colors.green
+                    : Colors.grey.withOpacity(0.2),
               ),
               padding: EdgeInsets.all(10),
               child: Row(
                 children: [
-                  Icon(Iconsax.user_tag, size: 18, color: Colors.white),
+                  Icon(
+                    Iconsax.user_tag,
+                    size: 18,
+                    color: guestProvider.isNotEmpty
+                        ? Colors.white
+                        : Colors.grey.withOpacity(0.2),
+                  ),
                   const SizedBox(width: 10),
                   Text(
                     'Guest Mode',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: guestProvider.isNotEmpty
+                          ? Colors.white
+                          : Colors.grey.withOpacity(0.2),
                     ),
                   ),
                 ],
@@ -543,10 +557,17 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
       if (!context.mounted) return;
 
       if (joinLink != null) {
+        showMessage(
+          'Joining Meeting as Consultant',
+          context,
+          status: MessageStatus.success,
+        );
+
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => TelemedicineRoomScreen(joinLink: joinLink, visits: visit,),
+            builder: (_) =>
+                TelemedicineRoomScreen(joinLink: joinLink, visits: visit),
           ),
         );
       } else if (provider.errorMessage != null) {

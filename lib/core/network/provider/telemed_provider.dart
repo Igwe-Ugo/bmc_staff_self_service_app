@@ -9,6 +9,7 @@ class TeleMedicineProvider extends ChangeNotifier {
   final TeleMedicineService _service;
 
   List<QryBookingVisits> _visits = [];
+  List<QryBookingVisits> _guestVisits = [];
   bool _isLoading = false;
   String? _errorMessage;
   String _searchQuery = '';
@@ -19,6 +20,7 @@ class TeleMedicineProvider extends ChangeNotifier {
     : _service = service;
 
   List<QryBookingVisits> get visits => _visits;
+  List<QryBookingVisits> get guestVisits => _guestVisits;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
@@ -45,6 +47,7 @@ class TeleMedicineProvider extends ChangeNotifier {
 
     try {
       _visits = await _service.fetchBookingVisits();
+      _guestVisits = await _service.fetchGuestVisits();
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -75,6 +78,17 @@ class TeleMedicineProvider extends ChangeNotifier {
   Future<String?> joinTelemedicineRoom(JoinTeleMedLink data) async {
     try {
       return await _service.getTelemedicineLink(data: data);
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // get link and join call for guests
+  Future<String?> joinTeleMedGuestRoom(String visitId) async {
+    try {
+      return await _service.getTelemedicineLinkForGuest(visitId: visitId);
     } catch (e) {
       _errorMessage = e.toString();
       notifyListeners();

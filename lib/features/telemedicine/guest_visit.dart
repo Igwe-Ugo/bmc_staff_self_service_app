@@ -20,7 +20,7 @@ class TelemedGuestScreen extends StatefulWidget {
 class _TelemedGuestScreenState extends State<TelemedGuestScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final Set<String> _joiningVisitIds = {};
+  final Set<String> _joiningGuestVisitIds = {};
 
   int _calculateAge(DateTime dob) {
     final now = DateTime.now();
@@ -264,7 +264,7 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
 
         final canJoin =
             (visit.triageCompleted == 1 || visit.triageBypassed == 1) & isReady;
-        final isJoining = _joiningVisitIds.contains(visit.id);
+        final isJoining = _joiningGuestVisitIds.contains(visit.id);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
@@ -369,7 +369,7 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
                             ? const Color.fromARGB(255, 250, 192, 1)
                             : Colors.grey,
                         onTap: (canJoin && !isJoining)
-                            ? () => _joinTeleMedCall(visit)
+                            ? () => _joinTeleMedGuestCall(visit)
                             : null,
                       ),
                     ],
@@ -383,29 +383,28 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
     );
   }
 
-  Future<void> _joinTeleMedCall(QryBookingVisits visit) async {
-    final authUser = context.read<UserProvider>().user; // read, not watch
-
-    if (visit.id == null || authUser?.id == null) return;
+  Future<void> _joinTeleMedGuestCall(QryBookingVisits visit) async {
 
     final visitId = visit.visitId!;
-    if (_joiningVisitIds.contains(visitId)) {
+    if (_joiningGuestVisitIds.contains(visitId)) {
       return; // already in flight — ignore re-tap
     }
 
-    setState(() => _joiningVisitIds.add(visitId));
-    final JoinTeleMedLink _joinTeleMedLink = JoinTeleMedLink(
-      userId: authUser!.id,
-      visitId: visitId,
-    );
+    setState(() => _joiningGuestVisitIds.add(visitId));
 
     try {
       final provider = context.read<TeleMedicineProvider>();
-      final joinLink = await provider.joinTelemedicineRoom(_joinTeleMedLink);
+      final joinLink = await provider.joinTeleMedGuestRoom(visitId);
 
       if (!context.mounted) return;
 
       if (joinLink != null) {
+        showMessage(
+          'Joining Meeting as Guest',
+          context,
+          status: MessageStatus.success,
+        );
+        
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -420,7 +419,7 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
         );
       }
     } finally {
-      if (mounted) setState(() => _joiningVisitIds.remove(visitId));
+      if (mounted) setState(() => _joiningGuestVisitIds.remove(visitId));
     }
   }
 

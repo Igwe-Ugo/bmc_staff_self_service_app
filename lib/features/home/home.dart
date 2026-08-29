@@ -11,6 +11,7 @@ import '../availability/widget.dart';
 import '../common/widget.dart';
 import '../leave/widget.dart';
 import '../rota/widget.dart';
+import '../telemedicine/widget.dart';
 
 class BMCHome extends StatefulWidget {
   const BMCHome({super.key});
@@ -72,53 +73,90 @@ class _BMCHomeState extends State<BMCHome> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer3<UserProvider, AvailabilityProvider, LeaveProvider>(
-      builder: (context, userProvider, availabilityProvider, leaveProvider, _) {
-        if (userProvider.isLoading || availabilityProvider.isLoading) {
-          return Scaffold(
-            body: Center(
-              child: LoadingAnimationWidget.staggeredDotsWave(
-                color: Theme.of(context).primaryColor,
-                size: 70,
-              ),
-            ),
-          );
-        }
-
-        return Scaffold(
-          body: CustomMaterialIndicator(
-            backgroundColor: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black12.withOpacity(0.3)
-                : Theme.of(context).hoverColor,
-            onRefresh: _refreshAllProviders,
-            indicatorBuilder: (context, controller) {
-              return Padding(
-                padding: const EdgeInsets.all(6.0),
-                child: LoadingAnimationWidget.staggeredDotsWave(
-                  color: Theme.of(context).primaryColor,
-                  size: 40,
+    return Consumer4<
+      UserProvider,
+      AvailabilityProvider,
+      LeaveProvider,
+      TeleMedicineProvider
+    >(
+      builder:
+          (
+            context,
+            userProvider,
+            availabilityProvider,
+            leaveProvider,
+            teleMedProvider,
+            _,
+          ) {
+            if (userProvider.isLoading || availabilityProvider.isLoading) {
+              return Scaffold(
+                body: Center(
+                  child: LoadingAnimationWidget.staggeredDotsWave(
+                    color: Theme.of(context).primaryColor,
+                    size: 70,
+                  ),
                 ),
               );
-            },
-            child: Stack(
-              children: [
-                SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 110, 20, 40),
-                    child: Column(
-                      children: [
-                        _welcomeCard(context, userProvider),
-                        const SizedBox(height: 24),
-                        RotaSummary(),
-                        const SizedBox(height: 24),
-                        LeaveSummaryCard(),
-                        const SizedBox(height: 24),
-                        const WeeklyAvailabilityWidget(),
-                        const SizedBox(height: 24),
-                        CombinedCarouselCalendar(),
-                        const SizedBox(height: 24),
+            }
 
-                        /* const _SectionTitle(
+            // Check telemedicine privilege
+            final user = userProvider.user;
+            bool hasTelemedicine = false;
+            if (user != null) {
+              hasTelemedicine = user.privileges.any((p) {
+                final lower = p.toLowerCase();
+                return lower.contains('operate~telemedicine') ||
+                    lower.contains('operate~telemed') ||
+                    lower == 'operate~telemedicine' ||
+                    lower == 'operate~telemed';
+              });
+            }
+
+            return Scaffold(
+              body: CustomMaterialIndicator(
+                backgroundColor: Theme.of(context).brightness == Brightness.dark
+                    ? Colors.black12.withOpacity(0.3)
+                    : Theme.of(context).hoverColor,
+                onRefresh: _refreshAllProviders,
+                indicatorBuilder: (context, controller) {
+                  return Padding(
+                    padding: const EdgeInsets.all(6.0),
+                    child: LoadingAnimationWidget.staggeredDotsWave(
+                      color: Theme.of(context).primaryColor,
+                      size: 40,
+                    ),
+                  );
+                },
+                child: Stack(
+                  children: [
+                    SingleChildScrollView(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 110, 20, 40),
+                        child: Column(
+                          children: [
+                            _welcomeCard(context, userProvider),
+                            const SizedBox(height: 24),
+                            RotaSummary(),
+                            const SizedBox(height: 24),
+                            LeaveSummaryCard(),
+                            const SizedBox(height: 24),
+                            const WeeklyAvailabilityWidget(),
+                            const SizedBox(height: 24),
+                            if (teleMedProvider.guestVisits.isNotEmpty &
+                                    hasTelemedicine ==
+                                true)
+                              Column(
+                                children: [
+                                  TeleMedGuestHomeVisits(
+                                    teleMedicineProvider: teleMedProvider,
+                                  ),
+                                  const SizedBox(height: 24),
+                                ],
+                              ),
+                            CombinedCarouselCalendar(),
+                            const SizedBox(height: 24),
+
+                            /* const _SectionTitle(
                           title: "Recent Messages",
                           badge: "5",
                           isRota: false,
@@ -132,40 +170,42 @@ class _BMCHomeState extends State<BMCHome> {
                         ),
                         const SizedBox(height: 14),
                         _buildNotificationList(Theme.of(context).cardColor), */
-                      ],
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                _topNavBar(
-                  context,
-                  userProvider: userProvider,
-                  onProfileTap: () {
-                    setState(() {
-                      _showDrawer = true;
-                      navBarVisible.value = false;
-                    });
-                  },
-                ),
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                  top: 0,
-                  bottom: 0,
-                  left: _showDrawer ? 0 : -MediaQuery.of(context).size.width,
-                  child: SizedBox(
-                    width: MediaQuery.of(context).size.width,
-                    child: ProfileDrawer(
-                      onClose: () {
-                        setState(() => _showDrawer = false);
+                    _topNavBar(
+                      context,
+                      userProvider: userProvider,
+                      onProfileTap: () {
+                        setState(() {
+                          _showDrawer = true;
+                          navBarVisible.value = false;
+                        });
                       },
                     ),
-                  ),
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      top: 0,
+                      bottom: 0,
+                      left: _showDrawer
+                          ? 0
+                          : -MediaQuery.of(context).size.width,
+                      child: SizedBox(
+                        width: MediaQuery.of(context).size.width,
+                        child: ProfileDrawer(
+                          onClose: () {
+                            setState(() => _showDrawer = false);
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        );
-      },
+              ),
+            );
+          },
     );
   }
 
