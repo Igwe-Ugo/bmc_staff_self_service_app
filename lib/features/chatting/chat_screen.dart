@@ -27,11 +27,8 @@ class ChatScreen extends StatefulWidget {
 
   bool get isGroup => group != null;
 
-  /// Other party's USERNAME for 1-on-1, or the groupId for groups — matches
-  /// ChatProvider's conversation keying exactly.
   String get conversationKey => isGroup ? group!.id : peer!.userId;
 
-  /// Display name for the app bar.
   String get title => isGroup ? group!.name : peer!.username;
 
   @override
@@ -43,14 +40,12 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showEmojiPicker = false;
   late final ChatProvider _chatProvider;
-  String? _selectedMessageId;
 
-  // Set by the ASAP / Urgent action chips on a long-pressed message — applied
-  // to the NEXT message sent, then cleared. This is what actually drives the
-  // schema's `urgency` and `replyTo` fields; the mock UI had these chips
-  // wired to nothing.
+  // Stores emoji reactions per message ID: { messageId: '🔥' }
+  final Map<String, String> _messageReactions = {};
+
   MessageReply? _pendingReplyTo;
-  MessageUrgency? _pendingUrgency;
+  MessageUrgency _pendingUrgency = MessageUrgency.normal;
 
   @override
   void initState() {
@@ -61,13 +56,49 @@ class _ChatScreenState extends State<ChatScreen> {
       isGroup: widget.isGroup,
     );
     _messageController.addListener(_handleTypingChanged);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom(animated: false);
+    });
+  }
+
+  void _scrollToBottom({bool animated = true}) {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    if (animated) {
+      _scrollController.animateTo(
+        maxScroll,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    } else {
+      _scrollController.jumpTo(maxScroll);
+    }
+  }
+
+  /// Scroll directly to a specific message by its target ID
+  void _scrollToMessage(String messageId, List<ChatMessage> messages) {
+    if (!_scrollController.hasClients) return;
+
+    final targetIndex = messages.indexWhere((m) => m.id == messageId);
+    if (targetIndex == -1) return;
+
+    // Estimate item position based on average message bubble height
+    final estimatedOffset = targetIndex * 70.0;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final targetScroll = estimatedOffset.clamp(0.0, maxScroll);
+
+    _scrollController.animateTo(
+      targetScroll,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+    );
   }
 
   void _toggleEmojiPicker() {
     setState(() => _showEmojiPicker = !_showEmojiPicker);
   }
 
-  // hide emoji keyboard when user taps into the text field
   void _onTextFieldTapEmoji() {
     if (_showEmojiPicker) {
       setState(() => _showEmojiPicker = false);
@@ -91,49 +122,34 @@ class _ChatScreenState extends State<ChatScreen> {
       to: widget.conversationKey,
       content: text,
       isGroup: widget.isGroup,
-      urgency: _pendingUrgency ?? MessageUrgency.normal,
+      urgency: _pendingUrgency,
       replyTo: _pendingReplyTo,
     );
 
     _messageController.clear();
     setState(() {
       _pendingReplyTo = null;
-      _pendingUrgency = null;
+      _pendingUrgency = MessageUrgency.normal;
     });
 
-    // No optimistic insert — the server echoes the message back with its
-    // minted id, and that echo is what actually lands in ChatProvider's
-    // state and triggers this rebuild.
     Future.delayed(const Duration(milliseconds: 100), () {
-      if (!_scrollController.hasClients) return;
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
+      _scrollToBottom(animated: true);
     });
   }
 
-  void _selectForQuickAction(ChatMessage message) {
-    setState(() => _selectedMessageId = message.id);
-  }
-
-  void _applyQuickAction(ChatMessage message, MessageUrgency urgency) {
+  void _stageReply(ChatMessage msg) {
     setState(() {
       _pendingReplyTo = MessageReply(
-        id: message.id,
-        from: message.from,
-        content: message.content,
+        id: msg.id,
+        from: msg.from,
+        content: msg.content,
       );
-      _pendingUrgency = urgency;
-      _selectedMessageId = null;
     });
   }
 
   void _clearPendingReply() {
     setState(() {
       _pendingReplyTo = null;
-      _pendingUrgency = null;
     });
   }
 
@@ -142,10 +158,10 @@ class _ChatScreenState extends State<ChatScreen> {
       final result = await FilePicker.pickFiles(
         type: FileType.any,
         allowMultiple: false,
-        withData: true, // loads bytes into memory for upload
+        withData: true,
       );
 
-      if (result == null || result.files.isEmpty) return; // user cancelled
+      if (result == null || result.files.isEmpty) return;
 
       final file = result.files.first;
 
@@ -163,8 +179,6 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
 
-      // Refused client-side, before the upload starts — matches the doc's
-      // verification checklist item #8.
       if (bytes.length > AttachmentService.maxUploadBytes) {
         if (!mounted) return;
         showMessage(
@@ -178,15 +192,11 @@ class _ChatScreenState extends State<ChatScreen> {
       final mimeType = _mimeTypeFor(file.extension);
       final text = _messageController.text.trim();
 
-      // ChatProvider.sendWithAttachment uploads first and only sends if
-      // that succeeds — see MESSAGING_ATTACHMENTS.md §1: a message sent
-      // with an invalid/missing documentKey is accepted and delivered with
-      // the file silently stripped, no error anywhere.
       await _chatProvider.sendWithAttachment(
         to: widget.conversationKey,
         isGroup: widget.isGroup,
         content: text.isNotEmpty ? text : 'Sent an attachment: ${file.name}',
-        urgency: _pendingUrgency ?? MessageUrgency.normal,
+        urgency: _pendingUrgency,
         replyTo: _pendingReplyTo,
         bytes: bytes,
         fileName: file.name,
@@ -194,10 +204,12 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 
       _messageController.clear();
-      _clearPendingReply();
+      setState(() {
+        _pendingReplyTo = null;
+        _pendingUrgency = MessageUrgency.normal;
+      });
+      _scrollToBottom(animated: true);
     } on AttachmentException catch (e) {
-      // Upload failed — nothing was sent, so the draft text and the picked
-      // file are still exactly where the user left them.
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Could not send attachment: ${e.message}')),
@@ -211,9 +223,6 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  /// file_picker gives an extension, not a MIME type. This covers the
-  /// common cases; swap for the `mime` package if you need broader
-  /// coverage later.
   String _mimeTypeFor(String? extension) {
     switch (extension?.toLowerCase()) {
       case 'jpg':
@@ -233,6 +242,39 @@ class _ChatScreenState extends State<ChatScreen> {
       default:
         return 'application/octet-stream';
     }
+  }
+
+  void _showReactionMenu(ChatMessage msg) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final emojis = ['🙏', '🔥', '❤️', '👍', '😂', '😮'];
+        return Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: Colors.white24),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: emojis.map((emoji) {
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _messageReactions[msg.id] = emoji;
+                  });
+                },
+                child: Text(emoji, style: const TextStyle(fontSize: 26)),
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -255,7 +297,6 @@ class _ChatScreenState extends State<ChatScreen> {
         ? false
         : (presence?.isReachable(widget.peer?.userId ?? '') ?? false);
 
-    // Safely extract avatar details depending on group vs 1-on-1 chat
     final String currentId = widget.conversationKey;
     final String? avatarUrl = widget.isGroup ? null : widget.peer?.avatar;
     final String initials = initialsFor(widget.title);
@@ -350,7 +391,6 @@ class _ChatScreenState extends State<ChatScreen> {
               Expanded(child: _buildMessageList(messages, chat.me)),
               if (_pendingReplyTo != null) _buildPendingReplyBar(),
               _buildInputBar(),
-              // Emoji Picker container
               if (_showEmojiPicker)
                 SizedBox(
                   height: 250,
@@ -418,11 +458,413 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Widget _buildMessageList(List<ChatMessage> messages, String me) {
+    if (messages.isEmpty) {
+      return const Center(
+        child: Text(
+          'No messages yet — say hi!',
+          style: TextStyle(color: Colors.white38, fontSize: 13),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      itemCount: messages.length,
+      itemBuilder: (_, i) {
+        final msg = messages[i];
+        final showDivider =
+            i == 0 || !isSameDay(messages[i - 1].time, msg.time);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (showDivider) _buildDateDivider(msg.time),
+            _buildSwipableBubble(msg, me, messages),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSwipableBubble(
+    ChatMessage msg,
+    String me,
+    List<ChatMessage> allMessages,
+  ) {
+    return Dismissible(
+      key: ValueKey('msg_${msg.id}'),
+      direction: DismissDirection.startToEnd,
+      confirmDismiss: (direction) async {
+        _stageReply(msg);
+        return false;
+      },
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 16),
+        child: const Icon(Icons.reply, color: Colors.white70, size: 22),
+      ),
+      child: GestureDetector(
+        onLongPress: () => _showReactionMenu(msg),
+        child: _buildBubble(msg, me, allMessages),
+      ),
+    );
+  }
+
+  Widget _buildDateDivider(DateTime time) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white12,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            formatDateDivider(time),
+            style: const TextStyle(color: Colors.white60, fontSize: 11),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBubble(
+    ChatMessage msg,
+    String me,
+    List<ChatMessage> allMessages,
+  ) {
+    final isMe = msg.from == me;
+    final isRead = widget.isGroup
+        ? widget.group!.members
+              .where((m) => m != me)
+              .every((m) => msg.readBy.contains(m))
+        : msg.read;
+    final reaction = _messageReactions[msg.id];
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Align(
+            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+            child: Container(
+              margin: EdgeInsets.only(bottom: reaction != null ? 8 : 4),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isMe ? const Color(0xFF6C47FF) : const Color(0xFF262D3D),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: Radius.circular(isMe ? 16 : 4),
+                  bottomRight: Radius.circular(isMe ? 4 : 16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (msg.replyTo != null)
+                    _buildQuotedReply(msg.replyTo!, isMe, allMessages),
+                  if (msg.file != null) _buildBubbleAttachment(msg.file!, isMe),
+                  if (msg.urgency != MessageUrgency.normal)
+                    _buildUrgencyBadge(msg.urgency, isMe),
+                  Text(
+                    msg.content,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Text(
+                        formatMessageTime(msg.time),
+                        style: const TextStyle(
+                          color: Colors.white60,
+                          fontSize: 10,
+                        ),
+                      ),
+                      if (isMe) ...[
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.done_all,
+                          size: 13,
+                          color: isRead
+                              ? Colors.lightBlueAccent
+                              : Colors.white70,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (reaction != null)
+            Positioned(
+              left: 4,
+              bottom: -6,
+              child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E2A45),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white24, width: 1.5),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Colors.black26,
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(reaction, style: const TextStyle(fontSize: 12)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuotedReply(
+    MessageReply reply,
+    bool isMe,
+    List<ChatMessage> allMessages,
+  ) {
+    return GestureDetector(
+      onTap: () => _scrollToMessage(reply.id, allMessages),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF181C26),
+          borderRadius: BorderRadius.circular(8),
+          border: const Border(
+            left: BorderSide(color: Color(0xFFE57373), width: 3.5),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '~ ${reply.from}',
+                    style: const TextStyle(
+                      color: Color(0xFF64B5F6),
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    reply.content,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUrgencyBadge(MessageUrgency urgency, bool isMe) {
+    final label = urgency == MessageUrgency.urgent ? 'URGENT' : 'ASAP';
+    final color = urgency == MessageUrgency.urgent
+        ? const Color(0xFFF39C12)
+        : const Color(0xFF007AFF);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 9,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPendingReplyBar() {
+    final reply = _pendingReplyTo!;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E2A45),
+        borderRadius: BorderRadius.circular(10),
+        border: const Border(
+          left: BorderSide(color: Color(0xFFE57373), width: 3),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Replying to ~ ${reply.from}',
+                  style: const TextStyle(
+                    color: Color(0xFF64B5F6),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  reply.content,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: _clearPendingReply,
+            child: const Icon(Icons.close, size: 16, color: Colors.white38),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputBar() {
+    final isUploading = context.watch<ChatProvider>().isUploading;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E2A45).withOpacity(0.5),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white12),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              GestureDetector(
+                onTap: isUploading ? null : _pickAndSendFile,
+                child: isUploading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white38,
+                        ),
+                      )
+                    : const Icon(
+                        Icons.attach_file,
+                        color: Colors.white38,
+                        size: 20,
+                      ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: _toggleEmojiPicker,
+                child: const Icon(
+                  Icons.emoji_emotions_outlined,
+                  color: Colors.white38,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 100),
+                  child: TextField(
+                    onTap: _onTextFieldTapEmoji,
+                    controller: _messageController,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
+                    minLines: 1,
+                    maxLines: null,
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                    decoration: const InputDecoration(
+                      hintText: 'Type your message...',
+                      hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 6),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              PopupMenuButton<MessageUrgency>(
+                icon: Icon(
+                  Icons.report_problem_outlined,
+                  size: 20,
+                  color: _pendingUrgency != MessageUrgency.normal
+                      ? const Color(0xFFF39C12)
+                      : Colors.white38,
+                ),
+                onSelected: (urgency) {
+                  setState(() => _pendingUrgency = urgency);
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: MessageUrgency.normal,
+                    child: Text('Normal'),
+                  ),
+                  const PopupMenuItem(
+                    value: MessageUrgency.asap,
+                    child: Text('ASAP'),
+                  ),
+                  const PopupMenuItem(
+                    value: MessageUrgency.urgent,
+                    child: Text('Urgent'),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: _sendMessage,
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.send, color: Colors.white, size: 16),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBubbleAttachment(MessageAttachment attachment, bool isMe) {
     if (!attachment.isValid) {
-      // Empty documentKey — shouldn't happen post-fix (the assert in
-      // outbound() catches it in debug), but the assert is debug-only, so
-      // guard release builds too rather than crash on a null download key.
       return _attachmentPlaceholder('Attachment unavailable', isMe);
     }
 
@@ -455,8 +897,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
         final error = snapshot.error;
         if (error is AttachmentException) {
-          // 'gone' is the expected end state after 7 days — style it
-          // muted, not as a failure. See MESSAGING_ATTACHMENTS.md §2/§6.
           return _attachmentPlaceholder(
             error.message,
             isMe,
@@ -554,396 +994,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 fontSize: 11,
                 color: isMe ? Colors.white60 : Colors.black54,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageList(List<ChatMessage> messages, String me) {
-    if (messages.isEmpty) {
-      return const Center(
-        child: Text(
-          'No messages yet — say hi!',
-          style: TextStyle(color: Colors.white38, fontSize: 13),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      itemCount: messages.length,
-      itemBuilder: (_, i) {
-        final msg = messages[i];
-        final showDivider =
-            i == 0 || !isSameDay(messages[i - 1].time, msg.time);
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (showDivider) _buildDateDivider(msg.time),
-            _buildBubble(msg, me),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDateDivider(DateTime time) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white12,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            formatDateDivider(time),
-            style: const TextStyle(color: Colors.white60, fontSize: 11),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBubble(ChatMessage msg, String me) {
-    final isMe = msg.from == me;
-    final isSelected = _selectedMessageId == msg.id;
-    // Group read receipt: everyone else in the group has read it.
-    // 1-on-1 read receipt: the `read` flag.
-    final isRead = widget.isGroup
-        ? widget.group!.members
-              .where((m) => m != me)
-              .every((m) => msg.readBy.contains(m))
-        : msg.read;
-
-    return GestureDetector(
-      onLongPress: isMe ? () => _selectForQuickAction(msg) : null,
-      onTap: () {
-        if (_selectedMessageId != null) {
-          setState(() => _selectedMessageId = null);
-        }
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Align(
-            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(bottom: 4),
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.68,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: isMe
-                    ? (isSelected
-                          ? const Color(0xFF6C47FF).withOpacity(0.35)
-                          : const Color(0xFF6C47FF))
-                    : Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                  bottomRight: Radius.circular(isMe ? 4 : 16),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  if (msg.file != null)
-                    _buildBubbleAttachment(
-                      msg.file!,
-                      isMe,
-                    ), // Render attachment preview
-                  if (msg.replyTo != null)
-                    _buildQuotedReply(msg.replyTo!, isMe),
-                  if (msg.urgency != MessageUrgency.normal)
-                    _buildUrgencyBadge(msg.urgency, isMe),
-                  Text(
-                    msg.content,
-                    style: TextStyle(
-                      color: isMe ? Colors.white : const Color(0xFF1A1A2E),
-                      fontSize: 13,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        formatMessageTime(msg.time),
-                        style: TextStyle(
-                          color: isMe ? Colors.white60 : Colors.black38,
-                          fontSize: 10,
-                        ),
-                      ),
-                      if (isMe) ...[
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.done_all,
-                          size: 13,
-                          color: isRead
-                              ? Colors.lightBlueAccent
-                              : Colors.white70,
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (isSelected && isMe) _buildMessageActionBar(msg),
-          const SizedBox(height: 6),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuotedReply(MessageReply reply, bool isMe) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: isMe
-            ? Colors.white.withOpacity(0.15)
-            : Colors.black.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(6),
-        border: Border(
-          left: BorderSide(
-            color: isMe ? Colors.white70 : const Color(0xFF6C47FF),
-            width: 3,
-          ),
-        ),
-      ),
-      child: Text(
-        reply.content,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 11,
-          color: isMe ? Colors.white70 : Colors.black54,
-          fontStyle: FontStyle.italic,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUrgencyBadge(MessageUrgency urgency, bool isMe) {
-    final label = urgency == MessageUrgency.urgent ? 'URGENT' : 'ASAP';
-    final color = urgency == MessageUrgency.urgent
-        ? const Color(0xFFF39C12)
-        : const Color(0xFF007AFF);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 9,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMessageActionBar(ChatMessage msg) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          _buildActionChip(
-            icon: Icons.close,
-            label: null,
-            iconColor: Colors.white,
-            bgColor: const Color(0xFF2A2A2A),
-            onTap: () => setState(() => _selectedMessageId = null),
-          ),
-          const SizedBox(width: 8),
-          _buildActionChip(
-            icon: Icons.flash_on,
-            label: 'ASAP',
-            iconColor: Colors.white,
-            bgColor: const Color(0xFF2A2A2A),
-            onTap: () => _applyQuickAction(msg, MessageUrgency.asap),
-          ),
-          const SizedBox(width: 8),
-          _buildActionChip(
-            icon: Icons.info_outline,
-            label: 'Urgent',
-            iconColor: const Color(0xFFF39C12),
-            bgColor: const Color(0xFF2A2A2A),
-            onTap: () => _applyQuickAction(msg, MessageUrgency.urgent),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionChip({
-    required IconData icon,
-    String? label,
-    required Color iconColor,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: EdgeInsets.symmetric(
-          horizontal: label != null ? 12 : 10,
-          vertical: 8,
-        ),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, color: iconColor, size: 16),
-            if (label != null) ...[
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Shown above the input bar once a quick action has staged a reply +
-  /// urgency for the next message. Lets the user back out before sending.
-  Widget _buildPendingReplyBar() {
-    final reply = _pendingReplyTo!;
-    final urgency = _pendingUrgency;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E2A45).withOpacity(0.5),
-        borderRadius: BorderRadius.circular(10),
-        border: Border(
-          left: BorderSide(color: Theme.of(context).primaryColor, width: 3),
-        ),
-      ),
-      child: Row(
-        children: [
-          if (urgency != null && urgency != MessageUrgency.normal) ...[
-            _buildUrgencyBadge(urgency, false),
-            const SizedBox(width: 8),
-          ],
-          Expanded(
-            child: Text(
-              reply.content,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ),
-          GestureDetector(
-            onTap: _clearPendingReply,
-            child: const Icon(Icons.close, size: 16, color: Colors.white38),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputBar() {
-    final isUploading = context.watch<ChatProvider>().isUploading;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 4, 12, 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E2A45).withOpacity(0.3),
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: isUploading ? null : _pickAndSendFile,
-            child: isUploading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white38,
-                    ),
-                  )
-                : const Icon(
-                    Icons.attach_file,
-                    color: Colors.white38,
-                    size: 20,
-                  ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _toggleEmojiPicker,
-            child: const Icon(
-              Icons.emoji_emotions_outlined,
-              color: Colors.white38,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 100),
-              child: TextField(
-                onTap: _onTextFieldTapEmoji,
-                controller: _messageController,
-                keyboardType: TextInputType.multiline,
-                textInputAction: TextInputAction.newline,
-                minLines: 1,
-                maxLines: null,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
-                decoration: const InputDecoration(
-                  hintText: 'Type your message...',
-                  hintStyle: TextStyle(color: Colors.white38, fontSize: 13),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 6),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: _sendMessage,
-            child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: Theme.of(context).primaryColor,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.send, color: Colors.white, size: 16),
             ),
           ),
         ],
