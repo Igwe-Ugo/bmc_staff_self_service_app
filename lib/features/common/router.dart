@@ -45,6 +45,7 @@ class BMCRouter {
 
   // auth pages
   static const String loginPath = '/login';
+  static const String forgotPasswordPath = 'forgotPassword';
 
   // home pages
   static const String homePath = '/home';
@@ -83,6 +84,12 @@ class BMCRouter {
       GoRoute(
         path: loginPath,
         builder: (context, state) => const LoginScreen(),
+        routes: [
+          GoRoute(
+            path: forgotPasswordPath,
+            builder: (context, state) => const ForgotPassword(),
+          ),
+        ],
       ),
       StatefulShellRoute.indexedStack(
         parentNavigatorKey: parentNavigatorKey,
@@ -190,9 +197,9 @@ class BMCRouter {
                 routes: [
                   GoRoute(
                     path: guestTelemedPath,
-                    builder: (context, state) => TelemedGuestScreen()
-                  )
-                ]
+                    builder: (context, state) => TelemedGuestScreen(),
+                  ),
+                ],
               ),
             ],
           ),

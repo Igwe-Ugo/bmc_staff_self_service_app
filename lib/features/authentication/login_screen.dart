@@ -268,9 +268,27 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () => GoRouter.of(context).go(
+                      '${BMCRouter.loginPath}/${BMCRouter.forgotPasswordPath}',
+                    ),
+                    child: const Text(
+                      "Forget Password?",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontFamily: 'Lexend',
+                        fontWeight: FontWeight.w400,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ),
+                ),
 
                 const SizedBox(
-                  height: 70,
+                  height: 60,
                 ), // 👈 2. Replaced Spacer() with a fixed height Box
                 ///LOGIN BUTTON
                 SizedBox(

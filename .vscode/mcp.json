@@ -1,0 +1,11 @@
+{
+	"servers": {
+		"io.github.ComposioHQ/composio": {
+			"type": "http",
+			"url": "https://connect.composio.dev/mcp",
+			"gallery": "https://api.mcp.github.com",
+			"version": "1.0.5"
+		}
+	},
+	"inputs": []
+}
