@@ -126,6 +126,31 @@ class TeleMedicineProvider extends ChangeNotifier {
     );
   }
 
+  List<QryBookingVisits> get guestTodayVisits {
+    final now = DateTime.now();
+    return _applyFilter(
+      _guestVisits.where((v) {
+        if (v.appmtStartDate == null) return false;
+        final date = v.appmtStartDate!;
+        return date.year == now.year &&
+            date.month == now.month &&
+            date.day == now.day;
+      }).toList(),
+    );
+  }
+
+  List<QryBookingVisits> get guestUpcomingVisits {
+    final now = DateTime.now();
+    final startOfTomorrow = DateTime(now.year, now.month, now.day + 1);
+    return _applyFilter(
+      _guestVisits.where((v) {
+        if (v.appmtStartDate == null) return false;
+        return v.appmtStartDate!.isAtSameMomentAs(startOfTomorrow) ||
+            v.appmtStartDate!.isAfter(startOfTomorrow);
+      }).toList(),
+    );
+  }
+
   List<QryBookingVisits> _applyFilter(List<QryBookingVisits> list) {
     if (_searchQuery.isEmpty) return list;
     return list.where((v) {

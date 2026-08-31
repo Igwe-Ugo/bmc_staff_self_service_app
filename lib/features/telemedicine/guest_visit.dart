@@ -209,11 +209,11 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
                     controller: _tabController,
                     children: [
                       _buildVisitsList(
-                        teleMedProvider.todayVisits,
+                        teleMedProvider.guestTodayVisits,
                         Theme.of(context).cardColor,
                       ),
                       _buildVisitsList(
-                        teleMedProvider.upcomingVisits,
+                        teleMedProvider.guestUpcomingVisits,
                         Theme.of(context).cardColor,
                       ),
                     ],
@@ -369,7 +369,9 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
                             ? const Color.fromARGB(255, 250, 192, 1)
                             : Colors.grey,
                         onTap: (canJoin && !isJoining)
-                            ? () => _joinTeleMedGuestCall(visit)
+                            ? () => _showConfirmCallDialog(
+                                () async => _joinTeleMedGuestCall(visit),
+                              )
                             : null,
                       ),
                     ],
@@ -383,8 +385,87 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
     );
   }
 
-  Future<void> _joinTeleMedGuestCall(QryBookingVisits visit) async {
+  void _showConfirmCallDialog(VoidCallback? onConfirm) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Go into the clinic for consultation?",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Lexend',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Confirm your intention!",
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Lexend',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            GestureDetector(
+              onTap: () => Navigator.pop(ctx),
+              child: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: BoxBorder.all(color: Colors.grey),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontFamily: 'Lexend',
+                    fontWeight: FontWeight.w200,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+            //if (!slot.isLocked && canSchedule)
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(ctx);
+                onConfirm?.call();
+              },
+              child: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Color.fromARGB(255, 107, 20, 11),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'Join Now',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w200,
+                    fontFamily: 'Lexend',
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
+  Future<void> _joinTeleMedGuestCall(QryBookingVisits visit) async {
     final visitId = visit.visitId!;
     if (_joiningGuestVisitIds.contains(visitId)) {
       return; // already in flight — ignore re-tap
@@ -404,11 +485,12 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
           context,
           status: MessageStatus.success,
         );
-        
+
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => TelemedicineRoomScreen(joinLink: joinLink, visits: visit,),
+            builder: (_) =>
+                TelemedicineRoomScreen(joinLink: joinLink, visits: visit),
           ),
         );
       } else if (provider.errorMessage != null) {

@@ -36,7 +36,6 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
   //without these produces a room with no devices and no explanation.
   String? _permissionError;
   bool _permanentlyDenied = false;
-
   Timer? _joinTimeoutTimer;
 
   @override
@@ -142,6 +141,8 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
   @override
   Widget build(BuildContext context) {
     final age = _calculateAge(widget.visits.dob);
+    final mrnStr = widget.visits.medrecnum?.toString() ?? '';
+    final mrnTail = mrnStr.length > 6 ? mrnStr.substring(6) : mrnStr;
 
     return Scaffold(
       appBar: PreferredSize(
@@ -200,7 +201,7 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'MRN: ${widget.visits.medrecnum ?? ''}  |  '
+                          'MRN: ...$mrnTail  |  '
                           '${widget.visits.gender ?? ''}  |  '
                           '${age != null ? '$age years' : ''}   '
                           'Telemedicine Clinic  |  ${widget.visits.telemedProviderName ?? ''}',

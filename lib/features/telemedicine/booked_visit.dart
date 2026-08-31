@@ -440,7 +440,9 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                             ? const Color.fromARGB(255, 250, 192, 1)
                             : Colors.grey,
                         onTap: (canJoin && !isJoining)
-                            ? () => _joinTeleMedCall(visit)
+                            ? () => _showConfirmCallDialog(
+                                () async => _joinTeleMedCall(visit),
+                              )
                             : null,
                       ),
                     ],
@@ -519,6 +521,86 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                 ),
                 child: const Text(
                   'Mark as Ready',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w200,
+                    fontFamily: 'Lexend',
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showConfirmCallDialog(VoidCallback? onConfirm) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: Theme.of(context).cardColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Join the telemedicine consultation?",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Lexend',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Confirm your intention!",
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  fontFamily: 'Lexend',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            GestureDetector(
+              onTap: () => Navigator.pop(ctx),
+              child: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: BoxBorder.all(color: Colors.grey),
+                ),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    fontFamily: 'Lexend',
+                    fontWeight: FontWeight.w200,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ),
+            //if (!slot.isLocked && canSchedule)
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(ctx);
+                onConfirm?.call();
+              },
+              child: Container(
+                padding: EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Color.fromARGB(255, 107, 20, 11),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'Enter Now',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w200,
