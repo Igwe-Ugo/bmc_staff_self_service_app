@@ -160,6 +160,7 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
                 item: items[index],
                 isActive: index == selectedUiIndex,
                 onTap: () => onTap(index), // ✅ Fixed: call onTap with index
+                hasTelemedicine: hasTelemedicine,
               );
             }),
           ),
@@ -175,20 +176,38 @@ class _NavTile extends StatelessWidget {
   final _NavItem item;
   final bool isActive;
   final VoidCallback onTap;
+  final bool hasTelemedicine;
 
   const _NavTile({
     required this.item,
     required this.isActive,
     required this.onTap,
+    required this.hasTelemedicine,
   });
 
-  // Purple from the screenshot
   static const _activeColor = Color(0xFFB8B0E8);
 
   @override
   Widget build(BuildContext context) {
+    final teleMedProvider = context.watch<TeleMedicineProvider>();
+    final availabilityProvider = context.watch<AvailabilityProvider>();
+
+    // Calculate badge counts
+    int teleMedCount = 0;
+    if (item.isTelemedicine && hasTelemedicine) {
+      teleMedCount = teleMedProvider.todayVisits.length;
+    }
+
+    // Availability badge logic: Window is open but user hasn't submitted slots
+    bool showAvailabilityBadge = false;
+    if (item.label == 'Availability') {
+      final isWindowOpen = availabilityProvider.isWindowOpen;
+      final hasSubmittedSlots = availabilityProvider.slots.isNotEmpty;
+      showAvailabilityBadge = isWindowOpen && !hasSubmittedSlots;
+    }
+
     return GestureDetector(
-      onTap: onTap, // ✅ Fixed: use the callback directly
+      onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
@@ -204,13 +223,68 @@ class _NavTile extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SvgPicture.asset(
-              isActive ? item.onIconName : item.offIconName,
-              height: 25,
-              width: 25,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                SvgPicture.asset(
+                  isActive ? item.onIconName : item.offIconName,
+                  height: 25,
+                  width: 25,
+                ),
+
+                // ── TeleMed Badge ──────────────────────────────────────────────
+                if (teleMedCount > 0)
+                  Positioned(
+                    right: -7,
+                    top: -4,
+                    child: CircleAvatar(
+                      backgroundColor: Colors.red.withOpacity(0.3),
+                      radius: 10,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        constraints: const BoxConstraints(
+                          minWidth: 14,
+                          minHeight: 14,
+                        ),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          teleMedCount > 99 ? '99+' : '$teleMedCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 7,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // ── Availability Alert Badge ─────────────────────────────────
+                if (showAvailabilityBadge)
+                  Positioned(
+                    right: -3,
+                    top: -2,
+                    child: Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: Colors.orangeAccent,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             if (isActive) ...[
-              const SizedBox(width: 6),
+              const SizedBox(height: 4),
               Text(
                 item.label,
                 style: const TextStyle(
