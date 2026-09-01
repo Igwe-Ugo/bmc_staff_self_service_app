@@ -113,6 +113,10 @@ class QryBookingVisits {
   final int? callEnded;
   final DateTime? callEndTime;
   final int? hasRecordings;
+  final int? consultantJoinedTelemed;
+  final DateTime? consultantJoinedTelemedTime;
+  final int? clinicJoinedTelemed;
+  final DateTime? clinicJoinedTelemedTime;
   final List<TelemedRecording>? recordings;
   final int? roomReady;
   final int? patientReady;
@@ -210,6 +214,10 @@ class QryBookingVisits {
     this.triageBypassed,
     this.triageBypassReason,
     this.triageBypassBy,
+    this.consultantJoinedTelemed,
+    this.consultantJoinedTelemedTime,
+    this.clinicJoinedTelemed,
+    this.clinicJoinedTelemedTime,
     this.telemedProviderName,
     this.specialistClinicType,
     this.arrivalBy,
@@ -315,6 +323,14 @@ class QryBookingVisits {
                 .toList()
           : null,
       roomReady: _parseInt(json['roomReady']),
+      consultantJoinedTelemed: _parseInt(json['consultantJoinedTelemed']),
+      consultantJoinedTelemedTime: json['consultantJoinedTelemedTime'] != null
+          ? DateTime.tryParse(json['consultantJoinedTelemedTime'])
+          : null,
+      clinicJoinedTelemed: _parseInt(json['clinicJoinedTelemed']),
+      clinicJoinedTelemedTime: json['clinicJoinedTelemedTime'] != null
+          ? DateTime.tryParse(json['clinicJoinedTelemedTime'])
+          : null,
       patientReady: _parseInt(json['patientReady']),
       telemedProviderId: json['telemedProviderId'],
       consultationId: json['consultationId'],
@@ -391,6 +407,10 @@ class QryBookingVisits {
     'bookedByName': bookedByName,
     'isTelemed': isTelemed,
     'telemedType': telemedType,
+    'consultantJoinedTelemed': consultantJoinedTelemed,
+    'consultantJoinedTelemedTime': consultantJoinedTelemedTime,
+    'clinicJoinedTelemed': clinicJoinedTelemed,
+    'clinicJoinedTelemedTime': clinicJoinedTelemedTime,
     'status': status,
     'deptId': deptId,
     'sectionId': sectionId,

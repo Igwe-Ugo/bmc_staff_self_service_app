@@ -69,7 +69,6 @@ class BMCRouter {
 
   //telemedicine
   static const String telemedPath = '/telemedicine';
-  static const String guestTelemedPath = 'guest_telemed';
 
   BMCRouter._internal() {
     final routes = <RouteBase>[
@@ -194,12 +193,6 @@ class BMCRouter {
               GoRoute(
                 path: telemedPath,
                 builder: (context, state) => BookingVisitsScreen(),
-                routes: [
-                  GoRoute(
-                    path: guestTelemedPath,
-                    builder: (context, state) => TelemedGuestScreen(),
-                  ),
-                ],
               ),
             ],
           ),

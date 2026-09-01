@@ -592,7 +592,11 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: isMe ? const Color(0xFF6C47FF) : const Color(0xFF262D3D),
+                color: isMe
+                    ? const Color(0xFF6C47FF)
+                    : Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF2A2A3E)
+                    : const Color(0xFFE0E0E0),
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
@@ -604,14 +608,23 @@ class _ChatScreenState extends State<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (msg.replyTo != null)
-                    _buildQuotedReply(msg.replyTo!, isMe, allMessages),
+                    _buildQuotedReply(
+                      msg.replyTo!,
+                      isMe,
+                      allMessages,
+                      widget.title,
+                    ),
                   if (msg.file != null) _buildBubbleAttachment(msg.file!, isMe),
                   if (msg.urgency != MessageUrgency.normal)
                     _buildUrgencyBadge(msg.urgency, isMe),
                   Text(
                     msg.content,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: isMe
+                          ? Colors.white
+                          : Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black87,
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -623,8 +636,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Text(
                         formatMessageTime(msg.time),
-                        style: const TextStyle(
-                          color: Colors.white60,
+                        style: TextStyle(
+                          color: isMe
+                              ? Colors.white
+                              : Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black87,
                           fontSize: 10,
                         ),
                       ),
@@ -674,6 +691,7 @@ class _ChatScreenState extends State<ChatScreen> {
     MessageReply reply,
     bool isMe,
     List<ChatMessage> allMessages,
+    String displayName,
   ) {
     return GestureDetector(
       onTap: () => _scrollToMessage(reply.id, allMessages),
@@ -681,7 +699,7 @@ class _ChatScreenState extends State<ChatScreen> {
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: const Color(0xFF181C26),
+          color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: BorderRadius.circular(8),
           border: const Border(
             left: BorderSide(color: Color(0xFFE57373), width: 3.5),
@@ -695,7 +713,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '~ ${reply.from}',
+                    '~ $displayName',
                     style: const TextStyle(
                       color: Color(0xFF64B5F6),
                       fontSize: 11,
@@ -707,7 +725,12 @@ class _ChatScreenState extends State<ChatScreen> {
                     reply.content,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 11, color: Colors.white70),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white
+                          : Colors.black,
+                    ),
                   ),
                 ],
               ),
@@ -816,7 +839,7 @@ class _ChatScreenState extends State<ChatScreen> {
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF1E2A45),
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(10),
         border: const Border(
           left: BorderSide(color: Color(0xFFE57373), width: 3),
@@ -829,7 +852,7 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Replying to ~ ${reply.from}',
+                  'Replying to ~ ${widget.title}',
                   style: const TextStyle(
                     color: Color(0xFF64B5F6),
                     fontSize: 11,
@@ -840,14 +863,20 @@ class _ChatScreenState extends State<ChatScreen> {
                   reply.content,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: const TextStyle(fontSize: 12),
                 ),
               ],
             ),
           ),
           GestureDetector(
             onTap: _clearPendingReply,
-            child: const Icon(Icons.close, size: 16, color: Colors.white38),
+            child: Icon(
+              Icons.close,
+              size: 16,
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? Colors.white
+                  : Colors.black,
+            ),
           ),
         ],
       ),

@@ -154,22 +154,6 @@ class _BMCHomeState extends State<BMCHome> {
                             const WeeklyAvailabilityWidget(),
                             const SizedBox(height: 24),
                             CombinedCarouselCalendar(),
-                            const SizedBox(height: 24),
-
-                            /* const _SectionTitle(
-                          title: "Recent Messages",
-                          badge: "5",
-                          isRota: false,
-                        ),
-                        const SizedBox(height: 14),
-                        _buildMessagesList(Theme.of(context).cardColor),
-                        const _SectionTitle(
-                          title: "Recent Notifications",
-                          badge: "10",
-                          isRota: false,
-                        ),
-                        const SizedBox(height: 14),
-                        _buildNotificationList(Theme.of(context).cardColor), */
                           ],
                         ),
                       ),
@@ -362,9 +346,7 @@ class _BMCHomeState extends State<BMCHome> {
             ),
           ),
           const SizedBox(width: 12),
-          MessageBadgeIcon(),
-          const SizedBox(width: 12),
-          NotificationBadgeIcon(),
+          MessageBadgeIcon()
         ],
       ),
     );
@@ -377,73 +359,3 @@ class _BMCHomeState extends State<BMCHome> {
     return "Good Evening";
   }
 }
-
-/* class _SectionTitle extends StatelessWidget {
-  final String title;
-  final String badge;
-  final bool isRota;
-
-  const _SectionTitle({
-    required this.title,
-    required this.badge,
-    required this.isRota,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final textColor = Theme.of(context).brightness == Brightness.dark
-        ? Colors.white
-        : const Color(0xFF1A1A2E);
-    return Row(
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-            color: textColor,
-          ),
-        ),
-        if (isRota) ...[
-          const SizedBox(width: 4),
-          Text(
-            "| This Month",
-            style: TextStyle(
-              fontWeight: FontWeight.w300,
-              fontSize: 12,
-              color: textColor.withOpacity(0.7),
-            ),
-          ),
-        ],
-        const SizedBox(width: 6),
-        CircleAvatar(
-          radius: 9,
-          backgroundColor: Theme.of(context).primaryColor.withOpacity(0.2),
-          child: Text(
-            badge,
-            style: TextStyle(
-              fontSize: 10,
-              color: Theme.of(context).primaryColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        const Spacer(),
-        Text(
-          "View All",
-          style: TextStyle(
-            fontSize: 12,
-            color: textColor.withOpacity(0.6),
-            decoration: TextDecoration.underline,
-          ),
-        ),
-        const SizedBox(width: 2),
-        Icon(
-          Iconsax.arrow_right_3,
-          size: 12,
-          color: textColor.withOpacity(0.6),
-        ),
-      ],
-    );
-  }
-} */

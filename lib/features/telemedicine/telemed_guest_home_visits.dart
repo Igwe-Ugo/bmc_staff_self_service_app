@@ -28,6 +28,84 @@ class _TeleMedGuestHomeVisitsState extends State<TeleMedGuestHomeVisits> {
     return age;
   }
 
+  Widget buildTelemedButton({
+    required int clinicJoinedTelemed,
+    required int consultantJoinedTelemed,
+    required VoidCallback onJoinPressed,
+  }) {
+    final bool hasAnyJoined =
+        clinicJoinedTelemed == 1 || consultantJoinedTelemed == 1;
+
+    // 1. Disabled State (Neither clinic nor consultant joined)
+    if (!hasAnyJoined) {
+      return ElevatedButton.icon(
+        onPressed: null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.grey,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        icon: Icon(
+          Iconsax.camera,
+          size: 12,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : Colors.black87,
+        ),
+        label: Text(
+          'Join',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            color: Theme.of(context).brightness == Brightness.dark
+                ? Colors.white
+                : Colors.black87,
+          ),
+        ),
+      );
+    }
+    // 2. Rejoin State (At least one joined, but user is currently out of call)
+    else if (hasAnyJoined) {
+      return ElevatedButton.icon(
+        onPressed: onJoinPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.orange.withOpacity(0.8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        icon: Icon(Iconsax.camera, size: 12, color: Colors.white),
+        label: const Text(
+          'ReJoin',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+    // 3. Join State (At least one joined and user is ready to enter)
+    else {
+      return ElevatedButton.icon(
+        onPressed: onJoinPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).primaryColor,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        icon: Icon(Iconsax.camera, size: 12, color: Colors.white),
+        label: const Text(
+          'Join',
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+            color: Colors.white,
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -42,10 +120,31 @@ class _TeleMedGuestHomeVisitsState extends State<TeleMedGuestHomeVisits> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'TeleMedicine Clinic Invites',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  Text(
+                    'TeleMedicine Guest Invites',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
+                      color: Colors.green,
+                    ),
+                    padding: EdgeInsets.all(10),
+                    child: Text(
+                      'Guest',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
+
               if (widget.teleMedicineProvider.guestTodayVisits.isNotEmpty)
                 CircleAvatar(
                   backgroundColor: Colors.red.withOpacity(0.3),
@@ -244,33 +343,14 @@ class _TeleMedGuestHomeVisitsState extends State<TeleMedGuestHomeVisits> {
               const SizedBox(width: 8),
 
               // 3. Action Button
-              ElevatedButton.icon(
-                onPressed: () => _showConfirmCallDialog(
-                  () async => _joinTeleMedGuestCall(visit),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                icon: Icon(
-                  Iconsax.call_outgoing,
-                  size: 12,
-                  color: Colors.white,
-                ),
-                label: const Text(
-                  'Join',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white,
-                  ),
-                ),
+              buildTelemedButton(
+                clinicJoinedTelemed: visit.clinicJoinedTelemed ?? 0,
+                consultantJoinedTelemed: visit.consultantJoinedTelemed ?? 0,
+                onJoinPressed: () {
+                  _showConfirmCallDialog(() {
+                    _joinTeleMedGuestCall(visit);
+                  });
+                },
               ),
             ],
           ),

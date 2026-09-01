@@ -54,62 +54,18 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final guestProvider = context.read<TeleMedicineProvider>().guestTodayVisits;
-
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
         title: const Text(
-          'TeleMedicine Guest',
+          'TeleMedicine Consultant',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
             fontFamily: 'Lexend',
           ),
         ),
-        actions: [
-          // guest Switch
-          GestureDetector(
-            onTap: guestProvider.isNotEmpty
-                ? () => GoRouter.of(
-                    context,
-                  ).go('${BMCRouter.telemedPath}/${BMCRouter.guestTelemedPath}')
-                : null,
-            child: Container(
-              margin: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(10)),
-                color: guestProvider.isNotEmpty
-                    ? Colors.green
-                    : Colors.grey.withOpacity(0.2),
-              ),
-              padding: EdgeInsets.all(10),
-              child: Row(
-                children: [
-                  Icon(
-                    Iconsax.user_tag,
-                    size: 18,
-                    color: guestProvider.isNotEmpty
-                        ? Colors.white
-                        : Colors.grey.withOpacity(0.2),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Guest Mode',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: guestProvider.isNotEmpty
-                          ? Colors.white
-                          : Colors.grey.withOpacity(0.2),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
       body: Consumer<TeleMedicineProvider>(
         builder: (context, teleMedProvider, child) {
