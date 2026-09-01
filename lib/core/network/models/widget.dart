@@ -1,4 +1,4 @@
-export 'login_request_model.dart';
+export 'auth_request_model.dart';
 export 'user_model.dart';
 export 'leave_model.dart';
 export 'rota_model.dart';

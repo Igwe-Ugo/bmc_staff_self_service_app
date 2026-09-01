@@ -53,6 +53,7 @@ class ApiEndpoints {
   // ── Routes ──────────────────────────────────────────────────────────────────
   static const String login = '/mobapp/auth/login';
   static const String logout = '/mobapp/auth/logout';
+  static const String resetPassword = '/password/reset/request';
   static const String refresh = '/mobapp/auth/refresh';
 
   // ── Availability ────────────────────────────────────────────────────────────

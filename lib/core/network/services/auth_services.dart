@@ -21,7 +21,7 @@ class AuthServices {
         ApiEndpoints.login,
         data: {
           ...request.toJson(),
-          'deviceId': deviceId,   // always injected here — single source of truth
+          'deviceId': deviceId, // always injected here — single source of truth
         },
       );
 
@@ -44,7 +44,7 @@ class AuthServices {
           } else {
             throw ApiException(
               message:
-              'Invalid response format: Expected JSON object but got ${decoded.runtimeType}',
+                  'Invalid response format: Expected JSON object but got ${decoded.runtimeType}',
               statusCode: response.statusCode,
             );
           }
@@ -56,8 +56,7 @@ class AuthServices {
         }
       } else {
         throw ApiException(
-          message:
-          'Unexpected response type: ${response.data.runtimeType}',
+          message: 'Unexpected response type: ${response.data.runtimeType}',
           statusCode: response.statusCode,
         );
       }
@@ -82,7 +81,6 @@ class AuthServices {
       print('STORED TOKEN after saving: $token');
 
       return loginResponse;
-
     } on DioException catch (e) {
       print('DioException caught:');
       print('  Message: ${e.message}');
@@ -98,22 +96,20 @@ class AuthServices {
         );
       } else if (e.type == DioExceptionType.connectionTimeout) {
         throw ApiException(
-          message:
-          'Connection timeout. Please check your internet connection.',
+          message: 'Connection timeout. Please check your internet connection.',
           statusCode: null,
         );
       } else if (e.type == DioExceptionType.connectionError) {
         throw ApiException(
           message:
-          'Cannot connect to server. Please check your internet connection.',
+              'Cannot connect to server. Please check your internet connection.',
           statusCode: null,
         );
       } else if (e.error is ApiException) {
         throw e.error as ApiException;
       } else {
         throw ApiException(
-          message:
-          'Network error: ${e.message ?? 'Unknown error occurred'}',
+          message: 'Network error: ${e.message ?? 'Unknown error occurred'}',
           statusCode: null,
         );
       }
@@ -127,6 +123,27 @@ class AuthServices {
     }
   }
 
+  Future<void> resetPassword(ForgotPasswordRequest request) async {
+    try {
+      final response = await _dio.post(
+        ApiEndpoints.resetPassword,
+        data: {'data': request.toJson()},
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw ApiException(
+          message: 'Failed to initiate password reset.',
+          statusCode: response.statusCode,
+        );
+      }
+    } on DioException catch (e) {
+      throw ApiException(
+        message: _extractErrorMessage(e.response?.data),
+        statusCode: e.response?.statusCode,
+      );
+    }
+  }
+
   String _extractErrorMessage(dynamic data) {
     if (data == null) return 'Server error occurred';
     try {
@@ -136,8 +153,8 @@ class AuthServices {
       }
       if (data is Map) {
         if (data.containsKey('message')) return data['message'].toString();
-        if (data.containsKey('error'))   return data['error'].toString();
-        if (data.containsKey('detail'))  return data['detail'].toString();
+        if (data.containsKey('error')) return data['error'].toString();
+        if (data.containsKey('detail')) return data['detail'].toString();
         if (data.containsKey('error_description')) {
           return data['error_description'].toString();
         }

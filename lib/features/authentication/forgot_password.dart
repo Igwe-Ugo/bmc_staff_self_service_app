@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:provider/provider.dart';
+import '../../core/network/provider/widget.dart';
 import '../common/widget.dart'; // adjust path
 
 class ForgotPassword extends StatefulWidget {
@@ -13,6 +15,7 @@ class ForgotPassword extends StatefulWidget {
 
 class _ForgotPasswordState extends State<ForgotPassword> {
   final TextEditingController _emailController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -143,7 +146,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                   width: double.infinity,
                   height: 60,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    onPressed: _isLoading ? null : _requestPasswordReset,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).primaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 20),
@@ -151,15 +154,20 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: const Text(
-                      "Request Password Reset",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontFamily: 'Lexend',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    child: _isLoading == true
+                        ? LoadingAnimationWidget.staggeredDotsWave(
+                            color: Colors.white,
+                            size: 35,
+                          )
+                        : const Text(
+                            "Request Password Reset",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontFamily: 'Lexend',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
 
@@ -182,5 +190,51 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         ),
       ),
     );
+  }
+
+  Future<void> _requestPasswordReset() async {
+    final email = _emailController.text.trim();
+
+    if (email.isEmpty) {
+      showMessage(
+        'Please enter your email address.',
+        context,
+        status: MessageStatus.warning,
+        title: 'Missing Fields',
+      );
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.forgotPassword(email);
+
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (authProvider.errorMessage == null) {
+      await Future.delayed(const Duration(milliseconds: 200));
+      showMessage(
+        'Password reset request sent. Please check your email for further instructions.',
+        context,
+        status: MessageStatus.success,
+        title: 'Success',
+      );
+      if (!mounted) return;
+      GoRouter.of(context).go(BMCRouter.loginPath);
+      navBarVisible.value = true;
+    } else {
+      showMessage(
+        authProvider.errorMessage ?? 'Password reset failed.',
+        context,
+        status: MessageStatus.error,
+        title: authProvider.errorTitle ?? 'Error',
+      );
+    }
   }
 }

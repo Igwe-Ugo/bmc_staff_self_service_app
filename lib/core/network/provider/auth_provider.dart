@@ -130,6 +130,32 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> forgotPassword(String email) async {
+    _state = AuthState.loading;
+    _errorTitle = null;
+    _errorMessage = null;
+    _errorStatusCode = null;
+    notifyListeners();
+
+    try {
+      await _authServices.resetPassword(ForgotPasswordRequest(email: email));
+      _state = AuthState.success;
+      notifyListeners();
+    } on ApiException catch (e) {
+      _state = AuthState.error;
+      _errorStatusCode = e.statusCode;
+      _errorTitle = 'Reset Password Failed';
+      _errorMessage = e.message;
+      notifyListeners();
+    } catch (_) {
+      _state = AuthState.error;
+      _errorTitle = 'Oops!';
+      _errorMessage = 'An unexpected error occurred. Please try again.';
+      _errorStatusCode = null;
+      notifyListeners();
+    }
+  }
+
   Future<void> logout() async {
     // Before clearing storage — this emits process-user-sign-out, which
     // clears this surface's presence flag immediately rather than waiting
