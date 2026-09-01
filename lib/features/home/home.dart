@@ -136,13 +136,7 @@ class _BMCHomeState extends State<BMCHome> {
                           children: [
                             _welcomeCard(context, userProvider),
                             const SizedBox(height: 24),
-                            RotaSummary(),
-                            const SizedBox(height: 24),
-                            LeaveSummaryCard(),
-                            const SizedBox(height: 24),
-                            const WeeklyAvailabilityWidget(),
-                            const SizedBox(height: 24),
-                            if (teleMedProvider.guestVisits.isNotEmpty &
+                            if (teleMedProvider.guestTodayVisits.isNotEmpty &
                                     hasTelemedicine ==
                                 true)
                               Column(
@@ -153,6 +147,12 @@ class _BMCHomeState extends State<BMCHome> {
                                   const SizedBox(height: 24),
                                 ],
                               ),
+                            RotaSummary(),
+                            const SizedBox(height: 24),
+                            LeaveSummaryCard(),
+                            const SizedBox(height: 24),
+                            const WeeklyAvailabilityWidget(),
+                            const SizedBox(height: 24),
                             CombinedCarouselCalendar(),
                             const SizedBox(height: 24),
 

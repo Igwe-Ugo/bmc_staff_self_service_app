@@ -39,8 +39,8 @@ class _TelemedGuestScreenState extends State<TelemedGuestScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<TeleMedicineProvider>();
       provider.loadVisits();
-      // I need to call the socket here.
-      //provider.listenToSocketEvents(context.read<SocketService>().eventStream);
+      // No socket wiring needed here: TeleMedicineProvider subscribes to
+      // SocketService.onInvalidation in its constructor and refreshes itself.
     });
   }
 

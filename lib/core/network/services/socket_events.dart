@@ -102,4 +102,25 @@ class LiveRefreshKeys {
   static const availabilityWindow = 'HR_AVAILABILITY_WINDOW';
 
   static const personnel = 'HR_PERSONNEL';
+
+  // ── Clinic desk / telemedicine visit lists ───────────────────────────────
+  //
+  // Broadcast by the web app (and by the server itself) whenever a row in
+  // `clinic_patientVisits` changes in a way the visit lists render:
+  //   • the clinic desk calls the patient in            (clinicals/[sectId]/[sectName])
+  //   • triage is completed, or bypassed                (same screen)
+  //   • the consultant toggles ready                    (my-clinics / this app)
+  //
+  // Which of the three keys arrives depends on which web screen the change was
+  // made from, so treat them as one signal — see [telemedVisits].
+  static const bookingVisits = 'BOOKING-VISITS';
+  static const providersBookingVisits = 'PROVIDERS-BOOKING-VISITS';
+  static const guestsBookingVisits = 'GUESTS-BOOKING-VISITS';
+
+  /// Any one of these means "the telemedicine visit lists may be stale".
+  static const telemedVisits = <String>{
+    bookingVisits,
+    providersBookingVisits,
+    guestsBookingVisits,
+  };
 }

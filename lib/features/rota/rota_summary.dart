@@ -43,7 +43,8 @@ class RotaSummary extends StatelessWidget {
 
     // Filter to isolate ONLY the current logged-in user's shifts for this current month
     final myMonthlyShifts = rotaProvider.rotaEvents.where((event) {
-      final isCurrentMonth = event.date.month == now.month && event.date.year == now.year;
+      final isCurrentMonth =
+          event.date.month == now.month && event.date.year == now.year;
       return isCurrentMonth;
     }).toList();
 
@@ -67,7 +68,9 @@ class RotaSummary extends StatelessWidget {
                   text: TextSpan(
                     style: TextStyle(
                       fontSize: 15,
-                      color: Theme.of(context).brightness == Brightness.light ? Colors.black87 : Colors.white,
+                      color: Theme.of(context).brightness == Brightness.light
+                          ? Colors.black87
+                          : Colors.white,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Lexend',
                     ),
@@ -78,19 +81,27 @@ class RotaSummary extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    totalCount.toString(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'Lexend',
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).primaryColor,
+                CircleAvatar(
+                  backgroundColor: Colors.red.withOpacity(0.3),
+                  radius: 15,
+                  child: Container(
+                    padding: const EdgeInsets.all(1),
+                    constraints: const BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 20,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      totalCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
@@ -98,7 +109,8 @@ class RotaSummary extends StatelessWidget {
             ),
             if (hasMore)
               GestureDetector(
-                onTap: () => GoRouter.of(context).pushReplacement(BMCRouter.rotaPath),
+                onTap: () =>
+                    GoRouter.of(context).pushReplacement(BMCRouter.rotaPath),
                 child: Row(
                   children: [
                     Text(
@@ -133,7 +145,11 @@ class RotaSummary extends StatelessWidget {
             ),
             child: Column(
               children: [
-                Icon(Iconsax.calendar_1, size: 100, color: Colors.grey.shade400),
+                Icon(
+                  Iconsax.calendar_1,
+                  size: 100,
+                  color: Colors.grey.shade400,
+                ),
                 const SizedBox(height: 20),
                 const Text(
                   'No shifts scheduled for this month.',
@@ -144,7 +160,7 @@ class RotaSummary extends StatelessWidget {
             ),
           )
         else
-        // ── FIX: Use a SingleChildScrollView with Row instead of ListView ──
+          // ── FIX: Use a SingleChildScrollView with Row instead of ListView ──
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
@@ -155,7 +171,10 @@ class RotaSummary extends StatelessWidget {
                   width: 160, // Fixed width for each card
                   height: 170,
                   margin: const EdgeInsets.only(right: 10),
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 0,
+                  ),
                   decoration: BoxDecoration(
                     color: baseColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(14),
@@ -172,7 +191,10 @@ class RotaSummary extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
                               color: Theme.of(context).scaffoldBackgroundColor,
                               borderRadius: BorderRadius.circular(10),
@@ -217,7 +239,11 @@ class RotaSummary extends StatelessWidget {
                                 const SizedBox(height: 4),
                                 Row(
                                   children: [
-                                    Icon(Iconsax.hospital, size: 12, color: baseColor.withOpacity(0.7)),
+                                    Icon(
+                                      Iconsax.hospital,
+                                      size: 12,
+                                      color: baseColor.withOpacity(0.7),
+                                    ),
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
@@ -280,7 +306,7 @@ class RotaSummary extends StatelessWidget {
               ),
             ),
           ),
-        ]
+        ],
       ],
     );
   }

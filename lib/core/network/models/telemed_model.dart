@@ -34,10 +34,27 @@ class PatientCompleteness {
   });
 
   factory PatientCompleteness.fromJson(Map<String, dynamic> json) {
+    List<String> parseStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) return value.map((e) => e.toString()).toList();
+      if (value is String) {
+        // Handles comma-separated strings or encoded lists
+        return value
+            .replaceAll('[', '')
+            .replaceAll(']', '')
+            .replaceAll('"', '')
+            .split(',')
+            .where((s) => s.trim().isNotEmpty)
+            .map((s) => s.trim())
+            .toList();
+      }
+      return [];
+    }
+
     return PatientCompleteness(
       isComplete: json['isComplete'] ?? false,
       missingCount: json['missingCount'] ?? 0,
-      missingFields: List<String>.from(json['missingFields'] ?? []),
+      missingFields: parseStringList(json['missingFields']),
     );
   }
 
@@ -291,8 +308,9 @@ class QryBookingVisits {
           ? DateTime.tryParse(json['callEndTime'])
           : null,
       hasRecordings: _parseInt(json['hasRecordings']),
-      recordings: json['recordings'] != null
+      recordings: (json['recordings'] is List)
           ? (json['recordings'] as List)
+                .whereType<Map<String, dynamic>>()
                 .map((e) => TelemedRecording.fromJson(e))
                 .toList()
           : null,

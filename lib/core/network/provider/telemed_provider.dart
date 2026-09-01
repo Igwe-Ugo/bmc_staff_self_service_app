@@ -15,9 +15,28 @@ class TeleMedicineProvider extends ChangeNotifier {
   String _searchQuery = '';
 
   StreamSubscription? _socketSubscription;
+  Timer? _refreshDebounce;
 
-  TeleMedicineProvider({required TeleMedicineService service})
-    : _service = service;
+  /// True once the visit lists have been fetched at least once. Live refreshes
+  /// are ignored before that: this provider is registered app-wide in main.dart,
+  /// so without the guard every broadcast would fire two HTTP GETs even for a
+  /// user who never opens the telemedicine screens.
+  bool _hasLoadedOnce = false;
+
+  TeleMedicineProvider({
+    required TeleMedicineService service,
+    SocketService? socket,
+  }) : _service = service,
+       _socket = socket ?? SocketService.instance {
+    // Live refresh. The web app broadcasts `send-invalidate-queries` whenever a
+    // visit changes — the clinic desk calling the patient in, triage being
+    // completed or bypassed, another device toggling consultant-ready — and the
+    // server rebroadcasts its own writes the same way. Mirrors the web app's
+    // SocketListeners.tsx, which invalidates the matching TanStack Query keys.
+    _socketSubscription = _socket.onInvalidation.listen(_onInvalidation);
+  }
+
+  final SocketService _socket;
 
   List<QryBookingVisits> get visits => _visits;
   List<QryBookingVisits> get guestVisits => _guestVisits;
@@ -27,27 +46,42 @@ class TeleMedicineProvider extends ChangeNotifier {
   @override
   void dispose() {
     _socketSubscription?.cancel();
+    _refreshDebounce?.cancel();
     super.dispose();
   }
 
-  /// Listens to WebSocket events and refetches visits when real-time updates occur
-  void listenToSocketEvents(Stream<dynamic> socketStream) {
-    _socketSubscription?.cancel();
-    _socketSubscription = socketStream.listen((event) {
-      if (event is Map<String, dynamic> && event['type'] == 'VISIT_UPDATE') {
-        loadVisits(); // Refetch visits to ensure all model properties are synced
-      }
-    });
+  /// A broadcast landed. Reload only when it names one of the visit-list keys —
+  /// the same stream carries HR keys this provider has no interest in.
+  void _onInvalidation(InvalidationEvent event) {
+    if (!_hasLoadedOnce) return;
+    if (!event.keys.any(LiveRefreshKeys.telemedVisits.contains)) return;
+
+    // One web action can broadcast several keys, and two actions can land back
+    // to back (triage completed, then the patient called in). Coalesce them into
+    // a single refetch.
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(
+      const Duration(milliseconds: 400),
+      () => loadVisits(silent: true),
+    );
   }
 
-  Future<void> loadVisits() async {
-    _isLoading = true;
+  /// Fetch the consultant's own visits and the visits they are a guest on.
+  ///
+  /// [silent] keeps [isLoading] false, so a live refresh replaces the rows in
+  /// place instead of flashing the screen back to its spinner. Use it for
+  /// anything the user did not explicitly ask for.
+  Future<void> loadVisits({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      notifyListeners();
+    }
     _errorMessage = null;
-    notifyListeners();
 
     try {
       _visits = await _service.fetchBookingVisits();
       _guestVisits = await _service.fetchGuestVisits();
+      _hasLoadedOnce = true;
     } catch (e) {
       _errorMessage = e.toString();
     } finally {
@@ -65,7 +99,11 @@ class TeleMedicineProvider extends ChangeNotifier {
     );
     try {
       await _service.setConsultantReady(data: markReady);
-      await loadVisits();
+      // Silent: the row is already on screen and only its pill changes — no
+      // reason to drop the whole list back to a spinner. The server also
+      // broadcasts this toggle to every client (including us), which the
+      // debounce in _onInvalidation collapses into this same refetch.
+      await loadVisits(silent: true);
       return true;
     } catch (e) {
       _errorMessage = e.toString();

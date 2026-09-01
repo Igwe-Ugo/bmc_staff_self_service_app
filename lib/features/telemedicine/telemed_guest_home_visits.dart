@@ -31,7 +31,7 @@ class _TeleMedGuestHomeVisitsState extends State<TeleMedGuestHomeVisits> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       height: 300,
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -47,27 +47,37 @@ class _TeleMedGuestHomeVisitsState extends State<TeleMedGuestHomeVisits> {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
               if (widget.teleMedicineProvider.guestTodayVisits.isNotEmpty)
-                Container(
-                  padding: EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    borderRadius: BorderRadius.all(Radius.circular(20)),
-                  ),
-                  child: Text(
-                    widget.teleMedicineProvider.guestTodayVisits.length
-                        .toString(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.white,
+                CircleAvatar(
+                  backgroundColor: Colors.red.withOpacity(0.3),
+                  radius: 15,
+                  child: Container(
+                    padding: const EdgeInsets.all(1),
+                    constraints: const BoxConstraints(
+                      minWidth: 20,
+                      minHeight: 20,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      widget.teleMedicineProvider.guestTodayVisits.length
+                          .toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
             ],
           ),
+          const SizedBox(height: 10),
           Expanded(
             child: _buildVisitsList(
-              widget.teleMedicineProvider.guestVisits,
+              widget.teleMedicineProvider.guestTodayVisits,
               Theme.of(context).cardColor,
             ),
           ),
@@ -186,17 +196,17 @@ class _TeleMedGuestHomeVisitsState extends State<TeleMedGuestHomeVisits> {
                   ? UserAvatar(
                       image: visit.picture!,
                       initials: initialsFor(visit.fullname!),
-                      radius: 17,
+                      radius: 15,
                       initialsColor: Colors.white,
                     )
                   : CircleAvatar(
-                      radius: 17,
+                      radius: 15,
                       backgroundColor: avatarColorFor(visit.fullname!),
                       child: Text(
                         initialsFor(visit.fullname!),
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 12,
+                          fontSize: 10,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -212,7 +222,7 @@ class _TeleMedGuestHomeVisitsState extends State<TeleMedGuestHomeVisits> {
                       visit.fullname ?? 'Unknown Patient',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
-                        fontSize: 13,
+                        fontSize: 11,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -220,13 +230,13 @@ class _TeleMedGuestHomeVisitsState extends State<TeleMedGuestHomeVisits> {
                       locationText,
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: 10,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       '${visit.dob != null ? _calculateAge(visit.dob!) : ''} yrs | ${visit.gender ?? ''} | ...$mrnTail',
-                      style: const TextStyle(fontSize: 11),
+                      style: const TextStyle(fontSize: 10),
                     ),
                   ],
                 ),
@@ -250,13 +260,13 @@ class _TeleMedGuestHomeVisitsState extends State<TeleMedGuestHomeVisits> {
                 ),
                 icon: Icon(
                   Iconsax.call_outgoing,
-                  size: 16,
+                  size: 12,
                   color: Colors.white,
                 ),
                 label: const Text(
                   'Join',
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w400,
                     color: Colors.white,
                   ),

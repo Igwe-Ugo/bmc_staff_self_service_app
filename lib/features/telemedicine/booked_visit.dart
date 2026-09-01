@@ -41,8 +41,8 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<TeleMedicineProvider>();
       provider.loadVisits();
-      // I need to call the socket here.
-      //provider.listenToSocketEvents(context.read<SocketService>().eventStream);
+      // No socket wiring needed here: TeleMedicineProvider subscribes to
+      // SocketService.onInvalidation in its constructor and refreshes itself.
     });
   }
 
@@ -54,7 +54,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final guestProvider = context.read<TeleMedicineProvider>().guestVisits;
+    final guestProvider = context.read<TeleMedicineProvider>().guestTodayVisits;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
