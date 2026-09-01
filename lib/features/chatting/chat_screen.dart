@@ -4,7 +4,9 @@ import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart' as foundation;
 import 'package:flutter/material.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import '../../core/network/models/widget.dart';
 import '../../core/network/provider/widget.dart';
@@ -244,7 +246,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _showReactionMenu(ChatMessage msg) {
+  void _showMessageOptionsMenu(ChatMessage msg, bool isMe) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -252,25 +254,56 @@ class _ChatScreenState extends State<ChatScreen> {
         final emojis = ['🙏', '🔥', '❤️', '👍', '😂', '😮'];
         return Container(
           margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white24),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: emojis.map((emoji) {
-              return GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    _messageReactions[msg.id] = emoji;
-                  });
-                },
-                child: Text(emoji, style: const TextStyle(fontSize: 26)),
-              );
-            }).toList(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Emoji Reactions Bar ─────────────────────────────────────────
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: emojis.map((emoji) {
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      setState(() {
+                        _messageReactions[msg.id] = emoji;
+                      });
+                    },
+                    child: Text(emoji, style: const TextStyle(fontSize: 26)),
+                  );
+                }).toList(),
+              ),
+
+              // ── Delete Option (Only if sent by current user) ───────────────
+              if (isMe) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: Divider(color: Colors.white12, height: 1),
+                ),
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Iconsax.trash, color: Colors.redAccent),
+                  title: const Text(
+                    'Delete Message',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmDeleteMessage(msg);
+                  },
+                ),
+              ],
+            ],
           ),
         );
       },
@@ -492,6 +525,8 @@ class _ChatScreenState extends State<ChatScreen> {
     String me,
     List<ChatMessage> allMessages,
   ) {
+    final isMe = msg.from == me;
+
     return Dismissible(
       key: ValueKey('msg_${msg.id}'),
       direction: DismissDirection.startToEnd,
@@ -505,7 +540,7 @@ class _ChatScreenState extends State<ChatScreen> {
         child: const Icon(Icons.reply, color: Colors.white70, size: 22),
       ),
       child: GestureDetector(
-        onLongPress: () => _showReactionMenu(msg),
+        onLongPress: () => _showMessageOptionsMenu(msg, isMe),
         child: _buildBubble(msg, me, allMessages),
       ),
     );
@@ -686,8 +721,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildUrgencyBadge(MessageUrgency urgency, bool isMe) {
     final label = urgency == MessageUrgency.urgent ? 'URGENT' : 'ASAP';
     final color = urgency == MessageUrgency.urgent
-        ? const Color(0xFFF39C12)
-        : const Color(0xFF007AFF);
+        ? const Color.fromARGB(255, 253, 1, 14).withOpacity(0.7)
+        : const Color(0xFFF39C12).withOpacity(0.7);
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Container(
@@ -704,6 +739,73 @@ class _ChatScreenState extends State<ChatScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmDeleteMessage(ChatMessage msg) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).cardColor,
+        title: const Text(
+          'Delete Message',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Lexend',
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to delete this message? This action cannot be undone.',
+          style: TextStyle(
+            fontSize: 11,
+            fontFamily: 'Lexend',
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        actions: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: BoxBorder.all(color: Colors.grey),
+              ),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  fontFamily: 'Lexend',
+                  fontWeight: FontWeight.w200,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              Navigator.pop(context);
+              _chatProvider.deleteMessage(msg);
+            },
+            child: Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Color.fromARGB(255, 107, 20, 11),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Text(
+                'Delete',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w200,
+                  fontFamily: 'Lexend',
+                  fontSize: 11,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -771,13 +873,9 @@ class _ChatScreenState extends State<ChatScreen> {
               GestureDetector(
                 onTap: isUploading ? null : _pickAndSendFile,
                 child: isUploading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white38,
-                        ),
+                    ? LoadingAnimationWidget.staggeredDotsWave(
+                        color: Colors.white,
+                        size: 20,
                       )
                     : const Icon(
                         Icons.attach_file,
@@ -909,16 +1007,41 @@ class _ChatScreenState extends State<ChatScreen> {
 
         final bytes = snapshot.data!;
 
+        // ── Image Attachment ───────────────────────────────────────────────
         if (attachment.isImage) {
           return Container(
             margin: const EdgeInsets.only(bottom: 6),
             constraints: const BoxConstraints(maxWidth: 200, maxHeight: 200),
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-            child: Image.memory(bytes, fit: BoxFit.cover),
+            child: Stack(
+              children: [
+                Image.memory(bytes, fit: BoxFit.cover),
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: GestureDetector(
+                    onTap: () => _saveFileToDevice(attachment.name, bytes),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.file_download,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           );
         }
 
+        // ── Non-Image (PDF/Document) Attachment ─────────────────────────────
         return Container(
           margin: const EdgeInsets.only(bottom: 6),
           padding: const EdgeInsets.all(8),
@@ -961,11 +1084,68 @@ class _ChatScreenState extends State<ChatScreen> {
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
+              IconButton(
+                icon: Icon(
+                  Icons.file_download,
+                  size: 20,
+                  color: isMe ? Colors.white : const Color(0xFF6C47FF),
+                ),
+                onPressed: () => _saveFileToDevice(attachment.name, bytes),
+              ),
             ],
           ),
         );
       },
     );
+  }
+
+  Future<void> _saveFileToDevice(String fileName, Uint8List bytes) async {
+    try {
+      Directory? dir;
+
+      if (Platform.isWindows) {
+        dir = await getDownloadsDirectory();
+      } else if (Platform.isAndroid) {
+        dir = Directory('/storage/emulated/0/Download');
+        if (!await dir.exists()) {
+          dir = await getExternalStorageDirectory();
+        }
+      } else if (Platform.isIOS) {
+        dir = await getApplicationDocumentsDirectory();
+      }
+
+      if (dir == null) {
+        if (!mounted) return;
+        showMessage(
+          'Could not locate local storage path.',
+          context,
+          status: MessageStatus.error,
+        );
+        return;
+      }
+
+      // Sanitize filename and prepare destination path
+      final safeFileName = fileName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final filePath = '${dir.path}\\$safeFileName';
+
+      final file = File(filePath);
+      await file.writeAsBytes(bytes);
+
+      if (!mounted) return;
+      showMessage(
+        'File saved to Downloads: $filePath',
+        context,
+        status: MessageStatus.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showMessage(
+        'Failed to save file: $e',
+        context,
+        status: MessageStatus.error,
+      );
+    }
   }
 
   Widget _attachmentPlaceholder(String label, bool isMe, {bool muted = false}) {
