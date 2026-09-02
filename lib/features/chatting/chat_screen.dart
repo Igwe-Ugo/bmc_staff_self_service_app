@@ -256,7 +256,7 @@ class _ChatScreenState extends State<ChatScreen> {
           margin: const EdgeInsets.all(16),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
+            color: Theme.of(context).cardColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: Colors.white24),
           ),
