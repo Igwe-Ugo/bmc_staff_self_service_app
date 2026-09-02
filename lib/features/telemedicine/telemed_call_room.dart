@@ -1,9 +1,6 @@
 // lib/features/telemedicine/telemedicine_room_screen.dart
-
 import 'dart:async';
-
 import 'package:bmc_app/core/network/models/widget.dart';
-import 'package:bmc_app/features/common/show_message.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
@@ -11,6 +8,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:webview_flutter_android/webview_flutter_android.dart';
 import 'package:webview_flutter_wkwebview/webview_flutter_wkwebview.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+import '../common/widget.dart';
 
 class TelemedicineRoomScreen extends StatefulWidget {
   final String joinLink;
@@ -29,7 +28,6 @@ class TelemedicineRoomScreen extends StatefulWidget {
 class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
   WebViewController? _controller; // nullable now — built async in _setupWebView
   bool _isLoading = true;
-  bool _isLive = false;
 
   // set when camera or microphone was refused at the OS level. The WebView can
   // only pass on a permission the app itself holds, so loading the call page
@@ -163,6 +161,7 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
                         status: MessageStatus.info,
                       );
                       Navigator.pop(context);
+                      navBarVisible.value = false;
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
@@ -214,6 +213,7 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
                         ),
                         const SizedBox(width: 8),
                         Container(
+                          margin: const EdgeInsets.only(bottom: 15),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 4,
@@ -228,13 +228,11 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
                               Icon(
                                 Icons.circle,
                                 size: 8,
-                                color: _isLive
-                                    ? Colors.greenAccent
-                                    : Colors.orangeAccent,
+                                color: Colors.greenAccent,
                               ),
                               SizedBox(width: 4),
                               Text(
-                                _isLive ? 'Live Session' : 'Connecting...',
+                                'Live Session',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 10,
@@ -298,9 +296,8 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
     switch (state) {
       case 'new':
       case 'connecting':
-        setState(() => _isLive = false);
         _joinTimeoutTimer ??= Timer(const Duration(seconds: 20), () {
-          if (!mounted || _isLive) return;
+          if (!mounted) return;
           showMessage(
             'Still waiting for the other party to join. You will connect automatically once they do.',
             context,
@@ -311,10 +308,8 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
       case 'connected':
         _joinTimeoutTimer?.cancel();
         _joinTimeoutTimer = null;
-        setState(() => _isLive = true);
         showMessage('You are live', context, status: MessageStatus.success);
       case 'disconnected':
-        setState(() => _isLive = false);
         showMessage(
           'Connection lost - attempting to reconnect...',
           context,
@@ -324,7 +319,6 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
       case 'failed':
         _joinTimeoutTimer?.cancel();
         _joinTimeoutTimer = null;
-        setState(() => _isLive = false);
         showMessage(
           'The call failed to connect. Please try again.',
           context,
@@ -334,7 +328,6 @@ class _TelemedicineRoomScreenState extends State<TelemedicineRoomScreen> {
       case 'closed':
         _joinTimeoutTimer?.cancel();
         _joinTimeoutTimer = null;
-        setState(() => _isLive = false);
         showMessage('The call has ended.', context, status: MessageStatus.info);
         break;
     }

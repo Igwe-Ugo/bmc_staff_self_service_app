@@ -40,8 +40,6 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider = context.read<TeleMedicineProvider>();
       provider.loadVisits();
-      // No socket wiring needed here: TeleMedicineProvider subscribes to
-      // SocketService.onInvalidation in its constructor and refreshes itself.
     });
   }
 
@@ -607,6 +605,7 @@ class _BookingVisitsScreenState extends State<BookingVisitsScreen>
                 TelemedicineRoomScreen(joinLink: joinLink, visits: visit),
           ),
         );
+        navBarVisible.value = false;
       } else if (provider.errorMessage != null) {
         showMessage(
           provider.errorMessage!,
