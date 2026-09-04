@@ -28,32 +28,32 @@ class BMCAppNavBar extends StatefulWidget {
 class _BMCAppNavBarState extends State<BMCAppNavBar> {
   static final _navItems = [
     _NavItem(
-      onIconName: 'assets/icons/home_on.svg',
       offIconName: 'assets/icons/home.svg',
+      darkModeIconName: 'assets/icons/home_dark.svg',
       label: 'Home',
       isTelemedicine: false,
     ),
     _NavItem(
-      onIconName: 'assets/icons/calendar-add_on.svg',
       offIconName: 'assets/icons/calendar-add.svg',
+      darkModeIconName: 'assets/icons/calendar-add_dark.svg',
       label: 'Availability',
       isTelemedicine: false,
     ),
     _NavItem(
-      onIconName: 'assets/icons/share_on.svg',
       offIconName: 'assets/icons/share.svg',
+      darkModeIconName: 'assets/icons/share_dark.svg',
       label: 'Rota',
       isTelemedicine: false,
     ),
     _NavItem(
-      onIconName: 'assets/icons/brifecase-timer_on.svg',
       offIconName: 'assets/icons/brifecase-timer.svg',
+      darkModeIconName: 'assets/icons/brifecase-timer_dark.svg',
       label: 'Leave',
       isTelemedicine: false,
     ),
     _NavItem(
-      onIconName: 'assets/icons/telemedicine.svg',
       offIconName: 'assets/icons/telemedicine_on.svg',
+      darkModeIconName: 'assets/icons/telemedicine_dark.svg',
       label: 'TeleMed',
       isTelemedicine: true,
     ),
@@ -107,6 +107,7 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
       currentShellIndex,
       visibleItems,
     );
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return ValueListenableBuilder<bool>(
       valueListenable: navBarVisible,
@@ -120,6 +121,7 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
                   visibleItems,
                   selectedUiIndex,
                   hasTelemedicine,
+                  isDarkMode,
                   (index) => _onItemTapped(index, visibleItems),
                 )
               : null,
@@ -133,6 +135,7 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
     List<_NavItem> items,
     int selectedUiIndex,
     bool hasTelemedicine,
+    bool isDarkMode,
     Function(int) onTap,
   ) {
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -161,6 +164,7 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
                 isActive: index == selectedUiIndex,
                 onTap: () => onTap(index), // ✅ Fixed: call onTap with index
                 hasTelemedicine: hasTelemedicine,
+                isDarkMode: isDarkMode,
               );
             }),
           ),
@@ -177,15 +181,18 @@ class _NavTile extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
   final bool hasTelemedicine;
+  final bool isDarkMode;
 
   const _NavTile({
     required this.item,
     required this.isActive,
     required this.onTap,
     required this.hasTelemedicine,
+    required this.isDarkMode,
   });
 
-  static const _activeColor = Color(0xFFB8B0E8);
+  static const _activeLightColor = Color(0xFFB8B0E8);
+  static const _activeDarkColor = Color(0xFF4C4B7C);
 
   @override
   Widget build(BuildContext context) {
@@ -217,7 +224,9 @@ class _NavTile extends StatelessWidget {
           vertical: 10,
         ),
         decoration: BoxDecoration(
-          color: isActive ? _activeColor : Colors.transparent,
+          color: isActive
+              ? (isDarkMode ? _activeDarkColor : _activeLightColor)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(50),
         ),
         child: Column(
@@ -227,7 +236,8 @@ class _NavTile extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 SvgPicture.asset(
-                  isActive ? item.onIconName : item.offIconName,
+                  isDarkMode ? item.darkModeIconName : item.offIconName,
+                  //: item.offIconName,
                   height: 25,
                   width: 25,
                 ),
@@ -305,13 +315,13 @@ class _NavTile extends StatelessWidget {
 
 class _NavItem {
   final String offIconName;
-  final String onIconName;
+  final String darkModeIconName;
   final String label;
   final bool isTelemedicine;
 
   const _NavItem({
     required this.offIconName,
-    required this.onIconName,
+    required this.darkModeIconName,
     required this.label,
     this.isTelemedicine = false,
   });
@@ -321,14 +331,14 @@ class _NavItem {
       identical(this, other) ||
       other is _NavItem &&
           offIconName == other.offIconName &&
-          onIconName == other.onIconName &&
+          darkModeIconName == other.darkModeIconName &&
           label == other.label &&
           isTelemedicine == other.isTelemedicine;
 
   @override
   int get hashCode =>
       offIconName.hashCode ^
-      onIconName.hashCode ^
+      darkModeIconName.hashCode ^
       label.hashCode ^
       isTelemedicine.hashCode;
 }
