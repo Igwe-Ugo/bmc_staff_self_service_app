@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/network/api_client/widget.dart';
 import '../../core/network/provider/widget.dart';
-import '../../core/network/services/widget.dart';
 
 class ProfileDrawer extends StatelessWidget {
   final VoidCallback onClose;

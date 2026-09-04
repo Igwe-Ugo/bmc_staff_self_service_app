@@ -492,8 +492,9 @@ class ChatProvider extends ChangeNotifier {
       for (final message in group.messages) {
         if (!_seenIds.add(message.id)) continue;
         convo.messages.add(message);
-        if (message.from != _me && !message.readBy.contains(_me))
+        if (message.from != _me && !message.readBy.contains(_me)) {
           convo.unread++;
+        }
       }
       convo.messages.sort((a, b) => a.time.compareTo(b.time));
       convo.lastActivity = convo.messages.isEmpty
