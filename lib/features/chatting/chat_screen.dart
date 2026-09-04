@@ -140,13 +140,79 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   void _stageReply(ChatMessage msg) {
+    final allMessages = _chatProvider.messagesWith(widget.conversationKey);
+    final senderDisplayName = _resolveDisplayName(msg.from, allMessages);
     setState(() {
       _pendingReplyTo = MessageReply(
         id: msg.id,
-        from: msg.from,
+        from: senderDisplayName,
         content: msg.content,
       );
     });
+  }
+
+  /// Fallback userId -> full name map for anyone the roster (ChatProvider's
+  /// `usernameFor`) doesn't know — e.g. a user who has since left and no
+  /// longer appears in the roster, but is still referenced in old messages.
+  /// Whenever someone swipes to reply, the resolved full name rides along
+  /// in `MessageReply.from` on the outbound message (see `_stageReply`
+  /// above); any already-loaded message that replies to another loaded
+  /// message is therefore a free (senderUserId -> fullName) fact.
+  Map<String, String> _harvestKnownNames(List<ChatMessage> allMessages) {
+    // messageId -> sender userId, so we can map a reply back to its author.
+    final senderOf = <String, String>{
+      for (final m in allMessages) m.id: m.from,
+    };
+
+    final names = <String, String>{};
+    for (final m in allMessages) {
+      final reply = m.replyTo;
+      if (reply == null || reply.from.isEmpty) continue;
+      final originalSenderId = senderOf[reply.id];
+      if (originalSenderId == null || originalSenderId.isEmpty) continue;
+      names.putIfAbsent(originalSenderId, () => reply.from);
+    }
+    return names;
+  }
+
+  String _resolveDisplayName(
+    String senderUserId,
+    List<ChatMessage> allMessages,
+  ) {
+    final currentUsername = _chatProvider.me;
+
+    // 1. The logged-in user, in either a 1-on-1 or a group.
+    if (senderUserId == currentUsername) {
+      return 'Me';
+    }
+
+    // 2. Direct 1-on-1 chat — we already have the peer's full name.
+    if (!widget.isGroup &&
+        widget.peer?.userId == senderUserId &&
+        (widget.peer?.username.isNotEmpty ?? false)) {
+      return widget.peer!.username;
+    }
+
+    // 3. The roster — ChatProvider's userId -> full name directory, seeded
+    // at sign-in and covering group members too (the roster is the whole
+    // user directory, not just 1-on-1 contacts).
+    final rostered = _chatProvider.usernameFor(senderUserId);
+    if (rostered != null && rostered.isNotEmpty) {
+      return rostered;
+    }
+
+    // 4. Safety net for anyone the roster doesn't know (e.g. a departed
+    // user still referenced in old messages): harvested from prior replies
+    // already loaded for this conversation (see _harvestKnownNames).
+    final harvested = _harvestKnownNames(allMessages)[senderUserId];
+    if (harvested != null && harvested.isNotEmpty) {
+      return harvested;
+    }
+
+    // 5. Unknown. Deliberately NOT falling back to widget.title here —
+    // that's the chat's name (peer or group), not the sender's, and using
+    // it mislabels every unresolved sender as the group/peer itself.
+    return senderUserId;
   }
 
   void _clearPendingReply() {
@@ -608,12 +674,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   if (msg.replyTo != null)
-                    _buildQuotedReply(
-                      msg.replyTo!,
-                      isMe,
-                      allMessages,
-                      widget.title,
-                    ),
+                    _buildQuotedReply(msg.replyTo!, isMe, allMessages),
                   if (msg.file != null) _buildBubbleAttachment(msg.file!, isMe),
                   if (msg.urgency != MessageUrgency.normal)
                     _buildUrgencyBadge(msg.urgency, isMe),
@@ -691,7 +752,6 @@ class _ChatScreenState extends State<ChatScreen> {
     MessageReply reply,
     bool isMe,
     List<ChatMessage> allMessages,
-    String displayName,
   ) {
     return GestureDetector(
       onTap: () => _scrollToMessage(reply.id, allMessages),
@@ -713,7 +773,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '~ $displayName',
+                    '~ ${reply.from}',
                     style: const TextStyle(
                       color: Color(0xFF64B5F6),
                       fontSize: 11,
@@ -852,7 +912,7 @@ class _ChatScreenState extends State<ChatScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Replying to ~ ${widget.title}',
+                  'Replying to ~ ${reply.from}',
                   style: const TextStyle(
                     color: Color(0xFF64B5F6),
                     fontSize: 11,

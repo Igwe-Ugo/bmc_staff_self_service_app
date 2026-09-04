@@ -156,11 +156,23 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> logout() async {
+  Future<void> logout(
+    ChatProvider chatProvider,
+    PresenceProvider presenceProvider,
+  ) async {
     // Before clearing storage — this emits process-user-sign-out, which
     // clears this surface's presence flag immediately rather than waiting
     // on the server's disconnect handler to notice a dropped transport.
+    // Awaited fully so the account-scoped resets below run against a
+    // torn-down socket, not one still live from this session.
     await SocketService.instance.disconnect();
+
+    // Wipe this account's chat/presence state explicitly rather than
+    // relying solely on ChatProvider's onStatus(disconnected) listener to
+    // catch it — belt-and-braces, and the only thing that protects the next
+    // account from seeing this one's cached conversations.
+    chatProvider.reset();
+    presenceProvider.reset();
 
     await _authServices.logout();
     _state = AuthState.idle;

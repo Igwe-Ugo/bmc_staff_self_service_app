@@ -86,6 +86,20 @@ class PresenceProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Wipes the roster and forgets who "me" was.
+  ///
+  /// Call this EXPLICITLY and unconditionally from your logout flow, same as
+  /// `ChatProvider.reset()` and for the same reason: this provider is
+  /// long-lived across account switches, so without an explicit reset here,
+  /// the next account's screens can render this account's cached roster
+  /// (including presence flags) before its own roster arrives.
+  void reset() {
+    _status = SocketStatus.disconnected;
+    _users.clear();
+    _me = '';
+    notifyListeners();
+  }
+
   void _onRoster(List<SocketUser> users) {
     _users
       ..clear()

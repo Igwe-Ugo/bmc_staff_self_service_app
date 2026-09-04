@@ -18,7 +18,6 @@ import 'package:flutter/foundation.dart';
 import '../models/widget.dart';
 import '../services/widget.dart';
 
-
 class Conversation {
   Conversation({required this.key, required this.isGroup});
 
@@ -36,7 +35,7 @@ class Conversation {
 
 class ChatProvider extends ChangeNotifier {
   ChatProvider({SocketService? service})
-      : _service = service ?? SocketService.instance {
+    : _service = service ?? SocketService.instance {
     _subs.addAll([
       _service.onStatus.listen(_onStatus),
       _service.onRoster.listen(_seedFromRoster),
@@ -62,12 +61,24 @@ class ChatProvider extends ChangeNotifier {
   set me(String username) => _me = username;
   String get me => _me;
 
-  
   bool _isUploading = false;
   bool get isUploading => _isUploading;
 
   final Map<String, Conversation> _conversations = {};
   final Map<String, ChatGroup> _groups = {};
+
+  /// userId (username) -> full name, harvested from the roster and from
+  /// typing events. This is the only place a group member's real name can
+  /// come from — ChatGroup.members is just bare userId strings, and there's
+  /// no per-group name payload. Since the roster is the whole user
+  /// directory (not just 1-on-1 contacts), it covers group senders too.
+  final Map<String, String> _usernames = {};
+
+  /// Full name for a userId, if known. Populated from the roster on sign-in
+  /// and topped up from typing events for anyone not in that snapshot.
+  /// Returns null rather than the userId itself so callers can decide their
+  /// own fallback (e.g. "Me" for the current user).
+  String? usernameFor(String userId) => _usernames[userId];
 
   /// Every message id we have already ingested.
   ///
@@ -179,10 +190,10 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void deleteMessage(ChatMessage message) => _service.deleteMessage(
-        messageId: message.id,
-        withUserId: message.conversationKey(_me),
-        groupId: message.isGroup ? message.groupId : null,
-      );
+    messageId: message.id,
+    withUserId: message.conversationKey(_me),
+    groupId: message.isGroup ? message.groupId : null,
+  );
 
   /// `toggle` is NOT the desired state — the server reads it as "this is a
   /// toggle request" and decides the direction itself:
@@ -194,10 +205,10 @@ class ChatProvider extends ChangeNotifier {
   /// server still emits `message-kept`, which would leave the UI permanently
   /// stuck. Always send `true`.
   void toggleKeep(ChatMessage message) => _service.keepMessage(
-        messageId: message.id,
-        withUserId: message.conversationKey(_me),
-        toggle: true,
-      );
+    messageId: message.id,
+    withUserId: message.conversationKey(_me),
+    toggle: true,
+  );
 
   /// One debounce timer per conversation. A single shared timer meant that
   /// switching chats mid-typing suppressed `typing-start` for the new chat and
@@ -227,26 +238,49 @@ class ChatProvider extends ChangeNotifier {
   void _onStatus(SocketStatus status) {
     if (status == SocketStatus.disconnected ||
         status == SocketStatus.unauthorized) {
-      _conversations.clear();
-      _groups.clear();
-      _seenIds.clear();
-      _typing.clear();
-      for (final t in _typingTimers.values) {
-        t.cancel();
-      }
-      _typingTimers.clear();
-      for (final t in _outboundTyping.values) {
-        t.cancel();
-      }
-      _outboundTyping.clear();
-      _activeConversation = null;
-      notifyListeners();
+      reset();
     }
   }
 
-  /// The roster doubles as the offline backlog.
+  /// Wipes every trace of the current session's conversations, groups, and
+  /// name directory, and forgets who "me" was.
+  ///
+  /// Call this EXPLICITLY and unconditionally from your logout flow — don't
+  /// rely on `_onStatus` picking up a `disconnected`/`unauthorized` socket
+  /// event to do it implicitly. This provider is long-lived across account
+  /// switches, so without an explicit reset here, the next account's screens
+  /// can render this account's cached messages before its own data arrives,
+  /// or on top of it if the two accounts share any conversation keys.
+  /// Safe to call again on the way back in, before the new account's `me`
+  /// is set, as a belt-and-braces measure.
+  void reset() {
+    _conversations.clear();
+    _groups.clear();
+    _seenIds.clear();
+    _typing.clear();
+    for (final t in _typingTimers.values) {
+      t.cancel();
+    }
+    _typingTimers.clear();
+    for (final t in _outboundTyping.values) {
+      t.cancel();
+    }
+    _outboundTyping.clear();
+    _activeConversation = null;
+    _usernames.clear();
+    _isUploading = false;
+    _me = '';
+    notifyListeners();
+  }
+
+  /// The roster doubles as the offline backlog, and — for every user in it,
+  /// not just ones with message history — as the userId -> full name
+  /// directory that group chats have no other source for.
   void _seedFromRoster(List<SocketUser> users) {
     for (final user in users) {
+      if (user.username.isNotEmpty) {
+        _usernames[user.userId] = user.username;
+      }
       if (user.messages.isEmpty) continue;
       final convo = _conversations.putIfAbsent(
         user.userId,
@@ -258,7 +292,9 @@ class ChatProvider extends ChangeNotifier {
         if (message.from != _me && !message.read) convo.unread++;
       }
       convo.messages.sort((a, b) => a.time.compareTo(b.time));
-      convo.lastActivity = convo.messages.isEmpty ? null : convo.messages.last.time;
+      convo.lastActivity = convo.messages.isEmpty
+          ? null
+          : convo.messages.last.time;
     }
     notifyListeners();
   }
@@ -350,8 +386,9 @@ class ChatProvider extends ChangeNotifier {
         convo.unread--;
       }
       _seenIds.remove(event.messageId);
-      convo.lastActivity =
-          convo.messages.isEmpty ? null : convo.messages.last.time;
+      convo.lastActivity = convo.messages.isEmpty
+          ? null
+          : convo.messages.last.time;
       notifyListeners();
       return;
     }
@@ -387,7 +424,9 @@ class ChatProvider extends ChangeNotifier {
       final message = convo.messages[i];
       // We read their messages → flag inbound.
       // They read ours      → flag outbound (drives the read receipt tick).
-      final shouldFlag = iAmTheReader ? message.from != _me : message.from == _me;
+      final shouldFlag = iAmTheReader
+          ? message.from != _me
+          : message.from == _me;
       if (shouldFlag && !message.read) {
         convo.messages[i] = message.copyWith(read: true);
       }
@@ -397,14 +436,16 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void _onGroupMessagesRead(
-      ({String groupId, String userId, int markedCount}) event) {
+    ({String groupId, String userId, int markedCount}) event,
+  ) {
     final convo = _conversations[event.groupId];
     if (convo == null) return;
     for (var i = 0; i < convo.messages.length; i++) {
       final message = convo.messages[i];
       if (message.readBy.contains(event.userId)) continue;
-      convo.messages[i] =
-          message.copyWith(readBy: [...message.readBy, event.userId]);
+      convo.messages[i] = message.copyWith(
+        readBy: [...message.readBy, event.userId],
+      );
     }
     // The server broadcasts this to the whole group room, so we are also told
     // when WE read the group on another device — clear the badge here too.
@@ -414,11 +455,20 @@ class ChatProvider extends ChangeNotifier {
 
   void _onTyping(TypingEvent event) {
     if (event.from == _me) return;
+    // Typing events carry the sender's full name — a cheap top-up for
+    // anyone not in the roster snapshot (e.g. they signed in after ours
+    // loaded). Roster stays authoritative; this only fills gaps.
+    if ((event.username?.isNotEmpty ?? false) &&
+        !_usernames.containsKey(event.from)) {
+      _usernames[event.from] = event.username!;
+    }
     _typing.add(event.from);
     _typingTimers[event.from]?.cancel();
     // Failsafe: `user-stopped-typing` can be lost if the sender drops.
-    _typingTimers[event.from] =
-        Timer(const Duration(seconds: 6), () => _clearTyping(event.from));
+    _typingTimers[event.from] = Timer(
+      const Duration(seconds: 6),
+      () => _clearTyping(event.from),
+    );
     notifyListeners();
   }
 
@@ -442,10 +492,13 @@ class ChatProvider extends ChangeNotifier {
       for (final message in group.messages) {
         if (!_seenIds.add(message.id)) continue;
         convo.messages.add(message);
-        if (message.from != _me && !message.readBy.contains(_me)) convo.unread++;
+        if (message.from != _me && !message.readBy.contains(_me))
+          convo.unread++;
       }
       convo.messages.sort((a, b) => a.time.compareTo(b.time));
-      convo.lastActivity = convo.messages.isEmpty ? null : convo.messages.last.time;
+      convo.lastActivity = convo.messages.isEmpty
+          ? null
+          : convo.messages.last.time;
     }
     notifyListeners();
   }

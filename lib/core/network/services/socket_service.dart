@@ -91,16 +91,27 @@ class SocketService with WidgetsBindingObserver {
   final _userSignedIn$ = StreamController<SocketUser>.broadcast();
   final _presence$ = StreamController<PresenceEvent>.broadcast();
   final _message$ = StreamController<ChatMessage>.broadcast();
-  final _messageDeleted$ = StreamController<({String messageId, String deletedBy})>.broadcast();
-  final _messageKept$ = StreamController<({String messageId, String userId, bool removed})>.broadcast();
-  final _read$ = StreamController<({String userId, String withUserId})>.broadcast();
-  final _groupRead$ = StreamController<({String groupId, String userId, int markedCount})>.broadcast();
+  final _messageDeleted$ =
+      StreamController<({String messageId, String deletedBy})>.broadcast();
+  final _messageKept$ =
+      StreamController<
+        ({String messageId, String userId, bool removed})
+      >.broadcast();
+  final _read$ =
+      StreamController<({String userId, String withUserId})>.broadcast();
+  final _groupRead$ =
+      StreamController<
+        ({String groupId, String userId, int markedCount})
+      >.broadcast();
   final _typing$ = StreamController<TypingEvent>.broadcast();
   final _typingStopped$ = StreamController<TypingEvent>.broadcast();
   final _groups$ = StreamController<List<ChatGroup>>.broadcast();
   final _groupUpserted$ = StreamController<ChatGroup>.broadcast();
   final _groupDeleted$ = StreamController<String>.broadcast();
-  final _groupMembership$ = StreamController<({String groupId, String userId, bool added})>.broadcast();
+  final _groupMembership$ =
+      StreamController<
+        ({String groupId, String userId, bool added})
+      >.broadcast();
   final _invalidation$ = StreamController<InvalidationEvent>.broadcast();
 
   Stream<SocketStatus> get onStatus => _status$.stream;
@@ -108,16 +119,21 @@ class SocketService with WidgetsBindingObserver {
   Stream<SocketUser> get onUserSignedIn => _userSignedIn$.stream;
   Stream<PresenceEvent> get onPresenceChange => _presence$.stream;
   Stream<ChatMessage> get onMessage => _message$.stream;
-  Stream<({String messageId, String deletedBy})> get onMessageDeleted => _messageDeleted$.stream;
-  Stream<({String messageId, String userId, bool removed})> get onMessageKept => _messageKept$.stream;
-  Stream<({String userId, String withUserId})> get onMessagesRead => _read$.stream;
-  Stream<({String groupId, String userId, int markedCount})> get onGroupMessagesRead => _groupRead$.stream;
+  Stream<({String messageId, String deletedBy})> get onMessageDeleted =>
+      _messageDeleted$.stream;
+  Stream<({String messageId, String userId, bool removed})> get onMessageKept =>
+      _messageKept$.stream;
+  Stream<({String userId, String withUserId})> get onMessagesRead =>
+      _read$.stream;
+  Stream<({String groupId, String userId, int markedCount})>
+  get onGroupMessagesRead => _groupRead$.stream;
   Stream<TypingEvent> get onTyping => _typing$.stream;
   Stream<TypingEvent> get onTypingStopped => _typingStopped$.stream;
   Stream<List<ChatGroup>> get onGroups => _groups$.stream;
   Stream<ChatGroup> get onGroupUpserted => _groupUpserted$.stream;
   Stream<String> get onGroupDeleted => _groupDeleted$.stream;
-  Stream<({String groupId, String userId, bool added})> get onGroupMembership => _groupMembership$.stream;
+  Stream<({String groupId, String userId, bool added})> get onGroupMembership =>
+      _groupMembership$.stream;
   Stream<InvalidationEvent> get onInvalidation => _invalidation$.stream;
 
   // ── Setup ────────────────────────────────────────────────────────────────
@@ -186,14 +202,32 @@ class SocketService with WidgetsBindingObserver {
   /// `https://app.example.com/api` → `https://app.example.com`.
   static String originFromApiBaseUrl(String apiBaseUrl) {
     final uri = Uri.parse(apiBaseUrl);
-    return Uri(scheme: uri.scheme, host: uri.host, port: uri.hasPort ? uri.port : null)
-        .toString();
+    return Uri(
+      scheme: uri.scheme,
+      host: uri.host,
+      port: uri.hasPort ? uri.port : null,
+    ).toString();
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
 
+  /// True while a [disconnect] call is tearing the socket down. [connect]
+  /// awaits this instead of racing it — see the note there.
+  Future<void>? _disconnecting;
+
   /// Connects and signs in. Safe to call repeatedly — a live socket is reused.
   Future<void> connect() async {
+    // If a disconnect (e.g. logout) is still in flight, its socket may still
+    // report `connected == true` for up to ~120ms while it waits to flush
+    // the sign-out emit before tearing down. Without this wait, a fast
+    // logout->login lands here during that window, the guard below sees the
+    // OLD socket as "connected", and this call silently no-ops — no socket
+    // is ever built for the new account, and the previous account's data
+    // isn't cleared until the pending disconnect finally completes, well
+    // after the new account's screens are already showing.
+    final inFlight = _disconnecting;
+    if (inFlight != null) await inFlight;
+
     if (_socket?.connected == true) return;
 
     final token = await _readAccessToken();
@@ -215,7 +249,23 @@ class SocketService with WidgetsBindingObserver {
   /// flag and leaves the rooms. Disconnecting without it also works (the
   /// server's `disconnect` handler recomputes presence), but the explicit
   /// sign-out is immediate and does not depend on the disconnect being clean.
-  Future<void> disconnect({bool signOut = true}) async {
+  ///
+  /// Always await this fully before calling [connect] for a different
+  /// account (or, better, let [connect]'s own wait above handle it) — and
+  /// clear any account-scoped app state (ChatProvider, PresenceProvider,
+  /// etc.) once it resolves, rather than relying solely on the
+  /// `onStatus(disconnected)` event to do so, since that event is what this
+  /// method delays.
+  Future<void> disconnect({bool signOut = true}) {
+    final future = _disconnectInternal(signOut: signOut);
+    _disconnecting = future;
+    future.whenComplete(() {
+      if (identical(_disconnecting, future)) _disconnecting = null;
+    });
+    return future;
+  }
+
+  Future<void> _disconnectInternal({bool signOut = true}) async {
     _intentionallyClosed = true;
     final s = _socket;
     if (s != null) {
@@ -289,41 +339,43 @@ class SocketService with WidgetsBindingObserver {
 
   /// [withUserId] is the other party's USERNAME. Pass [groupId] for groups.
   void markRead({required String withUserId, String? groupId}) => _emit(
-        SocketEvents.markMessagesRead,
-        {'withUserId': withUserId, if (groupId != null) 'groupId': groupId},
-      );
+    SocketEvents.markMessagesRead,
+    {'withUserId': withUserId, if (groupId != null) 'groupId': groupId},
+  );
 
   void deleteMessage({
     required String messageId,
     required String withUserId,
     String? groupId,
-  }) =>
-      _emit(SocketEvents.deleteMessage, {
-        'messageId': messageId,
-        'withUserId': withUserId,
-        if (groupId != null) 'groupId': groupId,
-      });
+  }) => _emit(SocketEvents.deleteMessage, {
+    'messageId': messageId,
+    'withUserId': withUserId,
+    if (groupId != null) 'groupId': groupId,
+  });
 
   void keepMessage({
     required String messageId,
     required String withUserId,
     bool toggle = true,
-  }) =>
-      _emit(SocketEvents.keepMessage, {
-        'messageId': messageId,
-        'withUserId': withUserId,
-        'toggle': toggle,
-      });
+  }) => _emit(SocketEvents.keepMessage, {
+    'messageId': messageId,
+    'withUserId': withUserId,
+    'toggle': toggle,
+  });
 
   /// The server fans typing out with a bare `socket.to(to)` and ignores the
   /// `groupId` field entirely, but group rooms are named `group:{id}` — so a
   /// group target must carry the prefix or the event goes to a room nobody is
   /// in and is silently dropped.
   void startTyping(String to, {String? groupId}) => _emit(
-      SocketEvents.typingStart, {'to': _typingTarget(to, groupId), 'groupId': groupId});
+    SocketEvents.typingStart,
+    {'to': _typingTarget(to, groupId), 'groupId': groupId},
+  );
 
   void stopTyping(String to, {String? groupId}) => _emit(
-      SocketEvents.typingStop, {'to': _typingTarget(to, groupId), 'groupId': groupId});
+    SocketEvents.typingStop,
+    {'to': _typingTarget(to, groupId), 'groupId': groupId},
+  );
 
   static String _typingTarget(String to, String? groupId) =>
       groupId == null ? to : 'group:$groupId';
@@ -340,18 +392,21 @@ class SocketService with WidgetsBindingObserver {
     required String name,
     String? description,
     required List<String> members,
-  }) =>
-      _emit(SocketEvents.createGroup, {
-        'name': name,
-        if (description != null) 'description': description,
-        'members': members,
-      });
+  }) => _emit(SocketEvents.createGroup, {
+    'name': name,
+    if (description != null) 'description': description,
+    'members': members,
+  });
 
-  void addGroupMember(String groupId, String userId) =>
-      _emit(SocketEvents.addGroupMember, {'groupId': groupId, 'userId': userId});
+  void addGroupMember(String groupId, String userId) => _emit(
+    SocketEvents.addGroupMember,
+    {'groupId': groupId, 'userId': userId},
+  );
 
-  void removeGroupMember(String groupId, String userId) =>
-      _emit(SocketEvents.removeGroupMember, {'groupId': groupId, 'userId': userId});
+  void removeGroupMember(String groupId, String userId) => _emit(
+    SocketEvents.removeGroupMember,
+    {'groupId': groupId, 'userId': userId},
+  );
 
   void updateGroup(String groupId, {String? name, String? description}) =>
       _emit(SocketEvents.updateGroup, {
@@ -374,11 +429,13 @@ class SocketService with WidgetsBindingObserver {
   ///
   /// The server uses `socket.to(target)`, which EXCLUDES the sender — so this
   /// never round-trips back to us. Refresh local state directly as well.
-  void broadcastInvalidation(List<String> keys, {String target = 'global-users'}) =>
-      _emit(SocketEvents.invalidateQueries, {
-        'target': target,
-        'queryKeys': keys.map((k) => [k]).toList(),
-      });
+  void broadcastInvalidation(
+    List<String> keys, {
+    String target = 'global-users',
+  }) => _emit(SocketEvents.invalidateQueries, {
+    'target': target,
+    'queryKeys': keys.map((k) => [k]).toList(),
+  });
 
   void _emit(String event, [Object? payload]) {
     final s = _socket;
@@ -440,7 +497,9 @@ class SocketService with WidgetsBindingObserver {
       debugPrint('🔌 socket disconnected: $reason');
       if (_status != SocketStatus.unauthorized) {
         _setStatus(
-          _intentionallyClosed ? SocketStatus.disconnected : SocketStatus.connecting,
+          _intentionallyClosed
+              ? SocketStatus.disconnected
+              : SocketStatus.connecting,
         );
       }
     });
@@ -457,7 +516,10 @@ class SocketService with WidgetsBindingObserver {
       if (map != null) _userSignedIn$.add(SocketUser.fromJson(map));
     });
 
-    for (final evt in [SocketEvents.userSignedOut, SocketEvents.userDisconnected]) {
+    for (final evt in [
+      SocketEvents.userSignedOut,
+      SocketEvents.userDisconnected,
+    ]) {
       socket.on(evt, (data) {
         final map = _asMap(data);
         if (map != null) _presence$.add(PresenceEvent.fromJson(map));
@@ -521,10 +583,12 @@ class SocketService with WidgetsBindingObserver {
     // ── Groups ─────────────────────────────────────────────────────────────
     socket.on(SocketEvents.groupsList, (data) {
       if (data is! List) return;
-      _groups$.add(data
-          .whereType<Map>()
-          .map((g) => ChatGroup.fromJson(Map<String, dynamic>.from(g)))
-          .toList());
+      _groups$.add(
+        data
+            .whereType<Map>()
+            .map((g) => ChatGroup.fromJson(Map<String, dynamic>.from(g)))
+            .toList(),
+      );
     });
 
     for (final evt in [SocketEvents.groupCreated, SocketEvents.groupUpdated]) {
@@ -581,10 +645,12 @@ class SocketService with WidgetsBindingObserver {
 
   void _emitRoster(dynamic data) {
     if (data is! List) return;
-    _rosterFull$.add(data
-        .whereType<Map>()
-        .map((u) => SocketUser.fromJson(Map<String, dynamic>.from(u)))
-        .toList());
+    _rosterFull$.add(
+      data
+          .whereType<Map>()
+          .map((u) => SocketUser.fromJson(Map<String, dynamic>.from(u)))
+          .toList(),
+    );
   }
 
   Future<void> _handleConnectError(dynamic err) async {

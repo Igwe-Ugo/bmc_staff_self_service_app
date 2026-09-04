@@ -256,7 +256,6 @@ class ProfileDrawer extends StatelessWidget {
                   availabilityProvider,
                   _,
                 ) {
-                  final AuthServices authServices = AuthServices();
                   return ListTile(
                     leading: const Icon(Iconsax.logout),
                     trailing: const Icon(Iconsax.arrow_right_3, size: 15),
@@ -286,10 +285,18 @@ class ProfileDrawer extends StatelessWidget {
                       rotaProvider.clearUserData();
                       availabilityProvider.clearUserData();
 
-                      // 3. Trigger the secure storage & backend token invalidation
-                      authProvider.reset();
-                      await authServices
-                          .logout(); // Calling your service clear block
+                      // 3. Disconnect the socket, clear chat/presence state,
+                      // invalidate the session server-side, and wipe local
+                      // storage — all of what authProvider.logout() does.
+                      // This used to be authProvider.reset() +
+                      // authServices.logout(), which skipped the socket
+                      // disconnect entirely: the next account to sign in
+                      // would reuse this account's still-live socket and
+                      // its cached chat messages.
+                      await authProvider.logout(
+                        context.read<ChatProvider>(),
+                        context.read<PresenceProvider>(),
+                      );
                     },
                   );
                 },
