@@ -53,7 +53,7 @@ class _BMCAppNavBarState extends State<BMCAppNavBar> {
     ),
     _NavItem(
       offIconName: 'assets/icons/telemedicine_on.svg',
-      darkModeIconName: 'assets/icons/telemedicine_dark.svg',
+      darkModeIconName: 'assets/icons/telemedicine.svg',
       label: 'TeleMed',
       isTelemedicine: true,
     ),
