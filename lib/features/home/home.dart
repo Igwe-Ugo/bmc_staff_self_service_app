@@ -66,8 +66,8 @@ class _BMCHomeState extends State<BMCHome> {
   void _updateDateTime() {
     final now = DateTime.now();
     setState(() {
-      currentTime = DateFormat('hh:mm a').format(now);
-      currentDate = DateFormat('EE, MMMM d').format(now);
+      currentTime = DateFormat('hh:mm:ss a').format(now);
+      currentDate = DateFormat('EE, MMMM d, yyyy').format(now);
     });
   }
 
@@ -309,13 +309,13 @@ class _BMCHomeState extends State<BMCHome> {
               Text(
                 currentTime,
                 style: const TextStyle(
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Text(
                 currentDate,
-                style: const TextStyle(fontSize: 10, color: Colors.grey),
+                style: const TextStyle(fontSize: 9, color: Colors.grey),
               ),
             ],
           ),
@@ -346,7 +346,7 @@ class _BMCHomeState extends State<BMCHome> {
             ),
           ),
           const SizedBox(width: 12),
-          MessageBadgeIcon()
+          MessageBadgeIcon(),
         ],
       ),
     );

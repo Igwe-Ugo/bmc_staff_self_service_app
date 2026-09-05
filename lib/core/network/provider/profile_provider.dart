@@ -5,10 +5,9 @@ import 'dart:io';
 import 'package:bmc_app/core/network/provider/widget.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-
-import '../../../features/profile/widget.dart';
 import '../models/widget.dart';
 import '../services/widget.dart';
+import '../../../features/profile/widget.dart';
 
 class ProfileProvider extends ChangeNotifier {
   final ProfileService _service = ProfileService();
@@ -32,6 +31,20 @@ class ProfileProvider extends ChangeNotifier {
   // ── Dropdown state ───────────────────────────────────────────────────────
   String country = '';
   String state = '';
+
+  /// Default when a user has no saved country yet — see _populateFromUser.
+  static const _defaultCountryName = 'Nigeria';
+
+  /// Last-resort fallback if "Nigeria" itself can't be found in the fetched
+  /// list (e.g. the countries fetch failed outright) — matches
+  /// _defaultCountryName's intent so selectedCountryIso2/DialCode never go
+  /// blank, they just fall back to Nigeria's known values.
+  static const _fallbackCountry = Country(
+    name: '',
+    iso2: 'NG',
+    dialCode: '+234',
+    states: [],
+  );
 
   // Fetched once, cached — countryName -> list of state names
   List<Country> _allCountries = [];
@@ -57,13 +70,19 @@ class ProfileProvider extends ChangeNotifier {
     // every caller getting that right — and it also picks up anything
     // changed server-side since login (e.g. a department reassignment).
     await userProvider.fetchMe();
-    _populateFromUser();
 
+    // loadCountries() must finish BEFORE _populateFromUser() runs: the
+    // latter resolves the phone field's dial code (via
+    // selectedCountryDialCode) and, for a user with no saved country,
+    // needs to match "Nigeria" against the fetched list to fill in NG's
+    // real dial code — neither works if _allCountries is still empty.
     if (!_initialised) {
       _initialised = true;
       _attachListeners();
       await loadCountries();
     }
+
+    _populateFromUser();
 
     if (country.isNotEmpty) _applyStatesForCountry(country);
     notifyListeners();
@@ -91,11 +110,39 @@ class ProfileProvider extends ChangeNotifier {
 
     final u = userProvider.user;
     if (u != null) {
-      phoneCtrl.text = u.telno ?? '';
+      // u.country/u.state are the RAW tblUsers fields — per the model's own
+      // comment, these may not be display names at all (could be a code or
+      // internal id). u.countryName/u.stateName are the qryUsers joined
+      // fields — the actual resolved human-readable names, which is the
+      // only thing that can ever match a Country.name from the fetched
+      // world-countries list. Reading u.country directly here was why the
+      // dropdown never showed a selection and the dial code kept falling
+      // through to the fallback. Falls back to the raw field only if the
+      // joined name genuinely wasn't returned, then to Nigeria if neither
+      // was.
+      final resolvedCountry = (u.countryName?.trim().isNotEmpty ?? false)
+          ? u.countryName!.trim()
+          : (u.country?.trim() ?? '');
+      country = resolvedCountry.isNotEmpty
+          ? resolvedCountry
+          : _defaultCountryName;
+
+      state = (u.stateName?.trim().isNotEmpty ?? false)
+          ? u.stateName!.trim()
+          : (u.state?.trim() ?? '');
+
+      // u.telno is stored as a full E.164 number (dial code + local number).
+      // CustomPhoneInput shows the dial code as its own prefix chip, so the
+      // controller must only ever hold the local part — otherwise the field
+      // shows the dial code twice and trips the widget's own "don't include
+      // the country code" warning. selectedCountryDialCode needs
+      // _allCountries already loaded (see init()) to resolve correctly.
+      phoneCtrl.text = stripDialCode(
+        u.telno,
+        dialCode: selectedCountryDialCode,
+      );
       addressCtrl.text = u.address ?? '';
       cityCtrl.text = u.city ?? '';
-      country = u.country ?? '';
-      state = u.state ?? '';
     }
 
     _attachListeners();
@@ -112,13 +159,19 @@ class ProfileProvider extends ChangeNotifier {
   String get selectedCountryIso2 {
     final match = _allCountries.firstWhere(
       (c) => c.name.toLowerCase() == country.toLowerCase(),
-      orElse: () => const Country(
-        name: '',
-        iso2: 'NG',
-        states: [],
-      ), // Default to NG or your preferred fallback
+      orElse: () => _fallbackCountry,
     );
-    return match.iso2.isNotEmpty ? match.iso2 : 'NG';
+    return match.iso2.isNotEmpty ? match.iso2 : _fallbackCountry.iso2;
+  }
+
+  String get selectedCountryDialCode {
+    final match = _allCountries.firstWhere(
+      (c) => c.name.toLowerCase() == country.toLowerCase(),
+      orElse: () => _fallbackCountry,
+    );
+    return match.dialCode.isNotEmpty
+        ? match.dialCode
+        : _fallbackCountry.dialCode;
   }
 
   // ── Fetch once — countries + all their states come back together ────────
@@ -143,7 +196,7 @@ class ProfileProvider extends ChangeNotifier {
   void _applyStatesForCountry(String countryName) {
     final match = _allCountries.firstWhere(
       (c) => c.name.toLowerCase() == countryName.toLowerCase(),
-      orElse: () => const Country(name: '', iso2: '', states: []),
+      orElse: () => const Country(name: '', iso2: '', dialCode: '', states: []),
     );
     states = match.states;
   }
@@ -203,50 +256,50 @@ class ProfileProvider extends ChangeNotifier {
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
-Future<bool> save() async {
-  final userId = userProvider.user?.id;
-  if (userId == null || userId.isEmpty) return false;
-  if (passwordError != null) return false;
+  Future<bool> save() async {
+    final userId = userProvider.user?.id;
+    if (userId == null || userId.isEmpty) return false;
+    if (passwordError != null) return false;
 
-  final formattedPhone = phoneCtrl.text.trim().isEmpty
-      ? null
-      : preparePhoneForBackend(
-          rawInputNumber: phoneCtrl.text.trim(),
-          countryIso2: selectedCountryIso2,
-        );
+    final formattedPhone = phoneCtrl.text.trim().isEmpty
+        ? null
+        : preparePhoneForBackend(
+            rawInputNumber: phoneCtrl.text.trim(),
+            dialCode: selectedCountryDialCode,
+          );
 
-  final data = UserProfileUpdateData(
-    id: userId,
-    avatar: _base64Avatar,
-    removeAvatar: _avatarRemoved,
-    address: addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
-    city: cityCtrl.text.trim().isEmpty ? null : cityCtrl.text.trim(),
-    telno: formattedPhone, // 👈 Send formatted E.164 number to backend
-    state: state.isEmpty ? null : state,
-    country: country.isEmpty ? null : country,
-    password: passCtrl.text.trim().isEmpty ? null : passCtrl.text.trim(),
-  );
+    final data = UserProfileUpdateData(
+      id: userId,
+      avatar: _base64Avatar,
+      removeAvatar: _avatarRemoved,
+      address: addressCtrl.text.trim().isEmpty ? null : addressCtrl.text.trim(),
+      city: cityCtrl.text.trim().isEmpty ? null : cityCtrl.text.trim(),
+      telno: formattedPhone, // 👈 Send formatted E.164 number to backend
+      state: state.isEmpty ? null : state,
+      country: country.isEmpty ? null : country,
+      password: passCtrl.text.trim().isEmpty ? null : passCtrl.text.trim(),
+    );
 
-  final success = await userProvider.updateProfile(data);
-  if (success) {
-    _populateFromUser();
+    final success = await userProvider.updateProfile(data);
+    if (success) {
+      _populateFromUser();
 
-    hasChanges = false;
-    imageFile = null;
-    _base64Avatar = null;
-    _avatarRemoved = false;
+      hasChanges = false;
+      imageFile = null;
+      _base64Avatar = null;
+      _avatarRemoved = false;
 
-    _removeListeners();
-    passCtrl.clear();
-    confirmCtrl.clear();
-    _attachListeners();
+      _removeListeners();
+      passCtrl.clear();
+      confirmCtrl.clear();
+      _attachListeners();
 
-    if (country.isNotEmpty) _applyStatesForCountry(country);
+      if (country.isNotEmpty) _applyStatesForCountry(country);
 
-    notifyListeners();
+      notifyListeners();
+    }
+    return success;
   }
-  return success;
-}
 
   void cancel() {
     _populateFromUser();

@@ -1,39 +1,43 @@
-// ─── country_model.dart ────────────────────────────────────────────────────
-//
-// Models the response from GET /api/system-apis/world-countries:
-//   { data: { countries: tblCountries[], states: tblStates[], lgas: tblLgas[] } }
-//
-// The backend sends inconsistent key casing depending on which query built
-// each row (raw column name vs. DB alias), so every field is read
-// defensively with a fallback chain, e.g. countryName ?? Country_Name.
-
 class Country {
   final String name;
   final String iso2;
+  final String dialCode;
   final List<String> states;
 
-  const Country({required this.name, required this.iso2, required this.states});
+  const Country({
+    required this.name,
+    required this.iso2,
+    required this.dialCode,
+    required this.states,
+  });
 
   /// Builds a single [Country] from one raw `tblCountries` row.
-  /// Pass in the already-joined, sorted state names for this country —
-  /// use [Country.buildDirectory] to construct the full list in one pass
-  /// rather than calling this directly per-row.
   factory Country.fromApiRow(Map<String, dynamic> json, {List<String> states = const []}) {
+    // Standardize dial code with a leading '+' sign
+    final rawCode = (json['intTelCode1'] ?? json['IntTelCode1'] ?? '').toString().trim();
+    final formattedDialCode = rawCode.isNotEmpty
+        ? (rawCode.startsWith('+') ? rawCode : '+$rawCode')
+        : '';
+
     return Country(
       name: (json['countryName'] ?? json['Country_Name'] ?? '').toString().trim(),
       iso2: (json['countryIsoCode2'] ?? json['Country_ISOCode2'] ?? '').toString().trim(),
+      dialCode: formattedDialCode,
       states: states,
     );
   }
 
-  /// Legacy/cache shape — some cached data may still be the old nested
-  /// { name, iso2, states: [{name}] } format. Kept for backward compatibility
-  /// so existing cached data doesn't crash on the next app launch.
   factory Country.fromJson(Map<String, dynamic> json) {
     final rawStates = (json['states'] as List<dynamic>? ?? []);
+    final rawCode = (json['dialCode'] ?? json['intTelCode1'] ?? '').toString().trim();
+    final formattedDialCode = rawCode.isNotEmpty
+        ? (rawCode.startsWith('+') ? rawCode : '+$rawCode')
+        : '';
+
     return Country(
       name: (json['name'] ?? json['countryName'] ?? '').toString(),
       iso2: (json['iso2'] ?? json['countryIsoCode2'] ?? '').toString(),
+      dialCode: formattedDialCode,
       states: rawStates
           .map((s) => s is Map<String, dynamic> ? (s['name'] as String? ?? '') : s.toString())
           .where((s) => s.isNotEmpty)
@@ -47,6 +51,7 @@ class Country {
     return Country(
       name: json['name'] as String? ?? '',
       iso2: json['iso2'] as String? ?? '',
+      dialCode: json['dialCode'] as String? ?? '',
       states: (json['states'] as List<dynamic>? ?? []).map((e) => e.toString()).toList(),
     );
   }
@@ -54,23 +59,14 @@ class Country {
   Map<String, dynamic> toCacheJson() => {
     'name': name,
     'iso2': iso2,
+    'dialCode': dialCode,
     'states': states,
   };
 
-  /// Builds the full picker-ready country list — each with its states
-  /// already joined, deduped, and sorted — from the raw
-  /// `/api/system-apis/world-countries` payload:
-  ///   { countries: tblCountries[], states: tblStates[], lgas: tblLgas[] }
-  ///
-  /// `lgas` isn't needed for a country/state picker and is intentionally
-  /// ignored here — join it separately if you later add an LGA picker.
   static List<Country> buildDirectory(Map<String, dynamic> payload) {
     final rawCountries = (payload['countries'] as List<dynamic>? ?? []);
     final rawStates = (payload['states'] as List<dynamic>? ?? []);
 
-    // Group state names by country ISO2 code first — O(1) lookup per
-    // country afterward, instead of re-scanning the full states list
-    // once per country.
     final statesByCountryCode = <String, Set<String>>{};
     for (final s in rawStates) {
       final row = s as Map<String, dynamic>;

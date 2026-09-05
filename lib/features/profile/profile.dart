@@ -352,6 +352,7 @@ class _ProfileState extends State<Profile> {
                           CustomPhoneInput(
                             controller: p.phoneCtrl,
                             countryIso2: p.selectedCountryIso2,
+                            dialCode: p.selectedCountryDialCode,
                           ),
                           const SizedBox(height: 18),
                         ],
