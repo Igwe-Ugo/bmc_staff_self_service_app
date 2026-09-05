@@ -238,6 +238,30 @@ class _ProfileState extends State<Profile> {
                                 user.clinicalRoleLabel,
                               ),
                             ],
+                            if (user.privileges.isNotEmpty == true) ...[
+                              Builder(
+                                builder: (context) {
+                                  final combinedLabels = user.privileges
+                                      .map((p) {
+                                        final parts = p.split('~');
+                                        final label = parts.length > 1
+                                            ? parts.sublist(1).join('~')
+                                            : p;
+                                        return label
+                                            .trim()
+                                            .toUpperCase(); // Capitalizes each privilege
+                                      })
+                                      .join(
+                                        ', ',
+                                      ); // Combines all privileges into one comma-separated string
+
+                                  return _readOnlyInfo(
+                                    'Privileges and Operations',
+                                    combinedLabels,
+                                  );
+                                },
+                              ),
+                            ],
 
                             if (user.deptName?.isNotEmpty == true) ...[
                               _readOnlyInfo('Department', user.deptName!),

@@ -129,32 +129,52 @@ class _BMCHomeState extends State<BMCHome> {
                 },
                 child: Stack(
                   children: [
-                    SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 110, 20, 40),
-                        child: Column(
-                          children: [
-                            _welcomeCard(context, userProvider),
-                            const SizedBox(height: 24),
-                            if (teleMedProvider.guestTodayVisits.isNotEmpty &
-                                    hasTelemedicine ==
-                                true)
-                              Column(
-                                children: [
-                                  TeleMedGuestHomeVisits(
-                                    teleMedicineProvider: teleMedProvider,
-                                  ),
-                                  const SizedBox(height: 24),
-                                ],
-                              ),
-                            RotaSummary(),
-                            const SizedBox(height: 24),
-                            LeaveSummaryCard(),
-                            const SizedBox(height: 24),
-                            const WeeklyAvailabilityWidget(),
-                            const SizedBox(height: 24),
-                            CombinedCarouselCalendar(),
+                    Container(
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage("assets/images/login.png"),
+                          fit: BoxFit.cover,
+                        ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF1E1E2F)
+                                : Colors.white,
+                            Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF1E1E2F)
+                                : Colors.white,
                           ],
+                        ),
+                      ),
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 110, 20, 40),
+                          child: Column(
+                            children: [
+                              _welcomeCard(context, userProvider),
+                              const SizedBox(height: 24),
+                              if (teleMedProvider.guestTodayVisits.isNotEmpty &
+                                      hasTelemedicine ==
+                                  true)
+                                Column(
+                                  children: [
+                                    TeleMedGuestHomeVisits(
+                                      teleMedicineProvider: teleMedProvider,
+                                    ),
+                                    const SizedBox(height: 24),
+                                  ],
+                                ),
+                              RotaSummary(),
+                              const SizedBox(height: 24),
+                              LeaveSummaryCard(),
+                              const SizedBox(height: 24),
+                              const WeeklyAvailabilityWidget(),
+                              const SizedBox(height: 24),
+                              CombinedCarouselCalendar(),
+                            ],
+                          ),
                         ),
                       ),
                     ),

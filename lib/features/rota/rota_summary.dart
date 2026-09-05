@@ -58,82 +58,6 @@ class RotaSummary extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header Row: "This month (Count)"
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Theme.of(context).brightness == Brightness.light
-                          ? Colors.black87
-                          : Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Lexend',
-                    ),
-                    children: [
-                      const TextSpan(text: 'My Rota '),
-                      const TextSpan(text: '| '),
-                      const TextSpan(text: 'This month '),
-                    ],
-                  ),
-                ),
-                CircleAvatar(
-                  backgroundColor: Colors.red.withOpacity(0.3),
-                  radius: 15,
-                  child: Container(
-                    padding: const EdgeInsets.all(1),
-                    constraints: const BoxConstraints(
-                      minWidth: 20,
-                      minHeight: 20,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      totalCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (hasMore)
-              GestureDetector(
-                onTap: () =>
-                    GoRouter.of(context).pushReplacement(BMCRouter.rotaPath),
-                child: Row(
-                  children: [
-                    Text(
-                      'View all',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(
-                      Icons.chevron_right,
-                      size: 16,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 12),
-
         // If no shifts are assigned for this month
         if (displayShifts.isEmpty)
           Container(
@@ -161,122 +85,205 @@ class RotaSummary extends StatelessWidget {
           )
         else
           // ── FIX: Use a SingleChildScrollView with Row instead of ListView ──
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            child: Row(
-              children: displayShifts.map((event) {
-                final baseColor = event.type.color;
-                return Container(
-                  width: 160, // Fixed width for each card
-                  height: 170,
-                  margin: const EdgeInsets.only(right: 10),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 0,
-                  ),
-                  decoration: BoxDecoration(
-                    color: baseColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: baseColor.withOpacity(0.15),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
+          Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
                     children: [
-                      // Date block
-                      Row(
+                      RichText(
+                        text: TextSpan(
+                          style: TextStyle(
+                            fontSize: 15,
+                            color:
+                                Theme.of(context).brightness == Brightness.light
+                                ? Colors.black87
+                                : Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Lexend',
+                          ),
+                          children: [
+                            const TextSpan(text: 'My Rota '),
+                            const TextSpan(text: '| '),
+                            const TextSpan(text: 'This month '),
+                          ],
+                        ),
+                      ),
+                      CircleAvatar(
+                        backgroundColor: Colors.red.withOpacity(0.3),
+                        radius: 15,
+                        child: Container(
+                          padding: const EdgeInsets.all(1),
+                          constraints: const BoxConstraints(
+                            minWidth: 20,
+                            minHeight: 20,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            totalCount.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (hasMore)
+                    GestureDetector(
+                      onTap: () => GoRouter.of(
+                        context,
+                      ).pushReplacement(BMCRouter.rotaPath),
+                      child: Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).scaffoldBackgroundColor,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  DateFormat('EEE').format(event.date),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: baseColor.withOpacity(0.8),
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                Text(
-                                  DateFormat('dd').format(event.date),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: baseColor,
-                                  ),
-                                ),
-                              ],
+                          Text(
+                            'View all',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).primaryColor,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          // Shift details
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  event.type.label,
-                                  style: TextStyle(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                    color: baseColor,
-                                  ),
+                          const SizedBox(width: 2),
+                          Icon(
+                            Icons.chevron_right,
+                            size: 16,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: displayShifts.map((event) {
+                    final baseColor = event.type.color;
+                    return Container(
+                      width: 160, // Fixed width for each card
+                      height: 170,
+                      margin: const EdgeInsets.only(right: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 0,
+                      ),
+                      decoration: BoxDecoration(
+                        color: baseColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: baseColor.withOpacity(0.15),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Date block
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 8,
                                 ),
-                                const SizedBox(height: 4),
-                                Row(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).scaffoldBackgroundColor,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(
-                                      Iconsax.hospital,
-                                      size: 12,
-                                      color: baseColor.withOpacity(0.7),
+                                    Text(
+                                      DateFormat('EEE').format(event.date),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: baseColor.withOpacity(0.8),
+                                        fontWeight: FontWeight.w700,
+                                      ),
                                     ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        event.ward,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: baseColor.withOpacity(0.7),
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
+                                    Text(
+                                      DateFormat('dd').format(event.date),
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: baseColor,
                                       ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  "${_convertTo12Hour(event.endTime)} - ${_convertTo12Hour(event.startTime)}",
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: baseColor,
-                                  ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Shift details
+                              Expanded(
+                                child: Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      event.type.label,
+                                      style: TextStyle(
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.bold,
+                                        color: baseColor,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Iconsax.hospital,
+                                          size: 12,
+                                          color: baseColor.withOpacity(0.7),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Expanded(
+                                          child: Text(
+                                            event.ward,
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: baseColor.withOpacity(0.7),
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      "${_convertTo12Hour(event.endTime)} - ${_convertTo12Hour(event.startTime)}",
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: baseColor,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ),
         const SizedBox(height: 12),
 
