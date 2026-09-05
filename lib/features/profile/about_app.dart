@@ -24,7 +24,7 @@ class _AboutAppState extends State<AboutApp> {
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       setState(() {
-        _appVersion = "${packageInfo.version}+${packageInfo.buildNumber}";
+        _appVersion = packageInfo.version;
       });
     } catch (e) {
       print('Error loading package info: $e');
@@ -56,7 +56,7 @@ class _AboutAppState extends State<AboutApp> {
     String noteSecurity =
         "The BMC Staff App uses secure authentication and protected data systems to help ensure that sensitive staff records remain confidential and accessible only to authorized users.";
     String noteVersion =
-        "Application Name: BMC Staff  Self-Service App\nOrganization: Bethany Medical Center\nVersion: $_appVersion\nLast Updated: May 2026";
+        "Application Name: BMC Staff  Self-Service App\nOrganization: Bethany Medical Center\nVersion: $_appVersion";
     String noteSupport =
         "For technical assistance, account-related support, or workforce management inquiries, please contact the ICT department or your assigned hospital administrator at Bethany Medical Center.";
     String noteMotivate =
