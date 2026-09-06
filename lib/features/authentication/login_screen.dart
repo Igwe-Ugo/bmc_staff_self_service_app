@@ -195,6 +195,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 16),
                 CustomTextInput(
+                  keyboardType: TextInputType.text,
                   controller: _usernameController,
                   hint: "John",
                   prefixIcon: Icons.person,
@@ -219,6 +220,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 16),
                 CustomTextInput(
                   controller: _passwordController,
+                  keyboardType: TextInputType.text,
                   hint: "*************",
                   prefixIcon: Icons.lock,
                   isPassword: true,

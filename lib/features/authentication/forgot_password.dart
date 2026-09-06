@@ -135,7 +135,8 @@ class _ForgotPasswordState extends State<ForgotPassword> {
                 const SizedBox(height: 16),
                 CustomTextInput(
                   controller: _emailController,
-                  hint: "email",
+                  keyboardType: TextInputType.emailAddress,
+                  hint: "example@domain.com",
                   prefixIcon: Icons.email,
                 ),
                 const SizedBox(
@@ -194,6 +195,9 @@ class _ForgotPasswordState extends State<ForgotPassword> {
 
   Future<void> _requestPasswordReset() async {
     final email = _emailController.text.trim();
+    final emailRegex = RegExp(
+      r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
+    );
 
     if (email.isEmpty) {
       showMessage(
@@ -201,6 +205,16 @@ class _ForgotPasswordState extends State<ForgotPassword> {
         context,
         status: MessageStatus.warning,
         title: 'Missing Fields',
+      );
+      return;
+    }
+
+    if (!emailRegex.hasMatch(email)) {
+      showMessage(
+        'Please enter a valid email address.',
+        context,
+        status: MessageStatus.warning,
+        title: 'Invalid Email',
       );
       return;
     }
@@ -220,7 +234,7 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     if (authProvider.errorMessage == null) {
       await Future.delayed(const Duration(milliseconds: 200));
       showMessage(
-        'Password reset request sent. Please check your email for further instructions.',
+        'Password reset request sent, if that email is registered. Please check your email for further instructions.',
         context,
         status: MessageStatus.success,
         title: 'Success',

@@ -5,6 +5,7 @@ class CustomTextInput extends StatefulWidget {
   final IconData prefixIcon;
   final bool isPassword;
   final TextEditingController controller;
+  final TextInputType keyboardType;
 
   const CustomTextInput({
     super.key,
@@ -12,6 +13,7 @@ class CustomTextInput extends StatefulWidget {
     required this.prefixIcon,
     this.isPassword = false,
     required this.controller,
+    required this.keyboardType,
   });
 
   @override
@@ -26,6 +28,7 @@ class _CustomTextInputState extends State<CustomTextInput> {
     final borderRadius = BorderRadius.circular(30);
 
     return TextFormField(
+      keyboardType: widget.keyboardType,
       controller: widget.controller,
       obscureText: widget.isPassword ? _obscure : false,
       maxLines: 1,
